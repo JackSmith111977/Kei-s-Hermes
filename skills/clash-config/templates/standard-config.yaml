@@ -1,0 +1,339 @@
+# Clash / mihomo 完整配置模板
+
+## 最小可用配置
+
+```yaml
+# 最小配置 - 仅代理端口 + 一个节点
+mixed-port: 7890
+mode: rule
+log-level: info
+
+proxies:
+  - name: "MyProxy"
+    type: ss
+    server: your-server.com
+    port: 443
+    cipher: aes-128-gcm
+    password: "your-password"
+
+proxy-groups:
+  - name: "Proxy"
+    type: select
+    proxies:
+      - MyProxy
+      - DIRECT
+
+rules:
+  - MATCH,Proxy
+```
+
+## 标准配置模板
+
+```yaml
+# ============================================
+# Clash / mihomo 标准配置模板
+# ============================================
+
+# --- 基础设置 ---
+mixed-port: 7890          # 混合代理端口 (HTTP + SOCKS5)
+socks-port: 7891          # SOCKS5 代理端口
+allow-lan: false          # 是否允许局域网访问
+bind-address: "*"         # 绑定地址
+mode: rule                # 运行模式: rule / global / direct
+log-level: info           # 日志级别: silent / error / warning / info / debug
+ipv6: true                # 启用 IPv6
+
+# --- 外部控制器 (API) ---
+external-controller: 127.0.0.1:9090
+secret: ""                # API 密钥 (留空则不需要)
+
+# --- 缓存 ---
+profile:
+  store-selected: true    # 保存代理选择
+  store-fake-ip: true     # 保存 fake-ip 映射
+
+# --- TCP 设置 ---
+tcp-concurrent: true      # TCP 并发连接
+unified-delay: true       # 统一延迟
+
+# --- GEO 数据 ---
+geodata-mode: true        # 使用 dat 格式 (兼容性好)
+geodata-loader: memconservative  # 内存优化模式
+geo-auto-update: true     # 自动更新 GEO 数据
+geo-update-interval: 24   # 更新间隔 (小时)
+geox-url:
+  geoip: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
+  geosite: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
+  mmdb: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb"
+
+# --- 进程匹配 ---
+find-process-mode: strict  # always / strict / off
+
+# --- DNS 设置 ---
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "localhost"
+    - "home.arpa"
+  default-nameserver:
+    - 8.8.8.8
+    - 114.114.114.114
+  nameserver:
+    - https://dns.google/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - https://dns.cloudflare.com/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+  nameserver-policy:
+    "geosite:cn":
+      - https://doh.pub/dns-query
+      - 114.114.114.114
+
+# --- TUN 模式 (可选，需要 root) ---
+# tun:
+#   enable: true
+#   stack: mixed
+#   dns-hijack:
+#     - any:53
+#   auto-route: true
+#   auto-detect-interface: true
+
+# --- 代理节点 ---
+proxies:
+  # Shadowsocks
+  - name: "SS-Example"
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: "password"
+    udp: true
+
+  # VMess
+  - name: "VMess-Example"
+    type: vmess
+    server: vmess.example.com
+    port: 443
+    uuid: your-uuid-here
+    alterId: 0
+    cipher: auto
+    tls: true
+    servername: example.com
+    skip-cert-verify: false
+    network: tcp
+
+  # VLESS + Reality
+  - name: "VLESS-Reality"
+    type: vless
+    server: reality.example.com
+    port: 443
+    uuid: your-uuid-here
+    flow: xtls-rprx-vision
+    tls: true
+    reality-opts:
+      public-key: "public-key-here"
+      short-id: "short-id-here"
+    client-fingerprint: chrome
+    skip-cert-verify: false
+    network: tcp
+
+  # Trojan
+  - name: "Trojan-Example"
+    type: trojan
+    server: trojan.example.com
+    port: 443
+    password: "password"
+    sni: example.com
+    skip-cert-verify: false
+    network: tcp
+
+  # Hysteria2
+  - name: "Hysteria2-Example"
+    type: hysteria2
+    server: hy2.example.com
+    port: 443
+    password: "password"
+    sni: example.com
+    skip-cert-verify: false
+    up: "50 Mbps"
+    down: "200 Mbps"
+
+# --- 代理提供者 ---
+proxy-providers:
+  # 机场订阅
+  my-provider:
+    type: http
+    url: "https://your-provider.com/sub?token=xxx"
+    path: ./proxy_providers/my-provider.yaml
+    interval: 3600
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+      lazy: true
+      timeout: 5000
+
+# --- 代理组 ---
+proxy-groups:
+  # 主选择组
+  - name: "🚀 Proxy"
+    type: select
+    proxies:
+      - "⚡ Auto"
+      - "🇭🇰 HK"
+      - "🇯🇵 JP"
+      - "🇺🇸 US"
+      - "DIRECT"
+
+  # 自动选择 (延迟最低)
+  - name: "⚡ Auto"
+    type: url-test
+    use:
+      - my-provider
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    lazy: true
+    timeout: 5000
+
+  # 香港节点
+  - name: "🇭🇰 HK"
+    type: url-test
+    use:
+      - my-provider
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    filter: "(?i)港|hk|hongkong|hong kong"
+
+  # 日本节点
+  - name: "🇯🇵 JP"
+    type: url-test
+    use:
+      - my-provider
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    filter: "(?i)日|jp|japan|tokyo"
+
+  # 美国节点
+  - name: "🇺🇸 US"
+    type: url-test
+    use:
+      - my-provider
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    filter: "(?i)美|us|united states|america"
+
+# --- 规则提供者 ---
+rule-providers:
+  # 广告屏蔽
+  reject:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.yaml
+    interval: 86400
+
+  # 国内域名
+  cn-domain:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+    path: ./ruleset/cn-domain.yaml
+    interval: 86400
+
+  # 私网 IP
+  private:
+    type: http
+    behavior: ipcidr
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+    path: ./ruleset/private.yaml
+    interval: 86400
+
+  # Telegram
+  telegram:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt"
+    path: ./ruleset/telegram.yaml
+    interval: 86400
+
+# --- 路由规则 ---
+rules:
+  # 广告屏蔽
+  - RULE-SET,reject,REJECT
+
+  # 私网 IP 直连
+  - RULE-SET,private,DIRECT
+
+  # 内网 IP 直连
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+
+  # Telegram
+  - RULE-SET,telegram,🚀 Proxy
+
+  # 国内直连
+  - RULE-SET,cn-domain,DIRECT
+  - GEOIP,CN,DIRECT,no-resolve
+
+  # 兜底规则
+  - MATCH,🚀 Proxy
+```
+
+## 纯 TUN 模式配置
+
+```yaml
+# 系统级代理 (需要 root)
+mixed-port: 0            # 关闭普通代理端口
+allow-lan: false
+mode: rule
+log-level: info
+
+tun:
+  enable: true
+  stack: mixed           # system / gvisor / mixed
+  dns-hijack:
+    - any:53             # 劫持所有 DNS 请求
+  auto-route: true       # 自动路由所有流量
+  auto-detect-interface: true
+  mtu: 9000
+
+# ... proxies, proxy-groups, rules 同上
+```
+
+## 多入口配置
+
+```yaml
+listeners:
+  # 本地 SOCKS5
+  - name: socks5-local
+    type: socks5
+    port: 1080
+    listen: 127.0.0.1
+
+  # 本地 HTTP
+  - name: http-local
+    type: http
+    port: 1081
+    listen: 127.0.0.1
+
+  # 局域网 SOCKS5
+  - name: socks5-lan
+    type: socks5
+    port: 2080
+    listen: 0.0.0.0
+
+  # 局域网 HTTP
+  - name: http-lan
+    type: http
+    port: 2081
+    listen: 0.0.0.0
+```

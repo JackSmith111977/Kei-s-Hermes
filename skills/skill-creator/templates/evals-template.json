@@ -1,0 +1,36 @@
+{
+  "skill_name": "example-skill",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "正常的触发场景 prompt，应该触发此 Skill",
+      "expected_output": "描述预期的输出内容和格式",
+      "files": ["output/result.md"],
+      "expectations": [
+        "输出文件存在于 output/result.md",
+        "输出包含必要的章节",
+        "输出的数据准确无误",
+        "Skill 执行了必要的搜索/获取步骤"
+      ]
+    },
+    {
+      "id": "eval-002",
+      "prompt": "边界情况 prompt，测试 Skill 的边界处理",
+      "expected_output": "描述边界情况的预期输出",
+      "expectations": [
+        "Skill 正确处理了边界情况",
+        "没有产生错误输出",
+        "给出了合理的提示或降级方案"
+      ]
+    },
+    {
+      "id": "eval-003",
+      "prompt": "不应触发的 prompt，测试 Skill 的触发精度",
+      "expected_output": "Skill 不应被触发",
+      "expectations": [
+        "Skill 没有被错误触发",
+        "Agent 正确识别了不匹配的场景"
+      ]
+    }
+  ]
+}

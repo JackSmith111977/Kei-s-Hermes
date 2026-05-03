@@ -1,0 +1,41 @@
+{
+  "skill_name": "learning",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "帮我学习一下 FastAPI 是什么，怎么用",
+      "expected_output": "通过 web-access 搜索 FastAPI，过滤清洗信息，精炼知识，通过 skill-creator 创建或更新 fastapi-guide skill",
+      "expectations": [
+        "加载 web-access skill 进行联网搜索",
+        "应用 filtering-standards.md 过滤信息质量",
+        "应用 washing-techniques.md 清洗信息",
+        "精炼后的知识输出到目标 skill（通过 skill-creator）",
+        "更新 learning skill 的方法论（filtering/washing/integration）"
+      ]
+    },
+    {
+      "id": "eval-002",
+      "prompt": "对比一下 SQLite 和 PostgreSQL 的区别，帮我整理成一个 skill",
+      "expected_output": "搜索对比信息，精炼成结构化知识，通过 skill-creator 创建 database-comparison skill",
+      "expectations": [
+        "联网搜索最新对比信息",
+        "过滤低质量来源，保留权威对比",
+        "生成多维度对比表格",
+        "通过 skill-creator 创建新 skill",
+        "更新 integration-patterns.md 记录整合经验"
+      ]
+    },
+    {
+      "id": "eval-003",
+      "prompt": "你知道 Docker 的 volume 和 bind mount 有什么区别吗",
+      "expected_output": "搜索 Docker 存储概念，精炼知识，更新已有的 docker-guide skill（如果存在）或创建新 skill",
+      "expectations": [
+        "检查是否已有 docker 相关 skill",
+        "通过 web-access 搜索验证概念准确性",
+        "精炼为结构化笔记",
+        "通过 skill-creator M1-M4 流程更新已有 skill",
+        "记录本次整合经验到 integration-patterns.md"
+      ]
+    }
+  ]
+}

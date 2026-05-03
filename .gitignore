@@ -1,0 +1,69 @@
+# =============================================================================
+# Hermes Catgirl Deploy - .gitignore
+# =============================================================================
+
+# ── 敏感信息（绝对不要提交！）──
+.env
+.env.local
+.env.*.local
+auth.json
+auth.lock
+channel_directory.json
+feishu_seen_message_ids.json
+gateway_state.json
+gateway.pid
+processes.json
+
+# ── 运行时数据（太大且隐私）──
+state.db
+state.db-shm
+state.db-wal
+models_dev_cache.json
+skills/.bundled_manifest
+
+# ── 会话记录（隐私）──
+sessions/
+logs/
+cache/
+cron/output/
+audio_cache/
+image_cache/
+weixin/accounts/
+
+# ── 临时文件──
+*.pyc
+*.pyo
+__pycache__/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.tirith-install-failed
+.update_check
+.mailmap
+
+# ── Python 虚拟环境──
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ── Node.js ──
+node_modules/
+package-lock.json
+yarn.lock
+
+# ── IDE ──
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# ── 大文件（核心代码可选排除）──
+# 取消注释以下行可排除 hermes-agent 核心（约 729MB）
+# 用户应通过 `git clone https://github.com/NousResearch/hermes-agent.git` 获取
+# hermes-agent/

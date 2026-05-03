@@ -1,0 +1,125 @@
+#!/bin/bash
+# =============================================================================
+# Hermes Catgirl Deploy - 安全上传脚本
+# =============================================================================
+# 此脚本将指定的安全文件上传到 GitHub 仓库
+# 自动排除所有敏感信息和运行时数据
+# =============================================================================
+
+set -e
+
+DEPLOY_DIR="/tmp/hermes-catgirl-deploy"
+HERMES_DIR="$HOME/.hermes"
+PROXY_HOST="127.0.0.1"
+PROXY_PORT="7890"
+
+# 颜色输出
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}=== Hermes Catgirl Deploy 上传脚本 ===${NC}"
+echo "开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+
+# 检查部署目录
+if [ ! -d "$DEPLOY_DIR" ]; then
+    echo -e "${RED}错误：部署目录不存在: $DEPLOY_DIR${NC}"
+    exit 1
+fi
+
+cd "$DEPLOY_DIR"
+
+# 初始化 git 仓库（如果尚未初始化）
+if [ ! -d ".git" ]; then
+    echo -e "${YELLOW}初始化 git 仓库...${NC}"
+    git init
+    git config user.email "hermes-catgirl@local"
+    git config user.name "小喵"
+fi
+
+# 设置远程仓库（如果尚未设置）
+# 注意：这里使用占位符，实际使用时需要替换为真实的仓库 URL
+# 或者通过环境变量 HERMES_REPO_URL 传入
+if [ -z "$HERMES_REPO_URL" ]; then
+    echo -e "${YELLOW}警告：未设置 HERMES_REPO_URL 环境变量，跳过推送步骤${NC}"
+    echo "请先设置: export HERMES_REPO_URL='https://<token>@github.com/<user>/<repo>.git'"
+    PUSH_ENABLED=false
+else
+    git remote set-url origin "$HERMES_REPO_URL" 2>/dev/null || git remote add origin "$HERMES_REPO_URL"
+    PUSH_ENABLED=true
+fi
+
+# 同步文件（从 ~/.hermes 到部署目录）
+echo -e "${GREEN}同步文件...${NC}"
+
+# 1. 同步 config 目录（排除敏感文件）
+if [ -d "$HERMES_DIR/config" ]; then
+    rsync -av --exclude='*.key' --exclude='*.pem' "$HERMES_DIR/config/" "$DEPLOY_DIR/config/" 2>/dev/null || true
+fi
+
+# 2. 同步 deploy.sh（如果有更新）
+if [ -f "$HERMES_DIR/deploy.sh" ]; then
+    cp "$HERMES_DIR/deploy.sh" "$DEPLOY_DIR/deploy.sh"
+fi
+
+# 3. 同步 scripts 目录
+if [ -d "$HERMES_DIR/scripts" ]; then
+    rsync -av "$HERMES_DIR/scripts/" "$DEPLOY_DIR/scripts/" 2>/dev/null || true
+fi
+
+# 4. 同步自定义 skills（排除 .bundled_manifest 等）
+if [ -d "$HERMES_DIR/skills" ]; then
+    rsync -av --exclude='.bundled_manifest' --exclude='node_modules' "$HERMES_DIR/skills/" "$DEPLOY_DIR/skills/" 2>/dev/null || true
+fi
+
+# 5. 同步 SOUL.md（如果有）
+if [ -f "$HERMES_DIR/SOUL.md" ]; then
+    cp "$HERMES_DIR/SOUL.md" "$DEPLOY_DIR/SOUL.md"
+fi
+
+# 6. 同步 TASK_QUEUE.md（任务队列模板）
+if [ -f "$HERMES_DIR/TASK_QUEUE.md" ]; then
+    cp "$HERMES_DIR/TASK_QUEUE.md" "$DEPLOY_DIR/TASK_QUEUE.md"
+fi
+
+# 7. 同步 task_queue.py
+if [ -f "$HERMES_DIR/task_queue.py" ]; then
+    cp "$HERMES_DIR/task_queue.py" "$DEPLOY_DIR/scripts/task_queue.py"
+fi
+
+echo -e "${GREEN}文件同步完成${NC}"
+
+# 添加文件到 git（使用 .gitignore 排除敏感文件）
+echo -e "${YELLOW}添加文件到 git...${NC}"
+git add -A 2>/dev/null || true
+
+# 检查是否有变更
+if git diff --staged --quiet 2>/dev/null; then
+    echo -e "${GREEN}没有变更，跳过提交${NC}"
+    exit 0
+fi
+
+# 提交变更
+COMMIT_MSG="自动更新 - $(date '+%Y-%m-%d %H:%M:%S')"
+git commit -m "$COMMIT_MSG" 2>/dev/null || {
+    echo -e "${YELLOW}提交失败，可能是首次提交需要配置用户信息${NC}"
+    git config user.email "hermes-catgirl@local" 2>/dev/null || true
+    git config user.name "小喵" 2>/dev/null || true
+    git commit -m "$COMMIT_MSG" 2>/dev/null || echo -e "${RED}提交仍然失败${NC}"
+}
+echo -e "${GREEN}提交完成: $COMMIT_MSG${NC}"
+
+# 推送到远程仓库（如果启用）
+if [ "$PUSH_ENABLED" = true ]; then
+    echo -e "${YELLOW}推送到远程仓库（通过代理）...${NC}"
+    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin main 2>&1 || \
+    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin master 2>&1 || \
+    echo -e "${RED}推送失败，请检查网络连接和仓库权限${NC}"
+    echo -e "${GREEN}推送完成${NC}"
+else
+    echo -e "${YELLOW}推送已跳过（未设置 HERMES_REPO_URL）${NC}"
+fi
+
+echo -e "${GREEN}=== 上传脚本执行完成 ===${NC}"
+echo "结束时间: $(date '+%Y-%m-%d %H:%M:%S')"

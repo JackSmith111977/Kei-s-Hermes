@@ -1,0 +1,24 @@
+{
+  "skill_name": "proxy-finder",
+  "version": "2.0.0",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "帮我找 3 个可用的免费代理机场订阅源",
+      "expected_output": "返回至少 3 个可访问的机场订阅 URL，包含 SS/Trojan/VMess 节点",
+      "grader": "检查是否提供了有效订阅链接，格式是否为 base64 或 YAML"
+    },
+    {
+      "id": "eval-002",
+      "prompt": "测试当前所有代理节点的连通性",
+      "expected_output": "输出每个节点的延迟和可用状态，筛选出可用节点列表",
+      "grader": "检查是否使用了 test_nodes.py 脚本，输出是否包含延迟数据"
+    },
+    {
+      "id": "eval-003",
+      "prompt": "把可用节点写入 mihomo 配置文件",
+      "expected_output": "生成有效的 mihomo proxies 配置段，格式正确",
+      "grader": "检查 YAML 格式是否正确，节点字段是否完整"
+    }
+  ]
+}

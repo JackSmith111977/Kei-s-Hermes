@@ -1,0 +1,24 @@
+{
+  "skill_name": "doc-design",
+  "version": "4.0.0",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "帮我创建一个 5 页的 PPT，主题是 AI 趋势",
+      "expected_output": "生成 .pptx 文件，包含封面、目录、3 页内容页，设计美观",
+      "grader": "六维评估：格式正确性 + 设计一致性 + 视觉层次 + 内容完整性 + 美学质量 + 可用性"
+    },
+    {
+      "id": "eval-002",
+      "prompt": "把这个 Markdown 文件转成 PDF",
+      "expected_output": "生成格式正确的 PDF 文件",
+      "grader": "检查是否使用了 pandoc，PDF 是否正常打开且排版正确"
+    },
+    {
+      "id": "eval-003",
+      "prompt": "帮我美化这个 Excel 表格",
+      "expected_output": "生成带样式、条件格式、图表的 .xlsx 文件",
+      "grader": "检查是否应用了字体、颜色、边框、对齐等样式"
+    }
+  ]
+}

@@ -1,0 +1,213 @@
+# mihomo 代理机场配置模板
+# 使用方法：复制此文件到 ~/.config/mihomo/config.yaml，填入你的机场订阅链接
+
+mixed-port: 7890
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: true
+external-controller: 127.0.0.1:9090
+secret: "change-me-to-your-secret"
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+
+# ============================================================
+# 方案一：使用 proxy-providers（推荐，自动更新）
+# ============================================================
+proxy-providers:
+  # 免费节点源（可按需增删）
+  free-pool:
+    type: http
+    url: "https://raw.githubusercontent.com/anaer/Sub/main/clash.yaml"
+    path: ./proxy_providers/free-pool.yaml
+    interval: 3600
+    proxy: DIRECT
+    size-limit: 0
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+      timeout: 5000
+      lazy: true
+      expected-status: 204
+
+  # 备用源1
+  free-pool-2:
+    type: http
+    url: "https://raw.githubusercontent.com/Barabama/FreeNodes/main/nodes/clashmeta.yaml"
+    path: ./proxy_providers/free-pool-2.yaml
+    interval: 3600
+    proxy: DIRECT
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+
+  # 付费机场（替换为你的订阅链接）
+  # your-airport:
+  #   type: http
+  #   url: "https://your-airport.com/sub?token=xxx"
+  #   path: ./proxy_providers/your-airport.yaml
+  #   interval: 3600
+  #   health-check:
+  #     enable: true
+  #     url: https://www.gstatic.com/generate_204
+  #     interval: 300
+
+# ============================================================
+# 方案二：直接内联节点（适合少量节点）
+# ============================================================
+# proxies:
+#   - name: "示例节点"
+#     type: ss
+#     server: example.com
+#     port: 443
+#     cipher: aes-256-gcm
+#     password: "password"
+
+# ============================================================
+# 代理组
+# ============================================================
+proxy-groups:
+  # 主选择组
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - "♻️ 自动选择"
+      - "🌏 免费节点"
+      - "DIRECT"
+
+  # 自动选择（延迟最低）
+  - name: "♻️ 自动选择"
+    type: url-test
+    use:
+      - "free-pool"
+      - "free-pool-2"
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    tolerance: 50
+
+  # 免费节点组
+  - name: "🌏 免费节点"
+    type: select
+    use:
+      - "free-pool"
+      - "free-pool-2"
+
+  # 付费机场组（取消注释并替换）
+  # - name: "✈️ 付费机场"
+  #   type: select
+  #   use:
+  #     - "your-airport"
+
+  # 常用服务
+  - name: "📺 流媒体"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "♻️ 自动选择"
+      - "DIRECT"
+
+  - name: "💬 社交通讯"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "DIRECT"
+
+  - name: "🔍 搜索引擎"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "DIRECT"
+
+  - name: "🛑 广告拦截"
+    type: select
+    proxies:
+      - "REJECT"
+      - "DIRECT"
+
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "DIRECT"
+
+# ============================================================
+# 规则
+# ============================================================
+rules:
+  # 广告拦截
+  - RULE-SET,reject,🛑 广告拦截
+
+  # 流媒体
+  - RULE-SET,streaming,📺 流媒体
+
+  # 社交通讯
+  - RULE-SET,social,💬 社交通讯
+
+  # 国内直连
+  - RULE-SET,china,DIRECT
+
+  # 国外代理
+  - RULE-SET,proxy,🚀 节点选择
+
+  # 局域网直连
+  - SRC-IP-CIDR,192.168.0.0/16,DIRECT
+  - SRC-IP-CIDR,10.0.0.0/8,DIRECT
+  - SRC-IP-CIDR,172.16.0.0/12,DIRECT
+
+  # GeoIP 国内直连
+  - GEOIP,CN,DIRECT
+
+  # 漏网之鱼
+  - MATCH,🐟 漏网之鱼
+
+# ============================================================
+# 规则集（rule-providers）
+# ============================================================
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.yaml
+    interval: 86400
+
+  streaming:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+    path: ./ruleset/proxy.yaml
+    interval: 86400
+
+  social:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+    path: ./ruleset/social.yaml
+    interval: 86400
+
+  china:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+    path: ./ruleset/direct.yaml
+    interval: 86400
+
+  proxy:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+    path: ./ruleset/proxy.yaml
+    interval: 86400

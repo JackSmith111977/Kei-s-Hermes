@@ -1,0 +1,379 @@
+# =============================================================================
+# Hermes Agent 配置文件模板
+# =============================================================================
+# 使用方法：
+#   1. 复制此文件：cp config.yaml.example ~/.hermes/config.yaml
+#   2. 编辑填入你的配置
+#   3. 运行：hermes setup
+# =============================================================================
+
+# ── 模型配置 ──
+model:
+  default: LongCat-2.0-Preview       # 默认模型
+  provider: custom_longCat           # 默认 provider
+  base_url: https://api.longcat.chat/openai
+
+# ── Provider 定义 ──
+providers:
+  # LongCat（自定义 OpenAI 兼容端点）
+  custom_longCat:
+    base_url: https://api.longcat.chat/openai
+    protocol: ''
+    api_key: YOUR_LONGCAT_API_KEY
+    api_mode: openai-completions
+    model: LongCat-2.0-Preview
+    model_display_name: LongCat-2.0-Preview
+    available_models_json: '[{"id":"LongCat-2.0-Preview","name":"LongCat-2.0-Preview"}]'
+
+  # OpenRouter（可选备用）
+  # openrouter:
+  #   base_url: https://openrouter.ai/api/v1
+  #   protocol: ''
+  #   api_key: YOUR_OPENROUTER_API_KEY
+  #   api_mode: openai-completions
+  #   model: anthropic/claude-sonnet-4
+  #   model_display_name: Claude Sonnet 4
+
+fallback_providers: []
+credential_pool_strategies: {}
+
+# ── 工具集 ──
+toolsets:
+  - hermes-cli
+
+# ── Agent 配置 ──
+agent:
+  max_turns: 60
+  gateway_timeout: 1800
+  restart_drain_timeout: 60
+  service_tier: ''
+  tool_use_enforcement: auto
+  gateway_timeout_warning: 900
+  gateway_notify_interval: 600
+  verbose: false
+  reasoning_effort: medium
+
+# ── 终端配置 ──
+terminal:
+  backend: local
+  modal_mode: auto
+  cwd: .
+  timeout: 180
+  env_passthrough: []
+  docker_image: nikolaik/python-nodejs:python3.11-nodejs20
+  docker_forward_env: []
+  docker_env: {}
+  singularity_image: docker://nikolaik/python-nodejs:python3.11-nodejs20
+  modal_image: nikolaik/python-nodejs:python3.11-nodejs20
+  daytona_image: nikolaik/python-nodejs:python3.11-nodejs20
+  container_cpu: 1
+  container_memory: 5120
+  container_disk: 51200
+  container_persistent: true
+  docker_volumes: []
+  docker_mount_cwd_to_workspace: false
+  persistent_shell: true
+  lifetime_seconds: 300
+
+# ── 浏览器配置 ──
+browser:
+  inactivity_timeout: 120
+  command_timeout: 30
+  record_sessions: false
+  allow_private_urls: false
+  cdp_url: ''
+  camofox:
+    managed_persistence: false
+
+# ── 检查点 ──
+checkpoints:
+  enabled: true
+  max_snapshots: 50
+
+file_read_max_chars: 100000
+
+# ── 上下文压缩 ──
+compression:
+  enabled: true
+  threshold: 0.5
+  target_ratio: 0.2
+  protect_last_n: 20
+
+# ── AWS Bedrock（可选）──
+bedrock:
+  region: ''
+  discovery:
+    enabled: true
+    provider_filter: []
+    refresh_interval: 3600
+  guardrail:
+    guardrail_identifier: ''
+    guardrail_version: ''
+    stream_processing_mode: async
+    trace: disabled
+
+# ── 辅助模型配置 ──
+auxiliary:
+  vision:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 120
+    extra_body: {}
+    download_timeout: 30
+  web_extract:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 360
+    extra_body: {}
+  compression:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 120
+    extra_body: {}
+  session_search:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+    extra_body: {}
+    max_concurrency: 3
+  skills_hub:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+    extra_body: {}
+  approval:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+    extra_body: {}
+  mcp:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+    extra_body: {}
+  flush_memories:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+    extra_body: {}
+  title_generation:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+    extra_body: {}
+
+# ── 显示配置 ──
+display:
+  compact: false
+  personality: kawaii           # 可选：helpful, concise, technical, creative, kawaii, catgirl 等
+  resume_display: full
+  busy_input_mode: interrupt
+  bell_on_complete: false
+  show_reasoning: false
+  streaming: true
+  final_response_markdown: strip
+  inline_diffs: true
+  show_cost: false
+  skin: default
+  user_message_preview:
+    first_lines: 2
+    last_lines: 2
+  interim_assistant_messages: true
+  tool_progress_command: false
+  tool_progress_overrides: {}
+  tool_preview_length: 0
+  platforms: {}
+  tool_progress: all
+  background_process_notifications: all
+
+dashboard:
+  theme: default
+
+privacy:
+  redact_pii: false
+
+# ── TTS 配置 ──
+tts:
+  provider: edge
+  edge:
+    voice: en-US-AriaNeural
+  elevenlabs:
+    voice_id: pNInz6obpgDQGcFmaJgB
+    model_id: eleven_multilingual_v2
+  openai:
+    model: gpt-4o-mini-tts
+    voice: alloy
+
+# ── STT 配置 ──
+stt:
+  enabled: true
+  provider: local
+  local:
+    model: base
+    language: ''
+
+# ── 语音配置 ──
+voice:
+  record_key: ctrl+b
+  max_recording_seconds: 120
+  auto_tts: false
+  silence_threshold: 200
+  silence_duration: 3.0
+
+human_delay:
+  mode: 'off'
+  min_ms: 800
+  max_ms: 2500
+
+# ── 上下文引擎 ──
+context:
+  engine: compressor
+
+# ── 记忆配置 ──
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  provider: ''
+  nudge_interval: 10
+  flush_min_turns: 6
+
+# ── 委托配置 ──
+delegation:
+  model: ''
+  provider: ''
+  base_url: ''
+  api_key: ''
+  max_iterations: 50
+  reasoning_effort: ''
+  default_toolsets:
+    - terminal
+    - file
+    - web
+
+# ── Skills 配置 ──
+skills:
+  external_dirs:
+    - ~/.agents/skills
+  creation_nudge_interval: 15
+
+# ── 平台配置（按需启用）──
+honcho: {}
+timezone: ''
+discord:
+  require_mention: true
+  free_response_channels: ''
+  allowed_channels: ''
+  auto_thread: true
+  reactions: true
+  channel_prompts: {}
+  server_actions: ''
+whatsapp: {}
+telegram:
+  channel_prompts: {}
+slack:
+  channel_prompts: {}
+mattermost:
+  channel_prompts: {}
+
+# ── 审批配置 ──
+approvals:
+  mode: manual
+  timeout: 60
+  cron_mode: deny
+
+# ── 安全配置 ──
+security:
+  redact_secrets: true
+  tirith_enabled: true
+  tirith_path: tirith
+  tirith_timeout: 5
+  tirith_fail_open: true
+  website_blocklist:
+    enabled: false
+    domains: []
+    shared_files: []
+
+# ── Cron 配置 ──
+cron:
+  wrap_response: true
+  max_parallel_jobs: null
+
+# ── 代码执行 ──
+code_execution:
+  mode: project
+  timeout: 300
+  max_tool_calls: 50
+
+# ── 日志 ──
+logging:
+  level: INFO
+  max_size_mb: 5
+  backup_count: 3
+
+network:
+  force_ipv4: false
+
+# ── MCP 服务器 ──
+mcp_servers:
+  tavily:
+    command: npx
+    args:
+      - -y
+      - tavily-mcp
+    env:
+      TAVILY_API_KEY: your_tavily_api_key_here
+    timeout: 60
+    connect_timeout: 30
+
+# ── 会话重置 ──
+session_reset:
+  mode: both
+  idle_minutes: 1440
+  at_hour: 4
+
+group_sessions_per_user: true
+streaming:
+  enabled: false
+
+# ── 平台工具集 ──
+platform_toolsets:
+  cli:
+    - hermes-cli
+  telegram:
+    - hermes-telegram
+  discord:
+    - hermes-discord
+  whatsapp:
+    - hermes-whatsapp
+  slack:
+    - hermes-slack
+  signal:
+    - hermes-signal
+  homeassistant:
+    - hermes-homeassistant
+  qqbot:
+    - hermes-qqbot
+  yuanbao:
+    - hermes-yuanbao
+
+_config_version: 21

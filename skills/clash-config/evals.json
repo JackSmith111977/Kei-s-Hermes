@@ -1,0 +1,39 @@
+{
+  "skill_name": "clash-config",
+  "version": "2.0.0",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "帮我创建一个最基础的 mihomo 配置文件，只需要 HTTP 代理端口 7890",
+      "expected_output": "生成包含 mixed-port: 7890 的合法 YAML 配置",
+      "expectations": [
+        "YAML 语法正确，能通过 mihomo -t 验证",
+        "包含 mixed-port: 7890 或 port: 7890",
+        "包含至少一个代理节点或 proxy-provider",
+        "包含基本的 proxy-groups 和 rules"
+      ]
+    },
+    {
+      "id": "eval-002",
+      "prompt": "mihomo 配置中 DNS 怎么设置才能防止 DNS 泄漏？",
+      "expected_output": "提供防 DNS 泄漏的完整 DNS 配置",
+      "expectations": [
+        "包含 enhanced-mode: fake-ip",
+        "包含国内 DNS 作为 default-nameserver",
+        "包含 fallback 配置且 fallback-filter geoip-code: CN",
+        "解释了 fake-ip-range 的作用"
+      ]
+    },
+    {
+      "id": "eval-003",
+      "prompt": "我需要配置 VLESS + Reality 节点，给我配置模板",
+      "expected_output": "提供 VLESS + Reality 协议的正确配置",
+      "expectations": [
+        "type 为 vless",
+        "包含 reality 相关字段（public-key, short-id）",
+        "servername 设置正确",
+        "flow 设置为 xtls-rprx-vision"
+      ]
+    }
+  ]
+}
