@@ -1,14 +1,20 @@
 ---
 name: docx-guide
 description: Word (.docx) 文档操作原子技能。使用 python-docx 创建、编辑、美化 Word 文档。
+triggers:
+- docx guide
+- docx-guide
 metadata:
   hermes:
-    tags: [word, docx, document, office]
+    tags:
+    - word
+    - docx
+    - document
+    - office
     category: productivity
     skill_type: doc-generation
     format: docx
 ---
-
 # Word (.docx) 原子操作技能
 
 > 库：`python-docx` | 安装：`pip install python-docx`

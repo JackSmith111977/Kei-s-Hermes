@@ -1,12 +1,13 @@
 ---
 name: youtube-content
-description: >
-  Fetch YouTube video transcripts and transform them into structured content
-  (chapters, summaries, threads, blog posts). Use when the user shares a YouTube
-  URL or video link, asks to summarize a video, requests a transcript, or wants
-  to extract and reformat content from any YouTube video.
+description: Fetch YouTube video transcripts and transform them into structured content ...
+triggers:
+- youtube content
+- youtube-content
+metadata:
+  hermes:
+    tags: []
 ---
-
 # YouTube Content Tool
 
 Extract transcripts from YouTube videos and convert them into useful formats.
@@ -70,3 +71,6 @@ After fetching the transcript, format it based on what the user asks for:
 - **Private/unavailable video**: relay the error and ask the user to verify the URL.
 - **No matching language**: retry without `--language` to fetch any available transcript, then note the actual language to the user.
 - **Dependency missing**: run `pip install youtube-transcript-api` and retry.
+
+
+> 🔍 **详细参考**: 更多内容请查阅 [output-formats.md](output-formats.md)

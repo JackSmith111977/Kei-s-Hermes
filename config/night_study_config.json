@@ -1,0 +1,8 @@
+{
+  "domains": [
+    {"id": "ai_tech", "name": "AI与前沿技术", "keywords": "AI agents, LLM new features, open-source models, machine learning papers", "target_skill": "ai-trends"},
+    {"id": "dev_tools", "name": "开发工具与语言", "keywords": "Python new libraries, frontend frameworks, DevOps tools, Rust/Go updates", "target_skill": "dev-tools-guide"},
+    {"id": "anime_acg", "name": "二次元与文娱", "keywords": "2026 new anime, manga releases, game industry news, ACG culture", "target_skill": "bangumi-recommender"},
+    {"id": "productivity", "name": "效率与工作方法论", "keywords": "productivity apps, remote work tools, knowledge management, Notion/Obsidian tips", "target_skill": "productivity-guide"}
+  ]
+}

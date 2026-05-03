@@ -1,0 +1,161 @@
+# Detailed Reference
+
+### Stage 3: 信息过滤与清洗
+
+应用当前积累的过滤标准（见 `references/filtering-standards.md`）：
+
+**过滤维度：**
+| 维度 | 标准 | 权重 |
+|------|------|------|
+| 权威性 | 官方文档 > 权威教程 > 社区讨论 > 个人博客 | 40% |
+| 时效性 | 近 1 年 > 1-2 年 > 2-3 年 > 3 年以上 | 30% |
+| 实用性 | 可操作 > 理论 > 概念介绍 | 20% |
+| 完整性 | 全面覆盖 > 部分覆盖 > 单一角度 | 10% |
+
+**清洗步骤：**
+1. 去除营销内容、重复信息
+2. 提取关键概念、代码示例、配置片段
+3. 交叉验证矛盾信息
+4. 标注信息来源和时效性
+
+### Stage 4: 信息精炼
+
+用结构化模板精炼知识：
+
+```markdown
+## {主题}
+### 核心概念
+（用自己的话总结，3-5 句话）
+
+### 关键特性
+| 特性 | 说明 | 示例/备注 |
+|------|------|-----------|
+
+### 使用方法
+（分步骤，包含代码示例）
+
+### 最佳实践
+（经验总结、反模式、常见陷阱）
+
+### 与其他方案对比
+（如适用，多维度对比表格）
+
+### 延伸阅读
+- [来源 1](URL) - 权威性/时效性标注
+- [来源 2](URL)
+```
+
+### Stage 5: 知识整合（通过 skill-creator）
+
+**确定输出目标：**
+
+```
+精炼后的知识 → 决策：
+├─ 已有 skill 覆盖该领域？
+│   ├─ 是 → 通过 skill-creator 的 M1-M4 流程更新该 skill
+│   └─ 否 → 继续
+├─ 该领域需要独立 skill？
+│   ├─ 是 → 通过 skill-creator 创建新 skill
+│   └─ 否 → 继续
+└─ 作为 references 存入现有 skill？
+    └─ 是 → 写入目标 skill 的 references/ 目录
+```
+
+**整合原则：**
+- 遵循原子化拆解原则（一个 skill 专注一个领域）
+- 遵循 skill-creator 的 9 阶段流程
+- 保持 skill 结构一致性（SKILL.md + references/ + checklists/）
+
+### Stage 6: 学习经验迭代
+
+**更新 learning skill 本身：**
+
+1. **更新 `references/filtering-standards.md`**
+   - 新增/调整过滤标准
+   - 记录本次发现的高质量信息源
+
+2. **更新 `references/washing-techniques.md`**
+   - 新增信息清洗技巧
+   - 记录处理矛盾信息的经验
+
+3. **更新 `references/integration-patterns.md`**
+   - 新增知识整合模式
+   - 记录 skill 创建/更新的最佳实践
+
+4. **更新 SKILL.md 中的"已积累的学习经验"表格**
+
+## 已积累的学习经验
+
+| 日期 | 学习的主题 | 方法论改进 | 新积累的过滤/清洗/整合技巧 |
+|------|-----------|-----------|--------------------------|
+| 2026-05-03 | Mermaid UML 图表 | 针对技术文档类 skill，重点提取"场景模板"而非纯语法。Agent 更需要可以直接复用的结构。 | 优先收集 Cheat Sheet 和常见场景模板（如时序图、状态流转图）。|
+| 2026-05-03 | WeasyPrint PDF 生成 | 官方文档的 First Steps 是最佳入口，比第三方教程更准确。@font-face 需要 FontConfiguration。 | pip 安装 vs apt 安装的选择标准：apt 更稳定但版本可能滞后。Jinja2 + CSS 分离是生产级做法。|
+| 2026-05-03 | lark-oapi / lark-mcp | 工具对比评估时，搞清"是否需要"比"怎么用"更重要。Hermes 环境用 raw API 比 SDK 更可靠。| SDK 文档直接看 GitHub demo 比看官网快。MCP 工具的配置方式与 Hermes 的 native-mcp skill 相关。|
+| 2026-05-03 | 工具审计 | 分阶段学习更高效：先审计痛点→再研究解决方案→最后创建/更新 skill。| 学习目标应拆成原子主题按顺序学，避免信息过载。每个主题结束时更新对应的 skill。|
+| 2026-05-03 | P0-P2 基本能力提升 | **分批吸收信息**：信息量太大时不要跳过，分批次（Tavily Extract / 分主题搜索）逐步消化。| Python logging 最佳实践：永远用模块级 Logger、%s 占位符惰性求值。Git rebase 黄金法则：只在未推送的 commit 上使用。Linux 排查 7 步法。|
+
+## 知识库索引（学习经验的存储）
+
+| 文件 | 内容 | 最后更新 |
+|------|------|----------|
+| `references/filtering-standards.md` | 信息过滤标准和质量评估维度 | 2026-05-03 |
+| `references/washing-techniques.md` | 信息清洗方法和去噪技巧 | 2026-05-03 |
+| `references/integration-patterns.md` | 知识整合模式和 skill 更新策略 | 2026-05-03 |
+
+## 学习原则
+
+### 1. 联网优先，记忆为辅
+- 不确定的信息必须先搜索验证
+- 记忆中的信息需要搜索确认时效性
+- 优先官方文档 > 权威教程 > 社区讨论
+
+### 2. 内容与方法分离
+- **学习内容** → 输出到对应的领域 skill
+- **学习方法** → 积累到 learning skill 本身
+- 每次学习都应同时产出两者
+
+### 3. 质量导向
+- 信息质量 > 信息数量
+- 深度理解 > 表面覆盖
+- 可操作性 > 理论描述
+
+### 4. 持续迭代
+- 每次学习后反思：搜索策略是否高效？过滤标准是否合理？
+- 定期更新 filtering-standards.md 和 washing-techniques.md
+- 积累不同领域的学习模式
+
+## Red Flags（常见错误）
+
+- ❌ 仅凭记忆回答不确定的问题 → 必须先联网搜索
+- ❌ 学习内容写入 learning skill 本身 → 应输出到对应的领域 skill
+- ❌ 不更新学习方法论 → 每次学习后应迭代 filtering/washing/integration 经验
+- ❌ 跳过 skill-creator 直接创建/修改 skill → 必须经过 skill-creator 流程
+- ❌ 跳过 web-access 直接搜索 → 必须通过 web-access 路由
+
+## 输出规范
+
+学习完成后，必须输出：
+1. **一句话总结**（核心结论）
+2. **关键要点**（3-5 条）
+3. **输出目标**（写入了哪个 skill / 创建了什么新 skill）
+4. **方法论改进**（本次学习对 filtering/washing/integration 的改进）
+5. **下一步建议**（还需要深入学习什么）
+
+## 设计模式映射
+
+### 🔄 Pipeline 模式（主流程）
+```
+Stage 1: 需求澄清 → Stage 2: web-access 信息收集 → Stage 3: 过滤清洗
+→ Stage 4: 精炼 → Stage 5: skill-creator 整合 → Stage 6: 方法论迭代
+```
+
+### 🎤 Inversion 模式（逆向思考）
+当学习复杂主题时：
+1. 先确定"最终 skill 应该包含什么"
+2. 反推需要收集哪些信息
+3. 针对性搜索，避免信息过载
+
+### 🏭 Generator 模式（skill 创建/更新）
+1. 通过 skill-creator 创建或更新目标 skill
+2. 将精炼后的知识按 skill 结构组织
+3. 生成 SKILL.md + references/ + checklists/

@@ -1,15 +1,21 @@
 ---
 name: baoyu-infographic
-description: Generate professional infographics with 21 layout types and 21 visual styles. Analyzes content, recommends layout×style combinations, and generates publication-ready infographics. Use when user asks to create "infographic", "visual summary", "信息图", "可视化", or "高密度信息大图".
+description: Generate professional infographics with 21 layout types and 21 visual style...
 version: 1.56.1
+triggers:
+- baoyu infographic
+- baoyu-infographic
 author: 宝玉 (JimLiu)
 license: MIT
 metadata:
   hermes:
-    tags: [infographic, visual-summary, creative, image-generation]
+    tags:
+    - infographic
+    - visual-summary
+    - creative
+    - image-generation
     homepage: https://github.com/JimLiu/baoyu-skills#baoyu-infographic
 ---
-
 # Infographic Generator
 
 Adapted from [baoyu-infographic](https://github.com/JimLiu/baoyu-skills) for Hermes Agent's tool ecosystem.

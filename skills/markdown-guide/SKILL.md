@@ -1,14 +1,20 @@
 ---
 name: markdown-guide
 description: Markdown 写作与转换原子技能。语法指南 + pandoc 转换 + 最佳实践。
+triggers:
+- markdown guide
+- markdown-guide
 metadata:
   hermes:
-    tags: [markdown, pandoc, writing, documentation]
+    tags:
+    - markdown
+    - pandoc
+    - writing
+    - documentation
     category: productivity
     skill_type: doc-generation
     format: markdown
 ---
-
 # Markdown 原子操作技能
 
 > 默认使用中文，除非用户特意说明。

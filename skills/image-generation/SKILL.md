@@ -1,12 +1,26 @@
+---
+name: image-generation
+description: 生成高质量配图（支持 gpt-image-2, Stable Diffusion, Dashscope），含 Prompt 模板与 API 接入指南。
+triggers:
+- 生图
+- 配图
+- image gen
+- 画图
+metadata:
+  hermes:
+    tags:
+    - image
+    - generative-ai
+    - design
+    - prompt-engineering
+    category: creative
+    skill_type: library
+    design_pattern: generator
+---
 # Image Generation Skill - AI 图片生成技能
 
 ## 描述
 AI 图片生成技能，支持通过多种方式为文档、PPT、营销素材等生成高质量配图。
-
-## 触发条件
-- 用户要求生成图片、配图、插图
-- 用户要求为文档/PPT 添加视觉元素
-- 用户提到 "图片生成"、"AI 绘图"、"生图"、"配图"
 
 ## 支持的图片生成方案
 
@@ -76,29 +90,6 @@ async def generate_with_fal(prompt: str, size: str = "landscape_4_3"):
         resp = await client.post(url, headers=headers, json=payload, timeout=120)
         data = resp.json()
         return data["images"][0]["url"]
-```
-
-**接入方式 C：Atlas Cloud 聚合 API**
-
-```python
-import httpx
-
-ATLAS_KEY = "your-atlas-key"
-
-def generate_with_atlas(prompt: str):
-    """通过 Atlas Cloud 调用 gpt-image-2"""
-    url = "https://api.atlascloud.ai/api/v1/model/generateImage"
-    headers = {"Authorization": f"Bearer {ATLAS_KEY}"}
-    payload = {
-        "model": "openai/gpt-image-2/text-to-image",
-        "prompt": prompt,
-        "width": 1024,
-        "height": 1024,
-    }
-    resp = requests.post(url, headers=headers, json=payload)
-    prediction_id = resp.json()["prediction_id"]
-    # 然后轮询获取结果
-    ...
 ```
 
 **Pricing（OpenAI 官方）**:
@@ -206,12 +197,6 @@ minimalist, modern, no characters
 ## 注意事项
 
 - gpt-image-2 默认返回 `b64_json`，不是 URL
-- 如果要用 URL 格式，需要传 `response_format="url"`（但 URL 1小时后过期）
+- 如果要用 URL 格式，需要传 `response_format="url"`（但 URL 1 小时后过期）
 - 中文 prompt 也支持，但英文 prompt 效果更好
 - 批量生成时注意 rate limit（OpenAI: 5 images/min for free tier）
-
-## 相关文件
-
-- `references/prompt-guide.md` - Prompt 编写指南
-- `references/api-examples.md` - 各平台 API 调用示例
-- `scripts/generate_images.py` - 批量生图脚本

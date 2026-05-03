@@ -37,5 +37,11 @@
 
 | 领域 | 来源 | 验证日期 | 备注 |
 |------|------|----------|------|
-<!-- 示例 -->
+| WeasyPrint | doc.courtbouillon.org/weasyprint/ | 2026-05-03 | 官方文档，完整准确 |
+| WeasyPrint | github.com/Kozea/WeasyPrint | 2026-05-03 | 源码 + 6407 commits |
+| Mermaid | mermaid.js.org/syntax/ | 2026-05-03 | 官方语法参考 |
+| 飞书 API | open.feishu.cn/document/ | 2026-05-03 | 官方 API 文档 |
+| Python | docs.python.org/3/howto/logging.html | 2026-05-03 | 官方 logging 教程 |
+| Python | typing.python.org | 2026-05-03 | 官方类型注解最佳实践 |
+| Git | git-scm.com/docs | 2026-05-03 | Git 官方文档 |
 <!-- | Python | docs.python.org | 2026-05-03 | 官方文档，始终最新 | -->

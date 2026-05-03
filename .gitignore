@@ -6,6 +6,8 @@
 .env
 .env.local
 .env.*.local
+config.yaml
+config/config.yaml
 auth.json
 auth.lock
 channel_directory.json

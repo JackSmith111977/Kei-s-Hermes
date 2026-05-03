@@ -1,17 +1,25 @@
 ---
 name: notion
-description: Notion API for creating and managing pages, databases, and blocks via curl. Search, create, update, and query Notion workspaces directly from the terminal.
+description: Notion API for creating and managing pages, databases, and blocks via curl....
 version: 1.0.0
+triggers:
+- notion
+- notion
 author: community
 license: MIT
 metadata:
   hermes:
-    tags: [Notion, Productivity, Notes, Database, API]
+    tags:
+    - Notion
+    - Productivity
+    - Notes
+    - Database
+    - API
     homepage: https://developers.notion.com
 prerequisites:
-  env_vars: [NOTION_API_KEY]
+  env_vars:
+  - NOTION_API_KEY
 ---
-
 # Notion API
 
 Use the Notion API via curl to create, read, update pages, databases (data sources), and blocks. No extra tools needed — just curl and a Notion API key.
@@ -169,3 +177,6 @@ Common property formats for database items:
 - Use `is_inline: true` when creating data sources to embed them in pages
 - Add `-s` flag to curl to suppress progress bars (cleaner output for Hermes)
 - Pipe output through `jq` for readable JSON: `... | jq '.results[0].properties'`
+
+
+> 🔍 **详细参考**: 更多内容请查阅 [block-types.md](block-types.md)

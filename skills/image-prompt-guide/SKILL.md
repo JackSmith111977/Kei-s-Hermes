@@ -1,12 +1,25 @@
+---
+name: image-prompt-guide
+description: 编写高质量生图 Prompt 的最佳实践，涵盖光影、风格、情绪及技术参数（适配 FLUX/gpt-image-2）。
+triggers:
+- prompt
+- 生图提示词
+- art style
+metadata:
+  hermes:
+    tags:
+    - prompt-engineering
+    - generative-ai
+    - art
+    - flux
+    category: creative
+    skill_type: reference
+    design_pattern: tool_wrapper
+---
 # AI 生图 Prompt 指南
 
 ## 描述
 AI 图片生成 prompt 编写最佳实践 — 涵盖 FLUX、gpt-image-2、DALL·E 等主流模型的风格描述、灯光关键词、构图技巧和迭代策略。
-
-## 触发条件
-- 用户要求生成图片、配图、插图
-- 需要提高生图质量和艺术效果
-- 需要特定艺术风格或摄影风格
 
 ## FLUX Prompt 结构
 

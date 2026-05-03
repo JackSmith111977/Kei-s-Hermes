@@ -1,21 +1,47 @@
 ---
 name: doc-design
-version: "5.0.0"
+description: '文档排版设计索引技能。根据文档格式路由到对应的原子 skill。
+
+  当用户需要创建、编辑、美化任何格式的文档时使用此技能，
+
+  本 skill 负责识别格式...'
+version: 5.1.0
+triggers:
+- 文档
+- 排版
+- doc
+- 排版设计
+depends_on:
+- pdf-layout-reportlab
+- pdf-layout-weasyprint
+- docx-guide
+- pptx-guide
+- markdown-guide
+- html-guide
+- latex-guide
+- epub-guide
 author: 小喵
 license: MIT
-description: |
-  文档排版设计索引技能。根据文档格式路由到对应的原子 skill。
-  当用户需要创建、编辑、美化任何格式的文档时使用此技能，
-  本 skill 负责识别格式并加载对应的原子 skill。
 metadata:
   hermes:
-    tags: [document, design, formatting, index]
-    related_skills: [pdf-layout, docx-guide, pptx-guide, markdown-guide, html-guide, latex-guide, epub-guide]
+    tags:
+    - document
+    - design
+    - formatting
+    - index
+    related_skills:
+    - pdf-layout-reportlab
+    - pdf-layout-weasyprint
+    - docx-guide
+    - pptx-guide
+    - markdown-guide
+    - html-guide
+    - latex-guide
+    - epub-guide
     category: productivity
     skill_type: doc-generation
     design_pattern: index
 ---
-
 # 文档排版设计索引技能
 
 > **原子化原则**：本 skill 是索引入口，不包含具体实现。每种文档格式有独立的原子 skill。
@@ -31,8 +57,8 @@ metadata:
 
 | 格式 | 路由到 | 说明 |
 |------|--------|------|
-| PDF | → `pdf-layout` skill | reportlab 高级排版、中文 PDF、页眉页脚、目录、表格样式 |
-| Word (.docx) | → `docx-guide` skill | python-docx 完整操作 |
+| PDF（ReportLab） | → `pdf-layout-reportlab` skill | ReportLab 中文排版——字体/分页/表格/封面/Mermaid |
+| PDF（WeasyPrint） | → `pdf-layout-weasyprint` skill | HTML+CSS→PDF，CSS 布局中文，比 ReportLab 更适合文字文档 |\n| Word (.docx) | → `docx-guide` skill | python-docx 完整操作 |
 | PPT (.pptx) | → `pptx-guide` skill | python-pptx 完整操作 + 2025-2026 设计趋势 |
 | Excel (.xlsx) | → `xlsx-guide` skill | openpyxl 完整操作 |
 | Markdown | → `markdown-guide` skill | 语法、pandoc 转换 |
@@ -109,3 +135,6 @@ libreoffice --headless --convert-to docx input.odt
 | 灵感 | Pinterest、Behance、Dribbble |
 | 转换 | pandoc（万能）、LibreOffice |
 | 图库 | Unsplash、Pexels（免费高清） |
+
+
+> 🔍 **详细参考**: 更多内容请查阅 [latex-guide.md](latex-guide.md)

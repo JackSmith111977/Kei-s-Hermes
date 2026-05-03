@@ -1,17 +1,25 @@
 ---
 name: openhue
-description: Control Philips Hue lights, rooms, and scenes via the OpenHue CLI. Turn lights on/off, adjust brightness, color, color temperature, and activate scenes.
+description: Control Philips Hue lights, rooms, and scenes via the OpenHue CLI. Turn lig...
 version: 1.0.0
+triggers:
+- openhue
+- openhue
 author: community
 license: MIT
 metadata:
   hermes:
-    tags: [Smart-Home, Hue, Lights, IoT, Automation]
+    tags:
+    - Smart-Home
+    - Hue
+    - Lights
+    - IoT
+    - Automation
     homepage: https://www.openhue.io/cli
 prerequisites:
-  commands: [openhue]
+  commands:
+  - openhue
 ---
-
 # OpenHue CLI
 
 Control Philips Hue lights and scenes via a Hue Bridge from the terminal.

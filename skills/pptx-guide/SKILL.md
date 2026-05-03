@@ -1,14 +1,20 @@
 ---
 name: pptx-guide
 description: PowerPoint (.pptx) 演示文稿操作原子技能。使用 python-pptx 创建专业 PPT，含 2025-2026 设计趋势。
+triggers:
+- pptx guide
+- pptx-guide
 metadata:
   hermes:
-    tags: [powerpoint, pptx, presentation, slides]
+    tags:
+    - powerpoint
+    - pptx
+    - presentation
+    - slides
     category: productivity
     skill_type: doc-generation
     format: pptx
 ---
-
 # PowerPoint (.pptx) 原子操作技能
 
 > 库：`python-pptx` | 安装：`pip install python-pptx`

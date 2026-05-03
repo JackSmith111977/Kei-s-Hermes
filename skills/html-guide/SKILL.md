@@ -1,14 +1,20 @@
 ---
 name: html-guide
 description: HTML/CSS 网页排版原子技能。创建可打印的网页文档。
+triggers:
+- html guide
+- html-guide
 metadata:
   hermes:
-    tags: [html, css, web, print]
+    tags:
+    - html
+    - css
+    - web
+    - print
     category: productivity
     skill_type: doc-generation
     format: html
 ---
-
 # HTML/CSS 原子操作技能
 
 > 默认使用中文，除非用户特意说明。

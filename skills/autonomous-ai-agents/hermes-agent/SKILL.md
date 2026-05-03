@@ -538,6 +538,10 @@ terminal(command="tmux new-session -d -s resumed 'hermes --resume 20260225_14305
 2. `hermes login` — re-authenticate OAuth providers
 3. Check `.env` has the right API key
 4. **Copilot 403**: `gh auth login` tokens do NOT work for Copilot API. You must use the Copilot-specific OAuth device code flow via `hermes model` → GitHub Copilot.
+5. **Fallback not triggering on 429**: Fallback providers configured with `key_env` will be silently dropped if the env var is unset. To diagnose:
+   - Check `echo "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:+SET}"` — if empty, the fallback entry is ignored
+   - Fix: use `api_key` directly in `fallback_providers` (same as main `providers`), or set the env var
+   - The 429→fallback logic checks `_fallback_index < len(_fallback_chain)`. If chain is empty (len=0), condition fails and fallback is silently skipped
 
 ### Changes not taking effect
 - **Tools/skills:** `/reset` starts a new session with updated toolset

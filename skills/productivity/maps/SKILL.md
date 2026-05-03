@@ -1,22 +1,33 @@
 ---
 name: maps
-description: >
-  Location intelligence — geocode a place, reverse-geocode coordinates,
-  find nearby places (44 POI categories), driving/walking/cycling
-  distance + time, turn-by-turn directions, timezone lookup, bounding
-  box + area for a named place, and POI search within a rectangle.
-  Uses OpenStreetMap + Overpass + OSRM. Free, no API key.
+description: Location intelligence — geocode a place, reverse-geocode coordinates, find ...
 version: 1.2.0
+triggers:
+- maps
+- maps
 author: Mibayy
 license: MIT
 metadata:
   hermes:
-    tags: [maps, geocoding, places, routing, distance, directions, nearby, location, openstreetmap, nominatim, overpass, osrm]
+    tags:
+    - maps
+    - geocoding
+    - places
+    - routing
+    - distance
+    - directions
+    - nearby
+    - location
+    - openstreetmap
+    - nominatim
+    - overpass
+    - osrm
     category: productivity
-    requires_toolsets: [terminal]
-    supersedes: [find-nearby]
+    requires_toolsets:
+    - terminal
+    supersedes:
+    - find-nearby
 ---
-
 # Maps Skill
 
 Location intelligence using free, open data sources. 8 commands, 44 POI

@@ -1,8 +1,13 @@
 ---
 name: obsidian
 description: Read, search, and create notes in the Obsidian vault.
+triggers:
+- obsidian
+- obsidian
+metadata:
+  hermes:
+    tags: []
 ---
-
 # Obsidian Vault
 
 **Location:** Set via `OBSIDIAN_VAULT_PATH` environment variable (e.g. in `~/.hermes/.env`).

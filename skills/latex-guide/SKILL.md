@@ -1,14 +1,20 @@
 ---
 name: latex-guide
 description: LaTeX 学术论文排版原子技能。学位论文、期刊文章、技术报告。
+triggers:
+- latex guide
+- latex-guide
 metadata:
   hermes:
-    tags: [latex, academic, paper, thesis]
+    tags:
+    - latex
+    - academic
+    - paper
+    - thesis
     category: productivity
     skill_type: doc-generation
     format: latex
 ---
-
 # LaTeX 原子操作技能
 
 > 默认使用中文，除非用户特意说明。

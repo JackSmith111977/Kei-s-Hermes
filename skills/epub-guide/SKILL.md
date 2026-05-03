@@ -1,14 +1,19 @@
 ---
 name: epub-guide
 description: EPUB 电子书生成原子技能。使用 ebooklib 创建标准 EPUB 电子书。
+triggers:
+- epub guide
+- epub-guide
 metadata:
   hermes:
-    tags: [epub, ebook, publishing]
+    tags:
+    - epub
+    - ebook
+    - publishing
     category: productivity
     skill_type: doc-generation
     format: epub
 ---
-
 # EPUB 原子操作技能
 
 > 库：`ebooklib` | 安装：`pip install ebooklib`

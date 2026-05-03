@@ -2,22 +2,21 @@
 name: feishu
 description: 飞书全套操作技能 — 消息、云文档、多维表格、日历、通讯录、审批、知识库、电子表格、任务、事件订阅。当用户需要操作飞书任何功能时触发。
 triggers:
-  - "飞书"
-  - "feishu"
-  - "lark"
-  - "发消息"
-  - "创建文档"
-  - "多维表格"
-  - "日历"
-  - "审批"
-  - "知识库"
-  - "电子表格"
-  - "通讯录"
-  - "飞书任务"
-  - "群管理"
-metadata: {"clawdbot":{"emoji":"📋","requires":{"bins":["python3"]},"install":[{"id":"pip","kind":"pip","package":"lark-oapi"}]}}
+- 飞书
+- 发消息
+- lark
+- 文档
+metadata:
+  clawdbot:
+    emoji: 📋
+    requires:
+      bins:
+      - python3
+    install:
+    - id: pip
+      kind: pip
+      package: lark-oapi
 ---
-
 # 飞书操作技能 (Feishu Skill)
 
 > 基于飞书开放平台 API v3/v4，覆盖消息、云文档、多维表格、日历、通讯录、审批、知识库、电子表格、任务等全套操作能力。
@@ -120,4 +119,6 @@ Header: Authorization: Bearer {tenant_access_token}
 2. **ID 类型**: 注意区分 open_id / user_id / union_id / open_chat_id
 3. **分页**: 大部分列表接口支持 page_token 分页，单次最多 100 条
 4. **Webhook**: 事件订阅需要公网可访问的回调地址
-5. **文件上传**: 飞书不支持通过 send_message MEDIA 附件上传文件，需走飞书原生 API
+5. **文件/图片上传**：飞书**不支持**通过 send_message MEDIA 附件上传文件/图片，必须走飞书原生 API。
+   - **发图片**: POST `/im/v1/images` (form-data `image_type=message`) -> 获得 `image_key` -> 发送 `msg_type=image`。
+   - **发文件**: POST `/im/v1/files` -> 获得 `file_key` -> 发送 `msg_type=file`。
