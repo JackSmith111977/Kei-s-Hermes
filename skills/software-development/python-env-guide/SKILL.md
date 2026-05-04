@@ -137,3 +137,8 @@ path.iterdir()         # 遍历目录
 
 
 > 🔍 **## 三、if __name__** moved to [references/detailed.md](references/detailed.md)
+
+## 📦 2025-2026 Python 生态更新
+
+> 新增库、工具和框架速查：FastMCP、Polars、Pixi、Dramatiq、Google ADK、OpenAI Agents SDK 等。
+> 详见 [references/ecosystem-2026.md](references/ecosystem-2026.md)

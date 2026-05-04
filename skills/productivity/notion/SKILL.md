@@ -180,3 +180,48 @@ Common property formats for database items:
 
 
 > 🔍 **详细参考**: 更多内容请查阅 [block-types.md](block-types.md)
+
+## Common Workflow Patterns (2026)
+
+### Architectural Decision Records (ADR)
+
+Use a Notion database to track technical decisions:
+
+**Properties:** `Title` (title), `Status` (select: Proposed/Accepted/Deprecated), `Date` (date), `Decision Makers` (multi-select), `Context` (rich text), `Related Project` (relation).
+
+This pattern optimizes for **browsing and filtering** structured decisions across projects — great for team visibility.
+
+### Content Calendar / Editorial Workflow
+
+A typical content creator's Notion workspace:
+- **Master content database** with properties: title, status, publish date, target keyword, word count, assigned writer
+- **Connected databases** for social media repurposing
+- **Embedded calendar views** showing publication schedule across all platforms
+- **Automation**: Use the API + Zapier/Make/n8n to auto-create pages from form submissions or update statuses from Slack
+
+### Team Wiki / Knowledge Base
+
+- Use nested pages with a clear hierarchy
+- Link related docs using `@mentions` and page links
+- Use database views (Table, Board, Calendar, Gallery, Timeline) to present the same data differently
+- AI features within documents can summarize, edit, and generate content
+
+## Notion vs Obsidian — When to Use Which
+
+| Criterion | Notion | Obsidian |
+| --- | --- | --- |
+| **Optimizes for** | Browsing and filtering structured lists | Following associative links through a knowledge graph |
+| **Collaboration** | Real-time multi-user editing | No real-time collaboration |
+| **AI Integration** | Built-in, closed AI within documents | Open, composable AI via plugins/agents |
+| **Data portability** | Export required (proprietary format) | Plain Markdown files (always portable) |
+| **External API** | Full REST API for automation | Plugin API only (internal) |
+| **Best use case** | Team wikis, project tracking, content calendars | Personal knowledge, research, writing |
+
+## 2026 Productivity Trends
+
+- **Unified AI workspaces**: Teams are moving away from scattered tool stacks toward central intelligence hubs that combine knowledge management, collaboration, and AI
+- **Async-first communication**: Remote teams prioritize written async updates over meetings; weekly written check-ins (what moved forward, what's blocked, what needs a decision) replace status meetings
+- **Onboarding as a product**: Knowledge bases with clear ownership and regular updates are the #1 productivity lever for remote team onboarding
+- **AI-powered task prioritization**: Tools now intelligently prioritize tasks and suggest optimal scheduling, transforming task management from manual chore to automated process
+- **Raycast + Superhuman**: Power users combine Raycast (launcher/automation) with Superhuman (email) for speed-centric workflows
+- **Capacities**: Emerging knowledge management tool alongside Obsidian, with object-based note organization

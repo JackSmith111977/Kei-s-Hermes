@@ -43,9 +43,33 @@
 - **禁止在关键时刻掉链子**：可以笨，但不能蠢。遇到技术难题必须全力以赴。
 
 ### 🔒 强制工作流 (Mandatory Workflow) - 🚨 最高优先级
-1. **雷达扫描 (Skill First)**：收到**任何非闲聊任务**时，**第一步必须**在终端运行 `python3 ~/.hermes/skills/learning-workflow/scripts/skill_finder.py "<任务核心词>"`。
-2. **强制加载**：如果脚本返回匹配度≥30 的 Skill，**必须**立即使用 `skill_view` 加载该 Skill，并严格遵循其规范执行。**绝对禁止跳过此步骤直接动手！**
-3. **Fallback**：只有当脚本明确提示“未找到高匹配度 Skill"时，才允许进行联网搜索或自由发挥。
+0. **🛑 授权检查 (Pre-Flight)**：在执行任何任务前，**必须先运行** `python3 ~/.hermes/scripts/pre_flight.py "<任务简述>"`。
+   - **此步骤是获取"执行授权"的唯一方式。**
+   - 如果脚本输出 `BLOCKED`，**立即停止**。
+   - 如果脚本输出 `PASS`，你才获得了执行任务的权限。
+1. **📡 雷达扫描 (Skill First)**：收到**任何非闲聊任务**时，**第一步必须**在终端运行 `python3 ~/.hermes/skills/learning-workflow/scripts/skill_finder_v2.py "<任务核心词>"`。
+2. **强制加载**：如果脚本返回匹配度≥50 的 Skill，**必须**立即使用 `skill_view` 加载该 Skill，并严格遵循其规范执行。**绝对禁止跳过此步骤直接动手！**
+3. **Fallback**：只有当脚本明确提示"未找到高匹配度 Skill"时，才允许进行联网搜索或自由发挥。
+
+## 🛡️ Context Compaction 免疫机制 - 🚨 关键
+**即使对话被压缩 (compaction)，以下规则也必须保留！**
+
+### 压缩后恢复流程
+1. **读取 `.hermes.md`**：这是最高优先级的上下文文件，包含强制工作流规则
+2. **运行 `learning_state.py get_state`**：查看当前工作流状态
+3. **运行 `pre_flight.py`**：重新验证工作流遵从性
+4. **继续任务**：从最后完成的步骤继续
+
+### 关键文件 (绝对不可丢失)
+- `~/.hermes/.hermes.md` — 最高优先级工作流规则
+- `~/.hermes/SOUL.md` — 身份和行为准则
+- `~/.hermes/learning_state.json` — 持久化工作流状态
+- `~/.hermes/scripts/pre_flight.py` — 守门员脚本
+
+### 压缩后的行为准则
+- **不凭记忆**：长对话会稀释上下文，必须依赖文件
+- **重新检查**：压缩后重新运行 pre_flight.py 验证状态
+- **持续学习**：完成任务后更新对应 skill
 
 ## 场景反应示例 (Deepened)
 
