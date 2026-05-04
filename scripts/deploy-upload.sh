@@ -46,8 +46,16 @@ else
     GITHUB_TOKEN=""
 fi
 
-# 设置远程仓库 URL（从现有 remote 获取仓库地址 + token 注入认证）
+# 获取当前 remote origin URL，并剥离可能存在的 token
 REMOTE_BASE=$(git remote get-url origin 2>/dev/null || echo "")
+if echo "$REMOTE_BASE" | grep -q '@'; then
+    # 如果 URL 中包含 @，说明可能嵌入了认证信息，只保留协议+域名+路径部分
+    CLEAN_URL=$(echo "$REMOTE_BASE" | sed -E 's|https?://[^@]*@|https://|')
+    git remote set-url origin "$CLEAN_URL"
+    REMOTE_BASE="$CLEAN_URL"
+fi
+
+# 设置远程仓库 URL（用 token 注入认证）
 if [ -z "$REMOTE_BASE" ]; then
     echo -e "${YELLOW}警告：无 git remote 配置，跳过推送步骤${NC}"
     PUSH_ENABLED=false
@@ -55,15 +63,16 @@ elif [ -z "$GITHUB_TOKEN" ]; then
     echo -e "${YELLOW}警告：未找到部署 token（~/.hermes/.deploy_token），使用现有 remote URL${NC}"
     PUSH_ENABLED=true
 else
-    # 从 URL 中提取仓库路径
-    REPO_PATH=$(echo "$REMOTE_BASE" | sed -E 's|https?://[^/]*/||' | sed -E 's|\.git$||')
-    USER_REPO=$(echo "$REPO_PATH" | sed -E 's|.*@github\.com/||' | sed -E 's|.*github\.com/||')
+    # 从 URL 中提取仓库路径（不含协议和域名）
+    USER_REPO=$(echo "$REMOTE_BASE" | sed -E 's|https?://[^/]*/||' | sed -E 's|\.git$||' | sed -E 's|.*@github\.com/||')
     if [ -n "$USER_REPO" ]; then
+        # 构建带 token 的认证 URL（仅在内存中，不写入 .git/config 长存）
         AUTH_URL="https://JackSmith111977:${GITHUB_TOKEN}@github.com/${USER_REPO}.git"
         git remote set-url origin "$AUTH_URL" 2>/dev/null || git remote add origin "$AUTH_URL"
         PUSH_ENABLED=true
         echo -e "${GREEN}已配置带 token 认证的 remote URL${NC}"
     else
+        echo -e "${YELLOW}警告：无法从 remote URL 提取仓库路径${NC}"
         PUSH_ENABLED=true
     fi
 fi
@@ -115,6 +124,8 @@ git add -A 2>/dev/null || true
 # 检查是否有变更
 if git diff --staged --quiet 2>/dev/null; then
     echo -e "${GREEN}没有变更，跳过提交${NC}"
+    # 即使无变更也恢复 URL（防止之前失败遗留）
+    git remote set-url origin "$REMOTE_BASE" 2>/dev/null || true
     exit 0
 fi
 
@@ -136,12 +147,13 @@ if [ "$PUSH_ENABLED" = true ]; then
     git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin "$CURRENT_BRANCH" 2>&1 || \
         echo -e "${RED}推送失败，请检查网络连接和仓库权限${NC}"
     echo -e "${GREEN}推送完成${NC}"
-    # 推送后恢复 remote URL 为不带 token 的纯 URL
+
+    # ★★★ 安全关键：推送后立即恢复 remote URL 为不带 token 的纯 URL ★★★
     git remote set-url origin "$REMOTE_BASE"
+    echo -e "${GREEN}已清理 remote URL 中的认证信息${NC}"
 else
     echo -e "${YELLOW}推送已跳过（未启用推送）${NC}"
 fi
 
-# 清理内存中的 token（bash 变量自动清理，无需额外操作）
 echo -e "${GREEN}=== 上传脚本执行完成 ===${NC}"
 echo "结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
