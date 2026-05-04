@@ -5,6 +5,10 @@ version: 1.0.0
 triggers:
 - segment anything model
 - segment-anything-model
+- sam
+- 图像分割
+- 抠图
+- SAM模型
 author: Orchestra Research
 license: MIT
 dependencies:

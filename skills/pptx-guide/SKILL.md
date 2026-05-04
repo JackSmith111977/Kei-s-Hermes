@@ -142,8 +142,84 @@ def add_gradient_background(slide, color1, color2):
 prs.save('output.pptx')
 ```
 
+## 设计原则速查
+
+### CRAP 四大原则
+| 原则 | 含义 | 实战 |
+|------|------|------|
+| **C**ontrast 对比 | 要素不同要显著不同 | 字号/颜色/粗细制造差异 |
+| **R**epetition 重复 | 跨页统一视觉元素 | 配色/字体/卡片风格贯穿 |
+| **A**lignment 对齐 | 无随意放置元素 | 8pt网格系统，间距8倍数 |
+| **P**roximity 亲密性 | 相关就近、不相关远离 | 卡片分组，组间留白 |
+
+### 每页检查清单
+- [ ] 一个核心想法？（5秒测试）
+- [ ] 强视觉层级？（最重要的最大最突出）
+- [ ] ≤3种颜色？（不含黑白灰）
+- [ ] ≤2种字体？
+- [ ] 留白足够？（内容<50%页面）
+- [ ] 对齐整洁？（网格感）
+
+## ⚠️ 避坑指南（实战经验）
+
+### 1. Python 字符串中文引号陷阱
+在 python-pptx 代码中使用中文双引号（""）会导致 SyntaxError：
+```python
+# ❌ 语法错误
+desc = "对齐是治愈"丑"的良药"
+# ✅ 正确
+desc = "对齐是治愈「丑」的良药"
+desc = '对齐是治愈"丑"的良药'
+```
+
+### 2. PPT 转图片检查流程
+```bash
+# 步骤1：PPT → PDF（使用 LibreOffice）
+libreoffice --headless --convert-to pdf input.pptx
+
+# 步骤2：PDF → 图片
+pdftoppm -jpeg -r 150 input.pdf slide  # 生成 slide-01.jpg ...
+
+# 注意：DeepSeek vision API 不支持本地图片路径
+# 如需要视觉检查，先用 Python 压缩图片：
+python3 -c "
+from PIL import Image
+img = Image.open('slide-01.jpg')
+img = img.resize((800, 450), Image.LANCZOS)
+img.save('slide-01_small.jpg', 'JPEG', quality=75)
+"
+```
+
+### 3. Python-pptx 卡片布局标准结构
+一个经典的 PPT 页通常包含：
+- 标题 + 分隔线（上方）
+- 多个圆角矩形卡片（中部）
+- 每个卡片内：图标 + 标题 + 描述
+
+### 4. 生成 PPT 的推荐环境
+```bash
+# 检查可用环境
+pip show python-pptx 2>/dev/null || python3 -m venv /tmp/ppt_venv
+
+# 如果系统 pip 被 external-managed-environment 拦截：
+python3 -m venv /tmp/ppt_venv
+/tmp/ppt_venv/bin/pip install python-pptx
+/tmp/ppt_venv/bin/python your_script.py
+```
+
+### 5. 6页标准学习成果PPT结构
+| 页码 | 内容 | 设计 |
+|:---:|------|------|
+| 1 | 封面 | 渐变背景 + 大标题 + 标签 |
+| 2 | 核心框架（如 CRAP） | 2×2 卡片布局 |
+| 3 | 原则速览 | 两栏布局（编号列表 + 趋势） |
+| 4 | 配色与字体 | 色块展示 + 字体配对 |
+| 5 | 检查清单 | 三栏（设计前/每页/整体） |
+| 6 | 总结 | 产出卡片 + 核心收获列表 |
+
 ## 详细参考
 
 完整设计指南和高级技巧见：
+- `references/pptx-design-handbook.md` — 完整 PPT 设计指南（配色、字体、版式、数据可视化、叙事结构）
 - `references/pptx-guide.md` — 完整 API 操作指南
 - `references/pptx-design-guide.md` — 设计美学指南（配色、字体、布局系统）

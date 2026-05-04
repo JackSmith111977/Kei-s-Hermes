@@ -1,7 +1,7 @@
 ---
 name: news-briefing
 description: 新闻采集与报刊级别简报生成技能。涵盖 RSS/API 采集管线、新闻分类筛选去重、AI 辅助摘要、以及使用 WeasyPrint 生成专业报刊级 PDF 文档（4+页，网格系统+视觉层次+多栏布局）。
-version: 2.1.0
+version: 2.2.0
 triggers:
 - 新闻采集
 - 新闻简报
@@ -37,9 +37,10 @@ metadata:
     skill_type: doc-generation
     design_pattern: generator
 ---
-# 新闻采集与报刊简报生成技能 v2.0 📰
+# 新闻采集与报刊简报生成技能 v2.2 📰
 
 > 从新闻采集到报刊级 PDF 输出的完整工作流（经过系统性学习提炼）
+> **v2.2 更新**: 严禁使用 Filler Hack，确立“真实新闻填充”原则。
 
 ## 触发条件
 
@@ -275,7 +276,8 @@ HTML(string=html_content).write_pdf(
 | 多栏布局断裂 | 使用 CSS `columns`，不要用 flexbox |
 | 文章被分页切断 | `page-break-inside: avoid` |
 | RSS 源 403 | 添加 User-Agent 头 |
-| 页面留大片空白 | 用 columns-2 或 columns-3 布局，在每页底部加额外文章/表格/点评填满 |
+| 页面留大片空白 | **严禁用 filler div 填充！** 必须**增加真实新闻条数**（如从 5 条加到 10 条）或用 columns-2 布局填满。Filler div 会导致 WeasyPrint 将其推到下一页，留下更严重的空白。 |
+| Filler Hack | **绝对禁止使用** `min-height` 或假 `filler` div 占位。WeasyPrint 的分页引擎会把它们整个扔到下一页，导致当前页空白 + 内容重复。 |
 | 第1页太空 | 第1页就开始双栏，头条下直接接双栏内容，底部加三栏快讯 |
 | 字体过多 | ≤2种字体，通过字重变化区分层次 |
 | 颜色杂乱 | 60-30-10 法则 |
@@ -299,8 +301,56 @@ HTML(string=html_content).write_pdf(
 ```
 
 ---
+## 七、排版填充最佳实践 (Layout Filling Strategy)
 
-## 六、模板结构速查
+> **核心原则**：**永远不要使用 filler div 或 min-height 强行撑满页面！** 必须依靠真实新闻内容。
+
+### 7.1 页面容量估算 (A4 标准)
+*   **纯短讯模式**：每页可容纳约 **18-22 条**（每条 2-3 行）。
+*   **图文混排模式**：每页可容纳 **8-10 条** 长新闻 + 1 个数据表格。
+*   **高密度模式**（本次推荐）：双栏布局，每栏 10 条短讯，单页总计 20 条。
+
+### 7.2 填充策略：增加条数
+*   **场景**：Review 发现某页底部有 >2cm 空白。
+*   **错误解法**：注入 filler div、设置 min-height、增加无关的"碎碎念"。
+*   **正确解法**：
+    1.  **扩展当前板块**：如果该页是"国际焦点"，去搜索更多相关新闻，从 5 条增加到 10 条。
+    2.  **新增子板块**：增加"一句话简讯"（List Item）列表，补充次要新闻。
+    3.  **增加数据密度**：插入一个行业数据表格（如股市行情、汇率等）。
+
+### 7.3 HTML 结构规范
+```css
+/* ✅ 正确：使用明确的 page 容器，不设 min-height */
+.page {{
+    page-break-after: always;
+    position: relative; /* 仅用于绝对定位元素 */
+}}
+.page:last-child {{ page-break-after: auto; }}
+```
+
+---
+
+## 八、Eval 用例
+
+### Eval-001 (基本触发)
+- **输入**："今天有什么新闻喵？"
+- **预期**：触发 news-briefing skill，执行搜索→分类→排版→PDF 流程
+
+### Eval-002 (依赖检查)
+- **输入**："生成今天的新闻简报"
+- **预期**：自动加载 web-access 和 pdf-layout-weasyprint 依赖
+
+### Eval-003 (排版验证)
+- **输入**："生成报刊级新闻简报"
+- **预期**：生成 4+ 页 PDF，每页填满无大片空白，双栏布局，有报头/头条/数据条
+
+### Eval-004 (飞书发送)
+- **输入**："把新闻简报发到飞书"
+- **预期**：通过飞书 API 上传文件→获 file_key→发 file 消息
+
+---
+
+## 八、模板结构速查
 
 ```html
 报头 .masthead → 头条 .headline → 数据条 .data-bar → 双栏 .columns-2

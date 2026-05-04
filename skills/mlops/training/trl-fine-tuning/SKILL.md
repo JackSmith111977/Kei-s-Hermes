@@ -5,6 +5,9 @@ version: 1.0.0
 triggers:
 - fine tuning with trl
 - fine-tuning-with-trl
+- 微调
+- RLHF
+- 强化学习微调
 author: Orchestra Research
 license: MIT
 dependencies:

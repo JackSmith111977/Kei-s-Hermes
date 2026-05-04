@@ -165,6 +165,10 @@ web, browser, terminal, file, code_execution, vision, image_gen, tts, skills, me
 │   ├── hermes-self-analysis     自我认知（本文件）
 │   ├── patch-file-safety        安全编辑文件
 │   └── anti-repetition-loop     防重复循环回复
+├── learning/
+│   ├── learning                 学习方法论 meta-skill (v2.1, 含反思迭代)
+│   ├── learning-workflow        强制学习流程 (v2.0, 含双模式/多任务/进度可视化)
+│   └── skill-creator            skill 创建引擎 (v4.1, 含快速/完整双通道)
 ├── doc-design/                  文档排版（索引 + 原子 skill）
 │   ├── doc-design, pdf-layout-reportlab, pdf-layout-weasyprint
 │   └── docx-guide, pptx-guide, ...

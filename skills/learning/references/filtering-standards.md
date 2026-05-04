@@ -35,8 +35,8 @@
 
 <!-- 每次学习后添加 -->
 
-| 领域 | 来源 | 验证日期 | 备注 |
-|------|------|----------|------|
+| 学域类型 | 来源 | 验证日期 | 备注 |
+|------|------|----------|----------|
 | WeasyPrint | doc.courtbouillon.org/weasyprint/ | 2026-05-03 | 官方文档，完整准确 |
 | WeasyPrint | github.com/Kozea/WeasyPrint | 2026-05-03 | 源码 + 6407 commits |
 | Mermaid | mermaid.js.org/syntax/ | 2026-05-03 | 官方语法参考 |
@@ -44,4 +44,6 @@
 | Python | docs.python.org/3/howto/logging.html | 2026-05-03 | 官方 logging 教程 |
 | Python | typing.python.org | 2026-05-03 | 官方类型注解最佳实践 |
 | Git | git-scm.com/docs | 2026-05-03 | Git 官方文档 |
-<!-- | Python | docs.python.org | 2026-05-03 | 官方文档，始终最新 | -->
+| Agent/LLM Research | arxiv.org (cs.AI, cs.LG) | 2026-05-04 | 学术研究首选，但需搭配实践验证 |
+| Agent 实践 | huggingface.co/blog, blog.ml.cmu.edu | 2026-05-04 | 工业界最佳实践，时效性强 |
+| 开源 Agent 项目 | github.com (topics: ai-agents, llm-agent) | 2026-05-04 | Stars+活跃度作为过滤器 |

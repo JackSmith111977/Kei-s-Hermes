@@ -5,6 +5,10 @@ version: 1.0.0
 triggers:
 - serving llms vllm
 - serving-llms-vllm
+- vllm
+- 模型部署
+- 推理加速
+- LLM推理
 author: Orchestra Research
 license: MIT
 dependencies:

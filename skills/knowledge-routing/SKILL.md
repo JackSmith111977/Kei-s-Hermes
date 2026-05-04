@@ -1,8 +1,8 @@
 ---
 name: knowledge-routing
 description: "Guide for classifying new knowledge: Memory vs Skills. Use when absorbing experience or updating knowledge base."
-version: 1.0.0
-triggers: ["经验吸收", "知识分类", "记忆管理", "skill更新", "knowledge routing", "经验沉淀", "总结", "复盘", "踩坑", "教训", "记下来", "存入Memory", "存入Skill", "知识路由"]
+version: 1.1.0
+triggers: ["经验吸收", "知识分类", "记忆管理", "skill更新", "knowledge routing", "经验沉淀", "总结", "总结经验", "复盘", "踩坑", "教训", "经验教训", "记下来", "存入Memory", "存入Skill", "知识路由"]
 ---
 
 # 知识路由指南 (Knowledge Routing Guide)
@@ -56,8 +56,9 @@ triggers: ["经验吸收", "知识分类", "记忆管理", "skill更新", "knowl
 
 ## 🚩 Red Flags (常见错误)
 
+- **绕过本 skill 直接凭记忆操作**：2026-05-04 boku 曾因收到"总结经验啦"后跳过 SRA + knowledge-routing 流程，直接凭记忆写总结。即使消息看起来像闲聊，也必须加载本 skill 并走决策树。
 - **把长流程塞进 Memory**：Memory 容量有限（2200 chars），且是扁平注入。长篇大论的操作 SOP 会导致上下文被淹没，必须存入 Skill。
-- **把琐碎事实写进 Skill**：例如“某个 API 报错 500"，这种一次性事件只需 Memory 记录，建 Skill 会造成 Skill 库臃肿。
+- **把琐碎事实写进 Skill**：例如"某个 API 报错 500"，这种一次性事件只需 Memory 记录，建 Skill 会造成 Skill 库臃肿。
 - **绕过 skill-creator**：创建/更新 Skill 时，**严禁**直接调用 `skill_manage` 而不先加载 `skill-creator`！必须经过 skill-creator 的检查清单。
 
 ## 执行动作

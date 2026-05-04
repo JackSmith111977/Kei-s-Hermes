@@ -5,6 +5,9 @@ version: 1.0.0
 triggers:
 - evaluating llms harness
 - evaluating-llms-harness
+- 模型评估
+- LLM评测
+- 大模型评估
 author: Orchestra Research
 license: MIT
 dependencies:

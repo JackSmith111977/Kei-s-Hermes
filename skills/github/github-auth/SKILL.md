@@ -1,13 +1,16 @@
 ---
 name: github-auth
 description: Set up GitHub authentication for the agent using git (universally available...
-version: 1.1.0
+version: 2.0.0
 triggers:
 - github
 - token
 - ssh
 - 认证
 - login
+- 推送
+- push
+- 远程仓库
 author: Hermes Agent
 license: MIT
 metadata:
@@ -32,24 +35,93 @@ This skill sets up authentication so the agent can work with GitHub repositories
 - **`git` (always available)** — uses HTTPS personal access tokens or SSH keys
 - **`gh` CLI (if installed)** — richer GitHub API access with a simpler auth flow
 
+## 🛑 关键规则：何时停下来问用户
+
+**Agent 不能自己完成 GitHub 认证的完整流程。以下场景必须停下来请求用户协助：**
+
+| 场景 | 需要用户做的事 |
+|------|---------------|
+| 需要 Personal Access Token | 用户去 https://github.com/settings/tokens 创建，把 token 给 agent |
+| 需要添加 SSH key 到 GitHub | agent 提供公钥，用户去 https://github.com/settings/keys 添加 |
+| 新仓库首次推送（无 token） | 用户提供 PAT 或 配置 SSH key |
+| 仓库不存在/权限错误 | 用户确认仓库地址和权限 |
+
+**正确流程：**
+1. Agent 先运行检测流检查认证状态和环境
+2. 如果已认证 → 直接操作
+3. 如果未认证 → **明确告诉用户需要什么**（token / SSH key），并在消息中提供操作指引
+4. 等待用户提供凭证
+5. 用户提供后 → Agent 配置并推送
+
+**禁止行为：**
+- ❌ 在未检测认证状态前盲目用各种命令尝试连接
+- ❌ 在用户没提供凭证时反复重试（浪费时间且产生垃圾状态）
+- ❌ 用错误的命令导致 git 配置损坏（如乱配 remote URL）
+- ❌ 假设环境变量 GITHUB_TOKEN 可用（可能被屏蔽或权限不足）
+- ❌ 不配置代理直接 push（国内服务器必须配代理）
+
+## 🚨 实战推送完整流程
+
+当用户给出仓库地址要求推送时，按以下步骤执行。
+
+### Phase 0: 检测环境
+先检查代理、git 认证状态、SSH key 是否存在。
+
+### Phase 1: 配置环境
+国内服务器需先配置 git 代理：`git config --global http.proxy http://127.0.0.1:7890`
+
+### Phase 2: 获取凭证
+- 如果已有 token（credential file 或环境变量）→ 直接使用
+- 如果无凭证 → **停下来告知用户**，说明需要 PAT 或 SSH key
+
+### Phase 3: 配置并推送
+```
+# token 嵌入 URL 推送
+git remote set-url origin https://<username>:<token>@github.com/owner/repo.git
+git push -u origin master
+
+# 推送后立即清理 token（安全）
+git remote set-url origin https://github.com/owner/repo.git
+```
+
+### Phase 4: 推送后验证
+确认推送成功，检查 remote URL 中不包含 token。
+
 ## Detection Flow
 
-When a user asks you to work with GitHub, run this check first:
+**每次处理 GitHub 推送/拉取任务时，第一步必须运行此检测流：**
 
 ```bash
-# Check what's available
+# Step 0: 检测代理环境（国内服务器必须配）
+echo "HTTP_PROXY=$HTTP_PROXY"
+echo "HTTPS_PROXY=$HTTPS_PROXY"
+curl -s --connect-timeout 3 http://127.0.0.1:7890 >/dev/null 2>&1 && echo "proxy_7890_UP" || echo "proxy_7890_DOWN"
+
+# Step 1: 检测 git 和 gh 可用性
 git --version
 gh --version 2>/dev/null || echo "gh not installed"
 
-# Check if already authenticated
+# Step 2: 检测认证状态
 gh auth status 2>/dev/null || echo "gh not authenticated"
 git config --global credential.helper 2>/dev/null || echo "no git credential helper"
+
+# Step 3: 检测 token 环境变量（注意：这些变量可能被屏蔽为 *** 或空值）
+echo "GITHUB_TOKEN=${#GITHUB_TOKEN} chars"
+echo "GH_TOKEN=${#GH_TOKEN} chars"
+
+# Step 4: 检测现有远程配置
+git remote -v 2>/dev/null || echo "no remote configured"
+
+# Step 5: 检测 SSH key
+ls -la ~/.ssh/id_*.pub 2>/dev/null || echo "no SSH keys found"
 ```
 
-**Decision tree:**
-1. If `gh auth status` shows authenticated → you're good, use `gh` for everything
-2. If `gh` is installed but not authenticated → use "gh auth" method below
-3. If `gh` is not installed → use "git-only" method below (no sudo needed)
+**决策树（优先级从高到低）：**
+1. `gh auth status` 通过 → 用 `gh` 操作一切
+2. 有 `GITHUB_TOKEN` 或 `GH_TOKEN`（非空且非 `***`） → 尝试用 token 直接认证
+3. 有 SSH key 且已添加到 GitHub → 用 SSH 方式
+4. 有 ssh key 但未添加到 GitHub → **停下来，告诉用户去添加**
+5. 什么都没有 → **停下来，告诉用户创建 PAT**
 
 ---
 
@@ -60,6 +132,20 @@ This works on any machine with `git` installed. No root access needed.
 ### Option A: HTTPS with Personal Access Token (Recommended)
 
 This is the most portable method — works everywhere, no SSH config needed.
+
+**Step 0 (国内服务器必须): Configure proxy first**
+
+```bash
+# 国内服务器必须配置代理才能访问 GitHub
+git config --global http.proxy http://127.0.0.1:7890
+git config --global https.proxy http://127.0.0.1:7890
+
+# 或只对 github.com 配置代理（推荐，不影响其他 git 操作）
+git config --global http.https://github.com.proxy http://127.0.0.1:7890
+
+# 验证代理是否可达
+curl -s --connect-timeout 3 http://127.0.0.1:7890 >/dev/null 2>&1 && echo "proxy OK" || echo "proxy NOT available"
+```
 
 **Step 1: Create a personal access token**
 

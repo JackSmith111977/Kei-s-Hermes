@@ -5,6 +5,9 @@ version: 1.0.0
 triggers:
 - audiocraft audio generation
 - audiocraft-audio-generation
+- 音频生成
+- 音乐生成
+- 文生音乐
 author: Orchestra Research
 license: MIT
 dependencies:

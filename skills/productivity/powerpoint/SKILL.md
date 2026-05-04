@@ -140,6 +140,21 @@ Choose colors that match your topic — don't default to generic blue. Use these
 - **Don't forget text box padding** — when aligning lines or shapes with text edges, set `margin: 0` on the text box or offset the shape to account for padding
 - **Don't use low-contrast elements** — icons AND text need strong contrast against the background; avoid light text on light backgrounds or dark text on dark backgrounds
 - **NEVER use accent lines under titles** — these are a hallmark of AI-generated slides; use whitespace or background color instead
+- **Don't put more than one idea per slide** — if you cant name the single idea in 5 seconds, split the slide
+- **Don't end with Thank You** — replace with a clear Call to Action (CTA) slide
+- **Don't use raw data screenshots** — extract the single most important number and visualize it
+
+### CRAP Quick Reference
+
+| Principle | Check |
+|-----------|-------|
+| **C**ontrast | Is the most important element visually dominant? |
+| **R**epetition | Are colors, fonts, and spacing consistent across slides? |
+| **A**lignment | Is every element intentionally placed on a grid? |
+| **P**roximity | Are related items grouped closely? |
+
+### Five-Second Test
+Show a colleague your slide for 5 seconds. If they can't name the core message, redesign it.
 
 ---
 

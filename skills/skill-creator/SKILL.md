@@ -1,7 +1,7 @@
 ---
 name: skill-creator
-description: "创建、优化、评估 Skill 的完整工作流。支持从实战任务中提取知识、从学习笔记转化 Skill。内置 5 种设计模式，9 阶段创作流程，引用依赖检查，以及 skill-manage 联动拦截。"
-version: 4.0.0
+description: "创建、优化、评估 Skill 的完整工作流。支持从实战任务中提取知识、从学习笔记转化 Skill。内置 5 种设计模式，9 阶段创作流程（含快速更新通道），引用依赖检查，以及 skill-manage 联动拦截。"
+version: 4.1.0
 triggers:
 - skill
 - 创建技能
@@ -53,19 +53,43 @@ metadata:
 [准备调用 skill_manage] 
    ↓
 [检查 0] 是否为知识沉淀任务？ → 是 → 🛑 检查是否经过 learning-workflow 的搜索阶段！
-   ↓ 否 (或已确认)
-[检查 1] 是否已加载 skill-creator？ → 否 → 🛑 强制加载！
+   ├─ 是（已有 raw_search_results.md）→ ✅ 放行
+   └─ 否 → 🛑 拦截！报错：需要先过 learning-workflow
+   ↓
+[检查 1] 是否为简单更新（如修复错别字、优化描述）？
+   ├─ 是 → 走快速更新通道（跳过完整 9 阶段）
+   └─ 否 → 继续
+[检查 2] 是否已加载 skill-creator？ → 否 → 🛑 强制加载！
    ↓ 是
-[检查 2] 是否已执行依赖检查？ → 否 → 🛑 运行 dependency-scan！
+[检查 3] 是否已执行依赖检查？ → 否 → 🛑 运行 dependency-scan！
    ↓ 是
-[检查 3] 是否通过质量清单？ → 否 → 🛑 补全缺失项！
+[检查 4] 是否通过质量清单？ → 否 → 🛑 补全缺失项！
    ↓ 是
 [✅ 放行] 允许调用 skill_manage
 ```
 
-**🔒 新增拦截规则**：如果 skill_manage 用于创建/更新知识类 skill，必须先检查 `~/.hermes/learning/raw_search_results.md` 是否存在。不存在则拒绝执行，报错："🚨 未经学习流程的搜索结果，禁止直接沉淀知识！请先执行 learning-workflow 的 STEP 1（搜索）和 STEP 2（阅读）。"
+### 快速更新通道（v4.1 新增）
 
-**严禁绕过此流程！** 任何直接调用 `skill_manage` 而不经过 skill-creator 的行为都是违规操作。
+适用于：错别字修复、描述优化、触发词添加、简单版本号更新等小改动
+
+**无需经过：**
+- ❌ 9 阶段完整流程
+- ❌ learning-workflow 前置搜索检查
+
+**必须经过：**
+- ✅ 依赖检查（检查是否影响其他 skill）
+- ✅ 质量清单检查（YAML frontmatter 完整性）
+- ✅ 修改后通知用户
+
+### 完整创建通道（标准）
+
+适用于：全新 skill 创建、重大重构、知识沉淀
+
+**必须经过：**
+- ✅ learning-workflow 前置搜索检查（知识沉淀类）
+- ✅ 9 阶段完整流程
+- ✅ 依赖检查 + 质量清单
+- ✅ 验证测试（子代理 QA）
 
 ## 一、5 种设计模式 (Design Patterns)
 

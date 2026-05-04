@@ -1,27 +1,125 @@
 ---
 name: bmad-method
-description: "BMad Method (Build More Architect Dreams) - 全生态 AI 驱动开发框架。含 BMM(敏捷开发)、BMB(模块构建)、TEA(测试架构)、BMGD(游戏开发)、CIS(创新智能) 五大模块共 102 个 Skill。"
-version: 2.0.0
+description: "BMad Method (Build More Architect Dreams) - 全生态 AI 驱动开发框架。含 BMM(敏捷开发)、BMB(模块构建)、TEA(测试架构)、BMGD(游戏开发)、CIS(创新智能) 五大模块共 102 个 Skill。项目开发、功能实现、Bug修复等任务自动触发 BMad 工作流。"
+version: 2.1.0
 triggers:
+  # === 核心启动词 ===
   - bmad
-  - 敏捷开发
-  - 架构设计
+  - bmad-method
+
+  # === 项目开发 / 功能实现 ===
+  - 项目开发
+  - 软件开发
+  - 功能开发
+  - 功能实现
+  - 实现功能
+  - 开发功能
+  - 开发项目
+  - 从 0 到 1
+  - 新项目
+  - 构建项目
+  - 搭建项目
+
+  # === 代码实现 ===
+  - 写代码
+  - 编码
+  - 实现这个
+  - 实现模块
+  - 实现 feature
+
+  # === Bug 修复 / 问题解决 ===
+  - bug修复
+  - 修bug
+  - 修复bug
+  - 修复问题
+  - 出了bug
+  - 有问题
+  - 改bug
+
+  # === 重构 / 优化 ===
+  - 重构
+  - 代码重构
+  - 优化代码
+  - 代码优化
+  - 重写
+  - 代码重写
+
+  # === 需求与分析 ===
   - 产品需求
   - 需求文档
+  - 产品需求文档
   - PRD
+  - 需求分析
+  - 写文档
+  - 分析需求
+
+  # === 架构设计 ===
+  - 架构设计
+  - 系统设计
+  - 技术选型
+  - 设计架构
+  - 方案设计
+  - 技术方案
+
+  # === 项目管理 / 敏捷 ===
+  - 敏捷开发
+  - 敏捷
   - 史诗故事
-  - bmad-method
-  - bmb
+  - epic
+  - user story
+  - 用户故事
+  - 冲刺
+  - sprint
+  - 项目规划
+  - 项目排期
+
+  # === 代码评审 ===
+  - 代码评审
+  - 代码审查
+  - code review
+  - 审查代码
+  - 评审代码
+
+  # === 测试 ===
+  - 测试策略
+  - 测试设计
+  - 测试框架
+  - 单元测试
+  - 自动化测试
+  - 测试架构
   - tea
   - test architect
+
+  # === 模块构建 ===
+  - bmb
+  - 构建模块
+  - 模块构建
+
+  # === 游戏开发 ===
   - gds
   - game dev
+  - 游戏开发
+  - 游戏设计
+  - GDD
+
+  # === 创新与设计思维 ===
   - cis
   - creative intelligence
   - 头脑风暴
-  - 测试策略
+  - 设计思维
+  - 创新策略
+  - 问题解决
+  - 故事叙述
+
+  # === 通用开发词汇（低优先级匹配） ===
+  - 开发
+  - 编程
+  - coding
+  - implement
+  - implementation
 depends_on:
   - skill-creator
+  - writing-plans
 design_pattern: Pipeline
 skill_type: Tool Wrapper
 ---
@@ -34,6 +132,48 @@ skill_type: Tool Wrapper
 > **核心路径**：`~/.hermes/skills/bmad-method/all-skills/`
 > **配置路径**：`~/.hermes/skills/bmad-method/_bmad/`
 > **用户配置**：`_bmad/config.user.toml` (language=Chinese, user=boku)
+
+## 🎯 自动触发场景与决策树
+
+当主人触发本 Skill（任何 triggers 匹配），boku 按以下决策树判断走 BMad 工作流的哪个路径：
+
+```
+主人消息 → 匹配 triggers？
+  ├── 项目开发/功能实现/写代码类
+  │   ├── 需要完整流程？ → bmad-create-prd → bmad-create-epics → bmad-dev-story ...
+  │   ├── 已有清晰需求？ → bmad-create-epics → bmad-dev-story
+  │   └── 小功能/快速开发？ → bmad-quick-dev
+  │
+  ├── Bug修复/问题排查类
+  │   ├── 简单bug？ → 直接修复（不走 BMad）
+  │   └── 复杂/系统性问题？ → bmad-correct-course + bmad-dev-story
+  │
+  ├── 重构/优化类
+  │   └── → bmad-code-review + bmad-review-adversarial-general + bmad-dev-story
+  │
+  ├── 需求/文档/分析类
+  │   └── → bmad-create-prd / bmad-edit-prd / bmad-validate-prd / bmad-domain-research
+  │
+  ├── 架构设计/方案类
+  │   └── → bmad-create-architecture / bmad-technical-research
+  │
+  ├── 代码评审类
+  │   └── → bmad-code-review / bmad-review-edge-case-hunter
+  │
+  ├── 测试类
+  │   └── → bmad-tea（TEA 测试架构总入口）
+  │
+  ├── 游戏开发类
+  │   └── → gds-* 系列（加载 gds-agent-game-designer 等）
+  │
+  └── 创新/头脑风暴类
+      └── → bmad-brainstorming / bmad-cis-* 系列
+```
+
+> **核心原则：**
+> - **简单任务（单文件改bug/加小功能）** → 不需要 BMad，直接干喵
+> - **复杂任务（多文件/新功能/重构思）** → 走 BMad 工作流
+> - **拿不准** → 走 BMad，宁可多一步流程，不跳过喵！
 
 ## 📦 五大模块总览
 
