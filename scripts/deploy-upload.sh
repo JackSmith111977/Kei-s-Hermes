@@ -42,10 +42,19 @@ fi
 # 注意：这里使用占位符，实际使用时需要替换为真实的仓库 URL
 # 或者通过环境变量 HERMES_REPO_URL 传入
 if [ -z "$HERMES_REPO_URL" ]; then
-    echo -e "${YELLOW}警告：未设置 HERMES_REPO_URL 环境变量，跳过推送步骤${NC}"
-    echo "请先设置: export HERMES_REPO_URL='https://<token>@github.com/<user>/<repo>.git'"
-    PUSH_ENABLED=false
-else
+    # 尝试从现有 git remote 获取
+    REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+    if [ -n "$REMOTE_URL" ]; then
+        HERMES_REPO_URL="$REMOTE_URL"
+        echo -e "${GREEN}从 git remote 获取仓库地址: $HERMES_REPO_URL${NC}"
+    else
+        echo -e "${YELLOW}警告：未设置 HERMES_REPO_URL 环境变量，且无 git remote，跳过推送步骤${NC}"
+        echo "请先设置: export HERMES_REPO_URL='https://<token>@github.com/<user>/<repo>.git'"
+        PUSH_ENABLED=false
+    fi
+fi
+
+if [ -n "$HERMES_REPO_URL" ]; then
     git remote set-url origin "$HERMES_REPO_URL" 2>/dev/null || git remote add origin "$HERMES_REPO_URL"
     PUSH_ENABLED=true
 fi
@@ -113,9 +122,10 @@ echo -e "${GREEN}提交完成: $COMMIT_MSG${NC}"
 # 推送到远程仓库（如果启用）
 if [ "$PUSH_ENABLED" = true ]; then
     echo -e "${YELLOW}推送到远程仓库（通过代理）...${NC}"
-    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin main 2>&1 || \
-    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin master 2>&1 || \
-    echo -e "${RED}推送失败，请检查网络连接和仓库权限${NC}"
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+    echo -e "${GREEN}推送到远程仓库（分支: $CURRENT_BRANCH，通过代理）...${NC}"
+    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin "$CURRENT_BRANCH" 2>&1 ||     echo -e "${RED}推送失败，请检查网络连接和仓库权限${NC}"
+    echo -e "${GREEN}推送完成${NC}"
     echo -e "${GREEN}推送完成${NC}"
 else
     echo -e "${YELLOW}推送已跳过（未设置 HERMES_REPO_URL）${NC}"
