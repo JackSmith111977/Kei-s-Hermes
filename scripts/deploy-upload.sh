@@ -38,25 +38,34 @@ if [ ! -d ".git" ]; then
     git config user.name "小喵"
 fi
 
-# 设置远程仓库（如果尚未设置）
-# 注意：这里使用占位符，实际使用时需要替换为真实的仓库 URL
-# 或者通过环境变量 HERMES_REPO_URL 传入
-if [ -z "$HERMES_REPO_URL" ]; then
-    # 尝试从现有 git remote 获取
-    REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
-    if [ -n "$REMOTE_URL" ]; then
-        HERMES_REPO_URL="$REMOTE_URL"
-        echo -e "${GREEN}从 git remote 获取仓库地址: $HERMES_REPO_URL${NC}"
-    else
-        echo -e "${YELLOW}警告：未设置 HERMES_REPO_URL 环境变量，且无 git remote，跳过推送步骤${NC}"
-        echo "请先设置: export HERMES_REPO_URL='https://<token>@github.com/<user>/<repo>.git'"
-        PUSH_ENABLED=false
-    fi
+# 从安全文件读取部署 token（仅 root 可读，权限 600）
+TOKEN_FILE="$HOME/.hermes/.deploy_token"
+if [ -f "$TOKEN_FILE" ]; then
+    GITHUB_TOKEN=$(cat "$TOKEN_FILE" | tr -d ' \n\r')
+else
+    GITHUB_TOKEN=""
 fi
 
-if [ -n "$HERMES_REPO_URL" ]; then
-    git remote set-url origin "$HERMES_REPO_URL" 2>/dev/null || git remote add origin "$HERMES_REPO_URL"
+# 设置远程仓库 URL（从现有 remote 获取仓库地址 + token 注入认证）
+REMOTE_BASE=$(git remote get-url origin 2>/dev/null || echo "")
+if [ -z "$REMOTE_BASE" ]; then
+    echo -e "${YELLOW}警告：无 git remote 配置，跳过推送步骤${NC}"
+    PUSH_ENABLED=false
+elif [ -z "$GITHUB_TOKEN" ]; then
+    echo -e "${YELLOW}警告：未找到部署 token（~/.hermes/.deploy_token），使用现有 remote URL${NC}"
     PUSH_ENABLED=true
+else
+    # 从 URL 中提取仓库路径
+    REPO_PATH=$(echo "$REMOTE_BASE" | sed -E 's|https?://[^/]*/||' | sed -E 's|\.git$||')
+    USER_REPO=$(echo "$REPO_PATH" | sed -E 's|.*@github\.com/||' | sed -E 's|.*github\.com/||')
+    if [ -n "$USER_REPO" ]; then
+        AUTH_URL="https://JackSmith111977:${GITHUB_TOKEN}@github.com/${USER_REPO}.git"
+        git remote set-url origin "$AUTH_URL" 2>/dev/null || git remote add origin "$AUTH_URL"
+        PUSH_ENABLED=true
+        echo -e "${GREEN}已配置带 token 认证的 remote URL${NC}"
+    else
+        PUSH_ENABLED=true
+    fi
 fi
 
 # 同步文件（从 ~/.hermes 到部署目录）
@@ -124,12 +133,15 @@ if [ "$PUSH_ENABLED" = true ]; then
     echo -e "${YELLOW}推送到远程仓库（通过代理）...${NC}"
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
     echo -e "${GREEN}推送到远程仓库（分支: $CURRENT_BRANCH，通过代理）...${NC}"
-    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin "$CURRENT_BRANCH" 2>&1 ||     echo -e "${RED}推送失败，请检查网络连接和仓库权限${NC}"
+    git -c http.proxy="http://${PROXY_HOST}:${PROXY_PORT}" push -u origin "$CURRENT_BRANCH" 2>&1 || \
+        echo -e "${RED}推送失败，请检查网络连接和仓库权限${NC}"
     echo -e "${GREEN}推送完成${NC}"
-    echo -e "${GREEN}推送完成${NC}"
+    # 推送后恢复 remote URL 为不带 token 的纯 URL
+    git remote set-url origin "$REMOTE_BASE"
 else
-    echo -e "${YELLOW}推送已跳过（未设置 HERMES_REPO_URL）${NC}"
+    echo -e "${YELLOW}推送已跳过（未启用推送）${NC}"
 fi
 
+# 清理内存中的 token（bash 变量自动清理，无需额外操作）
 echo -e "${GREEN}=== 上传脚本执行完成 ===${NC}"
 echo "结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
