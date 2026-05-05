@@ -1198,9 +1198,11 @@ Body: {
 
 ---
 
-## 11. 任务 (task/v2)
+## 11. 任务 (task v1 + v2)
 
-> 注意：v1 版本已废弃，请使用 v2
+> ⚠️ **重要区别**：v2 官方推荐，但 **v1 的 list 端点仍有不可替代的用途**！
+> - `GET /task/v1/tasks` — 唯一能用 **tenant_access_token** 查到**应用自己创建的任务**的接口
+> - `GET /task/v2/tasks` — 只支持 `type=my_tasks`（用户个人任务），应用身份查不到
 
 ### 创建任务
 
@@ -1230,7 +1232,10 @@ GET /task/v2/tasks/{task_guid}
 
 ```
 PATCH /task/v2/tasks/{task_guid}
-Body: { "summary": "新标题", "description": "新描述" }
+Body: {
+  "task": { "summary": "新标题", "description": "新描述" },
+  "update_fields": ["summary", "description"]
+}
 ```
 
 ### 删除任务
@@ -1243,14 +1248,31 @@ DELETE /task/v2/tasks/{task_guid}
 
 ```
 PATCH /task/v2/tasks/{task_guid}
-Body: { "completed_at": 1675742789470 }
+Body: {
+  "task": { "completed_at": 1675742789470 },
+  "update_fields": ["completed_at"]
+}
 ```
 
+⚠️ **必须用 `task` 包裹 + `update_fields` 指定要更新的字段**！直接传 `{ "completed_at": ... }` 会返回 `99992402: update_fields is required`。
+
 ### 获取任务列表
+
+#### v2 — 用户个人任务（需 user_access_token）
 
 ```
 GET /task/v2/tasks?page_size=50&page_token=xxx&completed=false&type=my_tasks
 ```
+
+#### v1 — 应用创建的任务（用 tenant_access_token）⭐
+
+```
+GET /task/v1/tasks?page_size=50&page_token=xxx
+```
+
+- 返回应用通过创建任务接口创建的所有任务
+- 支持分页（`has_more` + `page_token`）
+- 任务按创建时间倒序排列
 
 ### 创建清单（Tasklist）
 

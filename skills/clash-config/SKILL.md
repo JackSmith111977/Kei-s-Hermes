@@ -3,7 +3,7 @@ name: clash-config
 description: 'Clash / mihomo 代理工具配置管理技能。涵盖配置格式、代理协议、代理组、路由规则、
 
   DNS 设置、TUN 模式、代理提供者等完整配置参考。...'
-version: 2.0.0
+version: 2.1.0
 triggers:
 - clash config
 - clash-config
@@ -26,6 +26,9 @@ metadata:
     category: devops
     skill_type: library-reference
     design_pattern: tool-wrapper
+    related_skills:
+    - web-access
+    - browser-automation
 ---
 # Clash / mihomo 配置管理 Skill
 
@@ -38,11 +41,17 @@ metadata:
 - 用户需要生成配置模板
 - 用户询问 Clash 和 mihomo 的差异
 - 用户需要配置 proxy-providers 或 rule-providers
+- **browser/CDP 工具遇到网络问题（无法访问外网）**
+- **curl/web_search 测试代理失败**
 
 **不使用此 skill 当：**
 - 只需要启动/停止 mihomo 服务 → 直接用 terminal
 - 只需要测试代理连通性 → 直接用 curl 通过代理测试
 - 需要搜索机场/订阅源 → 使用代理机场搜集 skill
+
+**相关 Skill 联动**：
+- `web-access`：联网操作统一入口（会自动检查代理状态）
+- `browser-automation`：浏览器自动化（依赖代理访问外网）
 
 ---
 

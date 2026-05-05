@@ -83,10 +83,18 @@ print(f"Upload OK: file_key={file_key}")
 
 | 文件类型 | file_type 值 |
 |:---|:---|
-| 通用文件（PDF/DOCX/PPTX） | `stream` |
+| 通用文件（PDF/DOCX/PPTX） | `stream` ⚠️ **不是 `file`！** 用错会报 234001 |
 | 图片（JPG/PNG/GIF） | `image` |
 | 音频（OPUS） | `opus` |
 | 视频（MP4） | `mp4` |
+
+### 🚨 常见坑：file_type 错误
+
+```python
+# ❌ 错误：file_type="file" 会报 234001 Invalid request param
+# ✅ 正确：通用文件必须用 "stream"
+data = {"file_type": "stream", "file_name": filename}
+```
 
 ### Step 3: 发送文件消息
 
