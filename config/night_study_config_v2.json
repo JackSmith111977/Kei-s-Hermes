@@ -1,0 +1,64 @@
+{
+  "version": "2.0",
+  "domains": [
+    {
+      "id": "ai_tech",
+      "name": "AI与前沿技术",
+      "keywords": "AI agents, LLM new models, ML papers, ICLR/NeurIPS breakthroughs, agentic AI",
+      "target_skill": "ai-trends",
+      "priority": 0.9,
+      "schedule_interval_hours": 2,
+      "last_updated": "2026-05-05T08:03:00",
+      "freshness_score": 0.8,
+      "review_schedule": {"l1": "2026-05-06", "l2": "2026-05-12", "l3": "2026-06-04"}
+    },
+    {
+      "id": "dev_tools",
+      "name": "开发工具与语言",
+      "keywords": "Python new libraries, frontend frameworks, DevOps tools, Rust/Go updates, TypeScript",
+      "target_skill": "linux-ops-guide",
+      "priority": 0.7,
+      "schedule_interval_hours": 4,
+      "last_updated": "2026-05-05T02:02:00",
+      "freshness_score": 0.6,
+      "review_schedule": {"l1": "2026-05-06", "l2": "2026-05-12", "l3": "2026-06-04"}
+    },
+    {
+      "id": "anime_acg",
+      "name": "二次元与文娱",
+      "keywords": "2026 new anime, manga releases, game industry news, ACG culture, bangumi",
+      "target_skill": "bangumi-recommender",
+      "priority": 0.5,
+      "schedule_interval_hours": 8,
+      "last_updated": "2026-05-05T04:04:00",
+      "freshness_score": 0.5,
+      "review_schedule": {"l1": "2026-05-06", "l2": "2026-05-12", "l3": "2026-06-04"}
+    },
+    {
+      "id": "productivity",
+      "name": "效率与工作方法论",
+      "keywords": "productivity apps, knowledge management, remote work, AI tools, Notion Obsidian",
+      "target_skill": "memory-management",
+      "priority": 0.6,
+      "schedule_interval_hours": 6,
+      "last_updated": "2026-05-05T06:04:00",
+      "freshness_score": 0.7,
+      "review_schedule": {"l1": "2026-05-06", "l2": "2026-05-12", "l3": "2026-06-04"}
+    }
+  ],
+  "discovery_rules": [
+    "skill 超过 30 天未更新 → 自动加入学习队列",
+    "用户频繁查询某主题 → 自动创建领域",
+    "gap_queue 中 ≥ 3 个相关缺口 → 自动创建领域"
+  ],
+  "quality_threshold": {
+    "min_score": 60,
+    "artifact_required": true,
+    "max_loops": 3
+  },
+  "logging": {
+    "jsonl_dir": "~/.hermes/logs/night_study_sessions/",
+    "summary_log": "~/.hermes/logs/night_study.log"
+  },
+  "knowledge_base_dir": "~/.hermes/night_study/knowledge_base/"
+}

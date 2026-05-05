@@ -33,7 +33,7 @@ metadata:
 
 ## 📅 2026 年新番与 ACG 资讯
 
-> 最后更新：2026-05-04（夜自习自动更新）
+> 最后更新：2026-05-05（夜自习自动更新）
 
 ### 2026 春季番 (Spring 2026, 4月开播)
 
@@ -61,3 +61,15 @@ metadata:
 
 ### Viz Media 2026 新漫画计划
 Viz Media 在 2026 年公布了多个新漫画项目，涵盖多种类型。
+
+### Kodansha USA 2026 春季漫画发行
+Kodansha USA 在 Anime Expo 上宣布了 2026 春季新漫画发行计划，包含多部类型丰富的作品。
+
+### 2026 年夏季番预告 (Summer 2026, 7月开播)
+- **Bleach: Thousand-Year Blood War - The Calamity** — 2026 年最终季（第 4 部分），TV Tokyo 播出，Hulu 美区首播，Disney+ 国际流媒体。千年血战篇的终章，Tite Kubo 为结局准备了重大变化
+- **The Tomb Raider King** — 全新冒险番，夏季备受期待的新作
+- **Bungo Stray Dogs Wan! Season 2** — 7月开播，Q版衍生续作
+- **Saga of Tanya the Evil Season 2 (幼女战记 第二季)** — 2026 年度最受期待作品之一
+
+### FromSoftware / Kadokawa 2026 企划
+FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑，包括 Elden Ring 系列新内容。

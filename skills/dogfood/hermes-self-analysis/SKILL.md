@@ -247,8 +247,17 @@ Skill 数量: 90+
 - [ ] 学会主动用 `hermes config` CLI 查看/修改配置
 - [ ] 学会用 `hermes doctor` 做健康检查
 - [ ] 学会用 `systematic-debugging` 处理复杂错误
+- [ ] 启用 Honcho Memory 跨会话用户建模
+- [ ] 启用 Docker Terminal 隔离执行
+- [ ] 尝试 Web UI Dashboard (`hermes web`)
+- [ ] 熟悉 @ Context References 用法
+- [ ] 启用 Process 管理用于长任务监控
 
 ### 长期改进
 - [ ] 减少过度依赖 tool call，提高推理效率
 - [ ] 优化 skill 内容密度，减少上下文占用
 - [ ] 理解 context compression 机制，写更紧凑的内容
+- [ ] 开发自定义 Plugin（工具 + 钩子）
+- [ ] 创建自定义 MCP Server
+- [ ] 探索 RL 训练数据生成
+- [ ] 通过 Composio MCP 连接 1000+ 服务
