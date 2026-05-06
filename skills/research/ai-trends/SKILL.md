@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.1.0
+version: 1.2.0
 triggers:
 - ai trends
 - ai前沿
@@ -41,10 +41,20 @@ metadata:
 
 ### 闭源/专有模型
 
-- **OpenAI GPT-5.5 系列**：GPT-5.5 Pro（$3000/M 输入价格）和 GPT-5.5，最大上下文 1.1M tokens。OpenAI 还在探索基于 AI Agent 的手机概念（替代传统 App）
+- **OpenAI GPT-5.5 系列**（2026.05 更新）：
+  - GPT-5.5 Instant：幻觉减少 **52.5%**（高风险领域），30% 更简洁响应，增强个性化（Memory Sources 功能提供透明度控制）
+  - GPT-5.5 Pro：$3000/M 输入价格，最大上下文 1.1M tokens，擅长代理编码（Terminal-Bench 82.7%）
+  - OpenAI 还在探索基于 AI Agent 的手机概念（替代传统 App）
 - **OpenAI gpt-oss**：发布开放权重模型
-- **Google Gemini 3.1**：Gemini 3.1 Flash-Lite 等变体，最大上下文 2.1M tokens
-- **Anthropic Claude Opus 4.7**、Claude Sonnet 4.6、Claude Mythos Preview
+- **Google Gemini 3.1**（2026.02 发布，2026.05 企业集成）：
+  - Gemini 3.1 Pro：ARC-AGI-2 达 **77.1%**（推理能力翻倍）
+  - Gemini 3.1 Flash-Lite 等变体，最大上下文 2.1M tokens
+  - Gemini Robotics-ER 1.6：空间推理、多视图理解、成功检测，与 Boston Dynamics 合作
+- **Anthropic Claude Opus 4.7**（2026.04 发布）：
+  - 编码能力提升 **13%**，解决 4 个 Opus 4.6/Sonnet 4.6 无法完成的任务
+  - 支持 **2,576px** 高分辨率图像（化学结构、技术图表）
+  - 新增 Effort Control（`xhigh` 级别），Cyber Verification Program
+  - 定价不变：$5/M 输入，$25/M 输出
 - **MiniMax M2.7**：角色一致性与情感深度增强，开源 OpenRoom（基于 Web 的实时视觉反馈环境）
 
 ### 架构趋势
@@ -63,6 +73,9 @@ metadata:
 ### AI Agent 生态
 
 - **MCP（Model Context Protocol）** 已加入 Agentic AI Foundation（从 Linux Foundation 分出），成为 Agent 式 LLM 系统中工具/数据访问的标准。截至 2025 年底已有 10,000+ 公开 MCP 服务器部署
+- **Google Gemini Enterprise Agent Platform**（2026.04 发布）：整合 Gemini 3.1 Pro、Claude Opus 4.7 等，通过 MCP 协议实现跨 GCP/Workspace 系统集成，Agent Studio 低代码构建，Simulation Environment 压力测试
+- **NVIDIA Nemotron 3 Nano Omni**（2026.05 发布）：30B-A3B MoE 架构，统一视觉/音频/语言，**9x 效率提升**，1920×1080 原生分辨率，用于计算机使用 Agent、文档智能、音视频理解。开源权重，50M+ 下载
+- **Google DeepMind SIMA 2**（2025.11 发布）：Gemini 集成的游戏 Agent，支持自改进循环（无需人类示范即可在 Genie 3 新环境中学习），多语言、emoji、草图理解，为机器人路径奠定基础
 - **Cloudflare + Stripe Agent 协议**：让 AI Agent 自主创建账户、购买域名、部署应用，实现开发到生产的全自动管线
 - **Salesforce Agentforce 2.0**：将 LLM 调用从 4 次减至 2 次输出首 token，引入 HyperClassifier（专有小模型替代通用模型进行主题分类，速度提升 30 倍），整体延迟降低 70%
 - **Agent Script 语言**：由 Salesforce 推出，允许开发者定义显式 if/then 工作流，确保 Agent 在关键任务中 100% 达到预期结果
@@ -102,3 +115,4 @@ metadata:
 > 📌 **更新日志**
 > - 2026-05-04: 初始创建 — 整合 DeepSeek-V3.2/V4、Qwen 超越 Llama、MCP 加入 Linux Foundation、混合架构趋势、RLVR 扩展等
 > - 2026-05-05: v1.1 更新 — Qwen3.6/DeepSeek-V4-Pro-Max/Llama 4 系列模型信息；ICLR 2026 突破（ParaRNN 665×, TurboQuant 3-bit）；AI Agent 企业级部署（Agentforce 延迟降70%, Cloudflare+Stripe 协议, Agent Script）; 企业 Agent 选型框架；边缘 ML 趋势；更新闭源模型（GPT-5.5, Claude 4.7, Gemini 3.1）
+> - 2026-05-06: v1.2 更新 — GPT-5.5 Instant 详细数据（52.5% 幻觉减少、Memory Sources）；Claude Opus 4.7 完整规格（13% 编码提升、xhigh effort、Cyber Verification）；Gemini 3.1 Pro ARC-AGI-2 77.1%；新增 Gemini Enterprise Agent Platform、Nemotron 3 Nano Omni（9x 效率）、SIMA 2（自改进循环）；Gemini Robotics-ER 1.6（Boston Dynamics 合作）
