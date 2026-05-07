@@ -7,9 +7,12 @@ triggers:
 - 搜索结果太多
 - 读不完
 - 上下文不够用
-- 如何搜索
-- 高级搜索
-- 分治法
+  - dogfood
+  - 高级搜索
+  - 分治法
+  - 大文件处理
+related_skills:
+- analysis-workflow
 allowed-tools:
 - mcp_tavily_tavily_search
 - mcp_tavily_tavily_extract

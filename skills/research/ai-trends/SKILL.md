@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.2.0
+version: 1.5.0
 triggers:
 - ai trends
 - ai前沿
@@ -36,19 +36,28 @@ metadata:
    - DeepSeek-V4：面向长上下文推理、编码和 Agent 工作流，两大 MoE 模型
    - **DeepSeek-V4-Pro-Max / V4-Flash-Max**（2026.05）：最新推理优化变体
 3. **其他竞争者**：Kimi K2.6、GLM-4.7、MiniMax、Yi
+   - **Kimi K2.6 GA**（2026.04.21）：1T/32B MoE（384 experts），262K 上下文，12 小时自治运行，300-agent 群协调
+     - SWE-Bench Pro **58.6%**，Terminal-Bench 2.0 **66.7%**，MathVision **93.2%**
+     - Partner 验证：Vercel >50% Next.js 提升，Factory.ai +15%，CodeBuddy +12% accuracy
+     - Anthropic API 兼容，Apache 2.0 基础权重开源
 4. **Mistral 3**（2025.12）：采用 DeepSeek V3 架构
 5. **Llama 4 系列**（Meta，2025.10）：Llama 4 Scout（17B active/109B total，16 experts，10M token 上下文）、Llama 4 Maverick（17B active/400B total，128 experts，1M 上下文），单卡 H100 可跑 Scout。截至 2026.05 已被 Qwen3.6/DeepSeek-V4 部分超越
 
 ### 闭源/专有模型
 
 - **OpenAI GPT-5.5 系列**（2026.05 更新）：
-  - GPT-5.5 Instant：幻觉减少 **52.5%**（高风险领域），30% 更简洁响应，增强个性化（Memory Sources 功能提供透明度控制）
+  - **GPT-5.5 Instant**（5/5 发布）：幻觉减少 **52.5%**（高风险领域），37.3% 错误声明减少
+    - **Memory Sources** 功能：透明度控制，可查看个性化响应使用的上下文（过去聊天、连接文件）
+    - 响应更简洁：30.2% 更少词汇，29.2% 更少行数，减少不必要追问
+    - 自我错误恢复能力：能在问题解决过程中发现并纠正自身错误
+    - API 端点：`chat-latest`，替换 GPT-5.3 Instant 作为默认模型
   - GPT-5.5 Pro：$3000/M 输入价格，最大上下文 1.1M tokens，擅长代理编码（Terminal-Bench 82.7%）
   - OpenAI 还在探索基于 AI Agent 的手机概念（替代传统 App）
 - **OpenAI gpt-oss**：发布开放权重模型
 - **Google Gemini 3.1**（2026.02 发布，2026.05 企业集成）：
   - Gemini 3.1 Pro：ARC-AGI-2 达 **77.1%**（推理能力翻倍）
   - Gemini 3.1 Flash-Lite 等变体，最大上下文 2.1M tokens
+  - **Gemini API File Search 多模态化**（5/5）：支持图像+文本，自定义元数据过滤，页级引用提高透明度
   - Gemini Robotics-ER 1.6：空间推理、多视图理解、成功检测，与 Boston Dynamics 合作
 - **Anthropic Claude Opus 4.7**（2026.04 发布）：
   - 编码能力提升 **13%**，解决 4 个 Opus 4.6/Sonnet 4.6 无法完成的任务
@@ -74,7 +83,11 @@ metadata:
 
 - **MCP（Model Context Protocol）** 已加入 Agentic AI Foundation（从 Linux Foundation 分出），成为 Agent 式 LLM 系统中工具/数据访问的标准。截至 2025 年底已有 10,000+ 公开 MCP 服务器部署
 - **Google Gemini Enterprise Agent Platform**（2026.04 发布）：整合 Gemini 3.1 Pro、Claude Opus 4.7 等，通过 MCP 协议实现跨 GCP/Workspace 系统集成，Agent Studio 低代码构建，Simulation Environment 压力测试
-- **NVIDIA Nemotron 3 Nano Omni**（2026.05 发布）：30B-A3B MoE 架构，统一视觉/音频/语言，**9x 效率提升**，1920×1080 原生分辨率，用于计算机使用 Agent、文档智能、音视频理解。开源权重，50M+ 下载
+- **NVIDIA Nemotron 3 Nano Omni**（2026.05 发布）：**30B-A3B MoE 架构**，统一视觉/音频/语言
+  - **9x 效率提升**（相比其他开放 omni 模型），1920×1080 原生分辨率
+  - 用于计算机使用 Agent（H Company 实测 OSWorld 显著提升）、文档智能、音视频理解
+  - 开源权重、数据集、训练技术，**50M+ 下载**，Hugging Face/OpenRouter/build.nvidia.com 可用
+  - 支持 Jetson、DGX Spark/Station 本地部署，满足合规/数据主权要求
 - **Google DeepMind SIMA 2**（2025.11 发布）：Gemini 集成的游戏 Agent，支持自改进循环（无需人类示范即可在 Genie 3 新环境中学习），多语言、emoji、草图理解，为机器人路径奠定基础
 - **Cloudflare + Stripe Agent 协议**：让 AI Agent 自主创建账户、购买域名、部署应用，实现开发到生产的全自动管线
 - **Salesforce Agentforce 2.0**：将 LLM 调用从 4 次减至 2 次输出首 token，引入 HyperClassifier（专有小模型替代通用模型进行主题分类，速度提升 30 倍），整体延迟降低 70%
@@ -89,6 +102,42 @@ metadata:
 - **PwC 2025 Agent 采用调查**：35% 组织广泛采用，27% 有限采用，17% 全公司实施
 - 安全问题：unrestricted tool use 仍存在安全隐患（工具投毒攻击 — 恶意 MCP 服务器通过注入指令操纵 Agent 行为）。Salesforce 通过可信网关模型（Trusted Gateway）允许管理员定义 Agent 可访问的 MCP 服务器
 
+### Multi-Agent Orchestrator 框架（2026.05 新增）
+
+| 框架 | GitHub Stars | 适用场景 | 核心特性 | 最新版本 |
+|------|--------------|----------|----------|----------|
+| **Microsoft Agent Framework** | ~9,947 | 企业级多语言(.NET/Python) | Graph-based workflows, DevUI, OTEL observability | python-1.2.2 (2026-04-29) |
+| **Google Cloud Scion** | 实验性 | 容器化 agent 并行实验 | True isolation + git worktree, 支持 Claude Code/Gemini CLI/Codex | 早期实验阶段 |
+| **Agentspan** | - | 持久化执行引擎 | 基于 Netflix Conductor, 8 种协调策略, Human approval | - |
+| **Orloj** | - | 生产级治理 | YAML-defined workflows, Fail-closed governance, Kubernetes 风格 apply/rollback | v0.13.0 (2026-05-05) |
+
+**选型决策树**：
+```
+企业级 .NET/Python 团队 → Microsoft Agent Framework
+实验/原型多 agent → Scion (注意：仍在实验阶段)
+需要持久化执行 → Agentspan
+生产级治理需求 → Orloj
+```
+
+### CLI Coding Agents 对比（2026.05）
+
+| Agent | Stars | 开源 | 价格 | SWE-bench | Terminal-Bench | Context | MCP | 最佳场景 |
+|-------|-------|------|------|-----------|----------------|---------|-----|----------|
+| **Claude Code** | ~71K | 否 | $20-200/mo | 87.6% | 65.4% | 1M | 深度(3000+ hooks) | 架构设计、多文件重构、Frontend/UI |
+| **Codex CLI** | ~65K | Apache 2.0 | $20-200/mo | 78-80% | 77.3% | 192-400K | 支持 | DevOps、终端自动化、批处理任务 |
+| **Gemini CLI** | ~102K | Apache 2.0 | 免费(1000 req/day) | N/A | N/A | 1M | 支持 | 免费/评估、低成本原型 |
+| **OpenCode** | ~117K | Go | BYOK | 模型依赖 | 模型依赖 | 模型依赖 | Yes | 多模型自由(75+ models) |
+
+**关键洞察**：
+- **Claude Code** 代码质量最高 (87.6% SWE-bench Verified)，1M context window，Agent Teams 多 agent 协作
+- **Codex CLI** Token 效率 4x fewer tokens，Terminal-Bench 领导者 (77.3%)，Kernel-level sandboxing 安全
+- **最佳组合**: Claude Code → Architecture + Frontend; Codex CLI → DevOps + Autonomous batch work
+
+**避坑指南**：
+- Claude Code $20 Pro plan rate limit (5小时限制，复杂任务可能用完 50-70%)
+- Codex CLI 不适合 Frontend/UI（视觉理解弱于 Claude）
+- Gemini CLI Pro 已付费化（仅 Flash 免费，3月25日变更）
+
 ### 重要论文/模型
 
 | 模型/论文 | 机构 | 亮点 |
@@ -100,6 +149,9 @@ metadata:
 | TurboQuant | Google (ICLR 2026) | KV 缓存 3-bit 量化零精度损失，6 倍内存压缩，8 倍注意力加速 |
 | AI Scientist-v2 | Sakana AI | 全自动假设生成与论文撰写，加速药物发现与材料科学研究 |
 | VibeGen | MIT | 首个以运动而非静态结构设计蛋白质的 AI，用于适应性治疗与生物材料 |
+| **MoGA** | ICLR 2026 | Mixture-of-Groups Attention，精确 token 路由替代块级估计，支持 ~580K 上下文长视频生成 |
+| **GRAM** | ICLR 2026 Workshop | Generative Recursive reAsoning Models，概率递归推理，ARC-AGI 强竞争力，宽度扩展推理 |
+| **Drifting Models** | Kaiming He et al. | 一步生成范式，ImageNet FID 1.54，训练时演化 pushforward 分布 |
 
 ### 2026 趋势观察（中期更新）
 
@@ -112,7 +164,87 @@ metadata:
 
 ---
 
+### LLM 2026 Flagship 对比（2026.05 新增）
+
+| 模型 | MMLU | HumanEval | MATH | MT-Bench | 价格 Input/Output | Context | 最佳场景 |
+|------|------|-----------|------|----------|-------------------|---------|----------|
+| **DeepSeek R1** | 90.8 | 85.3 | 97.3 | — | $0.55/$2.19 | 128K | 数学/推理、成本敏感 |
+| **Claude Opus 4.5** | 89.5 | 91.0 | 76.0 | 9.3 | $5/$25 | 200K | 关键任务、编码 |
+| **Claude Sonnet 4.5** | 89.0 | 93.0 | 78.5 | 9.2 | $3/$15 | 200K | 复杂推理、编码 |
+| **Claude 4.6 Opus** | — | — | — | — | $15/$75 | 500K | 编码质量、Agent Tool-Use |
+| **o3** | 87.5 | 95.2 | 96.7 | — | $2/$8 | 200K | 最难推理、Agent 工作流 |
+| **o4-mini** | 83.2 | 93.4 | 96.7 | — | $1.1/$4.4 | 200K | 成本优化推理 |
+| **Gemini 2.5 Pro** | 87.2 | 84.0 | 78.0 | 9.0 | $1.25/$10 | 1M | 长文档、RAG、视频分析 |
+| **Gemini 2.5 Flash** | 83.6 | 82.0 | 73.1 | 8.6 | $0.30/$2.50 | 1M | 成本敏感批处理 |
+| **GPT-4.1** | 86.5 | 90.2 | 80.4 | 9.2 | $2/$8 | 1M | 企业级、工具使用 |
+| **GPT-4.1 mini** | 83.5 | 87.5 | 72.0 | 8.8 | $0.4/$1.6 | 1M | 高吞吐量、成本优化 |
+| **Llama 4 Scout** | 79.6 | 82.0 | 70.5 | 8.3 | $0.11/$0.34 | 10M | 大上下文、开源、自托管 |
+| **Llama 4 Maverick** | 85.5 | 88.0 | 78.5 | 8.7 | $0.20/$0.60 | 10M | 开源全能、数据主权 |
+
+**关键洞察**：
+- Claude 4.6: **99.2% tool-call reliability** (500-call stress test)，SWE-bench 72.4%，编码首选
+- GPT-5: **97.1% tool-call reliability**，最佳 ecosystem，Agent 通用
+- Gemini 2.5 Flash: **80% capability at 8% cost**，成本敏感首选
+- DeepSeek R1: **MATH 97.3** 最高，开源最优
+
+**LLM 选型决策树**：
+```
+任务类型 →
+├─ 编码/重构 → Claude 4.6 Opus (99.2% tool reliability) → Claude Sonnet 4.5 (性价比)
+├─ Agent Tool-Use → GPT-5 (best ecosystem, 97.1%) → Claude 4.6
+├─ 成本敏感批处理 → Gemini 2.5 Flash ($0.30/$2.50) → DeepSeek V3
+├─ 长文档分析 → Gemini 2.5 Ultra (1M+, 质量在 300K 后优于 Claude)
+├─ 复杂推理 → DeepSeek R1/o3 → o4-mini (成本优化)
+└─ 隐私/离线 → Llama 4 Scout (10M context, 开源)
+```
+
+### 新兴 Multi-Agent Orchestration 框架（2026.05 补充）
+
+| 框架 | Stars | License | 核心特性 | 适用场景 |
+|------|-------|---------|----------|----------|
+| **Shannon** | 1,738 | MIT | Time-travel debugging (Temporal), WASI sandbox, 8 execution strategies, token budget management | 生产级 Agent，需要可靠性 |
+| **MARSYS** | — | Apache 2.0 | 8 topology patterns (hub-and-spoke, pipeline, scatter-gather), 50+ parallel agents, branch-scoped state | 多拓扑、并行执行 |
+| **REDEREF** | — | arxiv | Training-free Thompson sampling routing, 28% token reduction, 17% agent call reduction | 成本优化路由 |
+
+**Shannon 架构**：
+```
+Gateway(Go:8080) → Orchestrator(Go:50052) → Agent Core(Rust:50051) → LLM Service(Python:8000)
+                    ↓ Temporal workflows      ↓ WASI sandbox      ↓ Provider abstraction
+                    ↓ Budget management       ↓ Token enforcement ↓ MCP tools
+```
+
+**Shannon 执行策略**：
+| Strategy | Trigger | Use Case |
+|----------|---------|----------|
+| Simple | complexity < 0.3 | 单 Agent |
+| DAG | 默认 | Fan-out/fan-in |
+| ReAct | 迭代推理 | Reasoning + tool use |
+| Research | 多步研究 | Tiered models (50-70% cost reduction) |
+| Swarm | 自主团队 | Lead-orchestrated multi-agent |
+
+**REDEREF 算法** (Training-Free Agent Routing):
+```
+REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
+效果: 28% token ↓, 17% agent calls ↓, 19% time-to-success ↓
+适用: 冷启动、Agent Pool 动态变化、成本敏感
+```
+
+### ICLR 2026 重要论文补充（2026.05）
+
+| 论文 | 领域 | 关键贡献 |
+|------|------|----------|
+| **LipNeXt** | Certified Robustness | 首个 convolution-free 1-Lipschitz，1-2B 参数，+8% CRA at ε=1 |
+| **Newt** | Multi-Task RL | 200 任务基准，语言条件世界模型，Foundation Model recipe |
+| **Cosmos Policy** | Robot Control | 视频模型 → 机器人策略，单阶段 post-training |
+| **VideoMind** | Video Reasoning | Chain-of-LoRA agent，时序定位视频理解 |
+| **Paper2Code** | ML Automation | 多 Agent LLM 从论文生成代码仓库 |
+
+---
+
 > 📌 **更新日志**
 > - 2026-05-04: 初始创建 — 整合 DeepSeek-V3.2/V4、Qwen 超越 Llama、MCP 加入 Linux Foundation、混合架构趋势、RLVR 扩展等
-> - 2026-05-05: v1.1 更新 — Qwen3.6/DeepSeek-V4-Pro-Max/Llama 4 系列模型信息；ICLR 2026 突破（ParaRNN 665×, TurboQuant 3-bit）；AI Agent 企业级部署（Agentforce 延迟降70%, Cloudflare+Stripe 协议, Agent Script）; 企业 Agent 选型框架；边缘 ML 趋势；更新闭源模型（GPT-5.5, Claude 4.7, Gemini 3.1）
+> - 2026-05-05: v1.1 更新 — Qwen3.6/DeepSeek-V4-Pro-Max/Llama 4 系列模型信息；ICLR 2026 突破（ParaRNN 665×, TurboQuant 3-bit）；AI Agent 企业级部署（Agentforce 延延降70%, Cloudflare+Stripe 协议, Agent Script）; 企业 Agent 选型框架；边缘 ML 趋势；更新闭源模型（GPT-5.5, Claude 4.7, Gemini 3.1）
 > - 2026-05-06: v1.2 更新 — GPT-5.5 Instant 详细数据（52.5% 幻觉减少、Memory Sources）；Claude Opus 4.7 完整规格（13% 编码提升、xhigh effort、Cyber Verification）；Gemini 3.1 Pro ARC-AGI-2 77.1%；新增 Gemini Enterprise Agent Platform、Nemotron 3 Nano Omni（9x 效率）、SIMA 2（自改进循环）；Gemini Robotics-ER 1.6（Boston Dynamics 合作）
+> - 2026-05-07: v1.3 更新 — 新增 Multi-Agent Orchestrator 框架对比（Microsoft Agent Framework、Scion、Agentspan、Orloj）；CLI Coding Agents 详细对比表（Claude Code/Codex CLI/Gemini CLI/OpenCode）；选型决策树和避坑指南；Token 效率对比（Codex 4x fewer tokens）；更新 SWE-bench 最新数据（Claude Code 87.6%）
+> - 2026-05-07: v1.4 更新 — LLM 2026 Flagship 详细对比表（DeepSeek R1/Claude 4.5/Gemini 2.5/GPT-4.1 等 12 模型）；新增 Shannon/MARSYS/REDEREF 框架；LLM 选型决策树；ICLR 2026 补充论文（LipNeXt/Newt/Cosmos Policy/VideoMind/Paper2Code）
+> - 2026-05-07: v1.5 更新 — GPT-5.5 Instant 完整规格（Memory Sources、自我错误恢复、API 端点）；Kimi K2.6 GA 详细规格（1T/32B MoE、12h 运行、300-agent 群、Partner 验证）；Nemotron 3 Nano Omni 扩展（部署路径、H Company 实测）；Gemini API File Search 多模态化；新增 ICLR 2026 论文（MoGA 长视频生成、GRAM 递归推理、Drifting Models 一步生成）

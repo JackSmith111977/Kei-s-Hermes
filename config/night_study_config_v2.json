@@ -8,13 +8,18 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-06T06:00:00",
-      "freshness_score": 0.95,
+      "last_updated": "2026-05-07T08:00:00",
+      "freshness_score": 0.05,
       "review_schedule": {
         "l1": "2026-05-06",
         "l2": "2026-05-12",
         "l3": "2026-06-04"
-      }
+      },
+      "knowledge_gaps_filled": [
+        "Multi-Agent Orchestrator frameworks",
+        "CLI Coding Agents comparison",
+        "Token efficiency insights"
+      ]
     },
     {
       "id": "dev_tools",
@@ -42,17 +47,22 @@
       "target_skill": "bangumi-recommender",
       "priority": 0.5,
       "schedule_interval_hours": 8,
-      "last_updated": "2026-05-06T04:07:21",
-      "freshness_score": 0.9,
+      "last_updated": "2026-05-07T04:00:00",
+      "freshness_score": 0.1,
       "review_schedule": {
-        "l1": "2026-05-06",
-        "l2": "2026-05-12",
-        "l3": "2026-06-04"
+        "l1": "2026-05-08",
+        "l2": "2026-05-14",
+        "l3": "2026-06-07"
       },
       "knowledge_gaps_filled": [
         "Summer 2026 MAL热度排行",
         "Bushiroad 2026行业趋势报告",
-        "十大新作挑战分析"
+        "十大新作挑战分析",
+        "五等分的新娘新动画项目",
+        "One Piece Netflix重制版定档",
+        "Kagurabachi动画化确认",
+        "Summer 2026中季评价",
+        "Magical Girl Nanoha回归"
       ]
     },
     {

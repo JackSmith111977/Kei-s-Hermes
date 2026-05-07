@@ -33,7 +33,7 @@ metadata:
 
 ## 📅 2026 年新番与 ACG 资讯
 
-> 最后更新：2026-05-05（夜自习自动更新）
+> 最后更新：2026-05-07（夜自习自动更新）
 
 ### 2026 春季番 (Spring 2026, 4月开播)
 
@@ -174,3 +174,54 @@ FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑
 - **Kadokawa Creators** — 新工作室培养年轻创作者，应对行业高流失率
 - **Naruto 全球分化** — 全球 Top5，日本仅第15；本土偏爱柯南/海贼/龙珠
 - **Spring 2026 突破作** — *Daemons of the Shadow Realm* 领跑日本收视
+
+---
+
+### 🔥 2026年5月重大新闻 (May 2026)
+
+> **更新**: 2026-05-07 (夜自习)
+
+#### 五等分的新娘新动画项目 (May 2)
+- **官方宣布**: 「五等分的新娘」新动画项目正式启动
+- **两项企划**:
+  1. 小说版动画化 — 原作者 Negi Haruba 监修的完整续作
+  2. 原作未动画化章节改编 — 补完粉丝期待的场景
+- **累计发行**: 2000万册+（截至2026年5月）
+
+#### One Piece Netflix 重制版 (May 5)
+- **定档**: 2027年2月
+- **制作**: Wit Studio
+- **覆盖范围**: East Blue篇前50章 → 7集 300分钟
+- **首集上映**: World Tour 2026 夏季开始先行放映
+- **特色**: 从风车村 Partys Bar 场景开始，重绘经典
+
+#### Kagurabachi 动画化确认 (April 27)
+- **开播**: 2027年4月
+- **制作**: Cypic (Umamusume: Cinderella Gray 同团队)
+- **导演**: Tetsuya Takeuchi | **角色设计**: Keigo Sasaki
+- **声优**: Taihi Kimura (主角 Chihiro Rokuhira)
+- **累计发行**: 400万册+ (Vol.11)
+- **World Tour**: 2026夏季先行20分钟，日本首映完整第1集
+
+#### Summer 2026 中季评价 (Mid-Season)
+- **领跑**: Bleach TYBW - The Calamity 压倒性热度
+- **黑马**: Black Torch 稳步升温，超出预期
+- **稳定**: Mushoku Tensei S3、Youjo Senki II 保持高质量
+- **争议**: The Detective Is Already Dead S2 节奏问题
+
+#### Magical Girl Nanoha 回归
+- **系列**: Mahou Shoujo Lyrical Nanoha EXCEEDS: Gun Blaze Vengeance
+- **意义**: 十年后首次TV系列回归
+- **设定**: 更暗黑风格，对抗"Invasion Species"外星威胁
+- **制作**: Seven ARCS
+
+---
+
+### 📅 2027 年重点项目预告
+
+| 作品 | 开播时间 | 工作室 | 类型 | 备注 |
+|------|----------|--------|------|------|
+| **Kagurabachi** | 2027年4月 | Cypic | 动作/超自然 | Jump新生代旗舰 |
+| **One Piece Netflix重制** | 2027年2月 | Wit Studio | 冒险 | East Blue 50章 |
+| **Re:Zero S4** | 待定 | White Fox | 异世界 | MAL Top 5 |
+| **Dungeon Meshi S2** | 待定 | Trigger | 奇幻/美食 | 原作完结 |
