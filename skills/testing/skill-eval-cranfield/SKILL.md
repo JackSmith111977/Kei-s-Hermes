@@ -245,6 +245,277 @@ Score = Recall@K × 0.30 + MRR × 0.35 + NDCG@K × 0.25 + (1 - Spurious@K) × 0.
 | Stanford CS276 IR Evaluation | NDCG 多级相关性处理的数学定义 |
 | Anthropic Contextual Retrieval (2024) | Hybrid 方法降低 failure rate 49% |
 
+---
+
+## 十、全套验证流程 — 超越 Cranfield 的系统集成测试
+
+> **Cranfield 侧重 IR 指标的量化评估；但一个推荐系统在发布前，还需要通过系统集成验证、CLI/HTTP 接口测试、仿真压力测试，确保功能完整性。**
+
+### 10.1 为什么需要多层级验证
+
+| 层级 | 覆盖 | 工具 | 发现的问题类型 |
+|:-----|:-----|:-----|:--------------|
+| **L0 单元测试** | 匹配算法/同义词表/索引 | pytest | 算法逻辑错误 |
+| **L1 集成测试** | SkillAdvisor 加载/推荐/记录 | pytest + fixtures | 索引/加载错误 |
+| **L2 CLI 命令测试** | 全部子命令的可用性 | sra status/recommend/coverage/... | CLI 入口/参数错误 |
+| **L3 HTTP API 测试** | REST 端点的响应 | curl + JSON 验证 | API 路由/序列化错误 |
+| **L4 仿真测试** | 真实用户场景模拟 | 连续问答/中英混合/边缘/压力 | 语义理解/性能瓶颈 |
+
+### 10.2 推荐验证流程
+
+```bash
+#!/bin/bash
+# SRA 全量验证脚本
+set -e
+
+echo "🧪 L0+L1: pytest (单元+集成)"
+cd /path/to/sra-proxy
+python3 -m pytest tests/ -v --tb=short | tail -20
+echo ""
+
+echo "🧪 L2: CLI 命令测试"
+sra status
+sra version
+sra refresh
+echo ""
+
+echo "🧪 L3: HTTP API 测试"
+curl -s http://localhost:8536/status | python3 -m json.tool
+curl -s -X POST http://localhost:8536/recommend \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "画架构图"}' | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Top: {d[\"recommendations\"][0][\"skill\"]} ({d[\"recommendations\"][0][\"score\"]})')"
+echo ""
+
+echo "🧪 L4: 仿真 (压力测试)"
+for i in $(seq 1 10); do
+  curl -s -X POST http://localhost:8536/recommend \
+    -H 'Content-Type: application/json' \
+    -d '{"message": "画架构图"}' -o /dev/null -w "第${i}次: %{time_total}s\\n"
+done
+```
+
+### 10.3 关键验证点
+
+#### L2 CLI 命令检查清单
+
+```bash
+# 必须验证的 12 个子命令
+sra status       # ✅ Daemon 运行状态
+sra version      # ✅ 版本号 + 作者
+sra help         # ✅ 帮助文档
+sra refresh      # ✅ 索引刷新
+sra stats        # ✅ 运行统计
+sra config show  # ✅ 配置读取
+sra adapters     # ✅ 适配器列表
+sra recommend 画架构图   # ✅ 场景推荐
+sra recommend 帮我做个PPT  # ✅ 场景推荐
+sra recommend 飞书发送文件  # ✅ 场景推荐
+sra coverage     # ✅ 覆盖率分析
+sra record <skill> <query>  # ✅ 记录使用
+```
+
+#### L3 HTTP API 端点验证
+
+| 端点 | 方法 | 预期响应 | 测试命令 |
+|:-----|:-----|:---------|:---------|
+| `/status` | GET | `{"status": "ok", "sra_engine": true, ...}` | `curl http://localhost:8536/status` |
+| `/recommend` | POST | `{"rag_context": "...", "recommendations": [...]}` | `curl -X POST -d '{"message":"..."}' http://localhost:8536/recommend` |
+| `/stats` | GET | `{"version": "...", "status": "running", ...}` | `curl http://localhost:8536/stats` |
+
+#### L4 仿真场景模板
+
+**场景 1: 连续问答**
+```bash
+# 模拟用户连续需求
+curl -X POST -d '{"message":"生成PDF"}'       # → pdf-layout
+curl -X POST -d '{"message":"然后是PPT"}'       # → pptx-guide
+curl -X POST -d '{"message":"最后整理成Excel"}'  # → xlsx-guide
+curl -X POST -d '{"message":"把这些发到飞书上"}'  # → feishu-send-file（⚠️ 可能为 NONE）
+```
+
+**场景 2: 中英混合**
+```bash
+curl -X POST -d '{"message":"git push 怎么撤销"}'
+curl -X POST -d '{"message":"deploy to production"}'
+curl -X POST -d '{"message":"financial analysis 股票"}'
+```
+
+**场景 3: 边缘情况**
+```bash
+curl -X POST -d '{"message":""}'              # 空 → NONE
+curl -X POST -d '{"message":"a"}'             # 单字 → NONE
+curl -X POST -d '{"message":"!@#$%^&"}'       # 特殊字符 → NONE
+curl -X POST -d '{"message":"主人帮我看看这个代码"}' # 口语化 → python-debugpy
+```
+
+**场景 4: 压力测试**
+```bash
+# 连续 20 次请求，验证成功率 100%，平均 < 500ms
+for i in $(seq 1 20); do
+  curl -s -X POST -d '{"message":"画架构图"}' \
+    http://localhost:8536/recommend -o /dev/null -w "%{http_code} %{time_total}s\\n"
+done
+```
+
+### 10.4 Daemon 生命周期管理
+
+**关键注意事项:**
+
+| 操作 | 命令 | 陷阱 |
+|:-----|:-----|:-----|
+| **停止旧 daemon** | `sra stop` | 必须先 stop 再 pip reinstall，否则文件锁 |
+| **重新安装** | `pip install --break-system-packages -e .` | 需要 `--break-system-packages`（PEP 668 环境） |
+| **启动新版** | `sra start` | 启动前检查日志/端口占用 |
+| **验证版本** | `sra version` | 确认版本号正确 |
+| **刷新索引** | `sra refresh` | Daemon 启动后首次加载 313 skills 需要 ~0.3s |
+
+**⚠️ 常见陷阱:**
+1. `pip install -e .` 不重启 daemon → 代码改动不生效（daemon 独立进程）
+2. `sra coverage` 和 `SkillAdvisor.analyze_coverage()` 的结果可能不同（前者走 daemon 索引，后者实时加载）
+3. HTTP API 的延迟（~225ms）远高于 CLI（~30ms）— 因为 JSON 序列化和网络开销
+
+### 10.5 实战参考（SRA v1.1.0，2026-05-07）
+
+| 测试项 | 结果 | 耗时 |
+|:------|:----|:----|
+| pytest (39 tests) | ✅ 全部通过 | 19.5s |
+| CLI 基础命令 (12 个) | ✅ 全部正常 | ~1s |
+| CLI 场景推荐 (7 个) | ✅ 全部精准匹配 | ~0.2s |
+| HTTP API (3 端点) | ✅ JSON 有效 | ~0.1s |
+| 仿真 20 次压力 | ✅ 100% 成功 | ~4s |
+| 推荐平均延迟 (CLI) | ~30ms | — |
+| 推荐平均延迟 (HTTP) | ~225ms | — |
+| 技能覆盖率 | 94.9% | — |
+| 有 trigger 技能覆盖率 | 99.4% | — |
+
+### 10.6 经验教训
+
+1. **不要凭直觉判断改进效果** — 改前后必须跑完整 L0-L4 流程
+2. **仿真测试暴露的问题 pytest 不一定能发现** — 模糊口语化查询、"把这些发到飞书上"等自然语言表达经常匹配失败
+3. **HTTP 延迟是 CLI 的 7-8 倍** — 如果用户主要用 HTTP API，性能基准应基于 HTTP 而非 CLI
+4. **Daemon 重启是必要的** — pip reinstall 后不重启 daemon，变更不会生效
+5. **门禁断言应 >= 300** — 确保 CI 不会降级到用假数据
+6. **同义词表是命门** — 一个缺失的同义词（如"系统设计"与 architecture diagram 之间）就导致完全无匹配。每次新增 skill 后应同步补全同义词
+7. **仿真必须先于量化评估** — 在跑 Recall/MRR 等指标前，先用仿真场景暴露明显的匹配错误，否则量化指标可能掩盖严重缺陷
+8. **HTTP API 端点覆盖不全** — daemon 的 /coverage 端点返回 404，需要从 CLI 覆盖。发布前必须验证每个端点返回正确的 HTTP 状态码
+
+### 10.7 实战发现的典型匹配盲区（SRA v1.1.0）
+
+以下是从 2026-05-07 仿真测试中发现的典型缺陷：
+
+| 查询 | 推荐结果 | 问题类型 | 根因 |
+|:-----|:---------|:---------|:-----|
+| `发飞书消息` | himalaya (59分) | 同义词桥接错误 | synonyms 中 himalaya 与飞书产生交叉干扰 |
+| `画系统设计图` | NONE (0分) | 同义词缺失 | 无"系统设计"到 architecture diagram 的映射 |
+| `用 python 画个折线图` | NONE (0分) | 技能盲区 | 无 matplotlib/seaborn 相关 skill |
+| `把这些发到飞书上` | NONE (0分) | 模糊指代 | "把这些"等口语化指代无法被特征拆分捕获 |
+| `主人帮我看看这个代码` | python-debugpy (51.8) | 正确但薄弱 | 靠"代码"到 debug 映射，仅中等置信度 |
+
+**处理策略**：这些缺陷先记录后治理。同义词表修改可能引发连锁反应，需要先跑基线再修改，修改完重新跑全套 L0-L4 验证。
+
+---
+
+> **本页内容来自 2026-05-07 实战：将 ~/.hermes/skills/ 的全部真实技能 YAML 提取为可复用的测试 Fixture。**
+
+### 9.1 为什么需要真实数据
+
+| 方法 | 问题 |
+|------|------|
+| 手工编造 15 个测试技能 | 覆盖率不真实，CI 上跑不出有意义的结果 |
+| 直接从 ~/.hermes/skills/ 加载 | 依赖外部环境，CI 上不可用 |
+| **✅ 提取 YAML → 创建 Fixture** | **既真实又独立，git clone 即跑** |
+
+### 9.2 批量提取流程
+
+```
+~/.hermes/skills/ (313 SKILL.md)
+       ↓ python3 scripts/create-fixtures-from-real-skills.py
+       ├── tests/fixtures/skills/         ← 317 个 SKILL.md（按类别组织）
+       ├── tests/fixtures/skills_yaml/    ← 每个技能 1 个 YAML
+       └── tests/fixtures/skills_yaml/_all_yamls.json  ← 合并 JSON（测试数据源）
+```
+
+### 9.3 关键技术决策
+
+| 决策 | 方案 | 理由 |
+|------|------|------|
+| **类别嵌套** | `bmad-method/agents` → `bmad-method__agents` | `/` 在文件系统中会被识别为目录分隔符 |
+| **YAML 源保留** | 独立 YAML + 合并 JSON | 独立 YAML 便于单技能审计，合并 JSON 便于测试加载 |
+| **跳过重复** | 已有 Fixture 的技能（15 个）跳过 | 保留原始的精确控制数据，不覆盖 |
+| **验证门禁** | `assert skills >= 300` | 确保 CI 上不会退化到用假数据 |
+
+### 9.4 脚本使用
+
+```bash
+# 运行一次，生成全部 Fixture
+cd /path/to/sra-proxy
+python3 tests/fixtures/../scripts/create-fixtures-from-real-skills.py
+
+# 在测试中验证真实数据
+# 参考 test_matcher.py:
+def test_all_skills_indexed(self):
+    indexed_names = set(s["name"] for s in self.skills)
+    missing = REAL_SKILL_NAMES - indexed_names
+    coverage = len(indexed_names & REAL_SKILL_NAMES) / len(REAL_SKILL_NAMES) * 100
+    assert coverage >= 90, f"真实技能索引覆盖率应 ≥ 90%，实际 {coverage:.1f}%"
+```
+
+### 9.5 从真实 YAML 生成测试查询
+
+```python
+with open("_all_yamls.json") as f:
+    ALL_REAL_SKILLS_YAML = json.load(f)
+
+def get_real_skill_test_queries():
+    """遍历每个真实技能的 trigger/name/desc → 自动生成测试查询"""
+    tests = []
+    for ydata in ALL_REAL_SKILLS_YAML:
+        name = ydata.get("_source_name", "")
+        triggers = ydata.get("triggers", []) or []
+        queries = []
+        # 1. 中文 trigger 优先
+        for t in triggers:
+            if isinstance(t, str) and any('\u4e00' <= c <= '\u9fff' for c in t):
+                queries.append(t)
+        # 2. 英文 trigger（前 2 个）
+        eng = [t for t in triggers if isinstance(t, str) and all(c.isascii() or c in ' -' for c in t)]
+        queries.extend(eng[:2])
+        # 3. 名称语义化
+        queries.append(name.replace("-", " "))
+        # 4. description 关键词
+        desc = ydata.get("description", "")
+        if desc:
+            queries.extend([w for w in desc.replace("—", " ").split() if len(w) >= 2][:2])
+        tests.append({"name": name, "test_queries": list(set(q for q in queries if q))[:5]})
+    return tests
+```
+
+### 9.6 实战结果（313 真实技能）
+
+| 指标 | 值 |
+|:-----|:--:|
+| 有 YAML frontmatter | **313/313 (100%)** |
+| 生成的 Fixture 数 | **317 个**（含原有 15 个） |
+| 覆盖类别 | **67 个** |
+| 索引覆盖率 | **96.8%** |
+| 有 trigger 技能覆盖率 | **99.4%** |
+
+### 9.7 经验教训
+
+1. **不要在 CI 上依赖真实 `~/.hermes/skills/`** — 换环境就挂
+2. **不要用手工编造的测试技能** — 测不出真实的问题
+3. **提取 YAML 时保留 `_source_path`** — 方便追查来源
+4. **门禁验证** — 用 `assert count >= 300` 杜绝退化到假数据
+5. **重复技能的处理** — 已有手工 fixtures 时，跳过保留，不覆盖
+
+### 9.8 参考
+
+- 脚本: `scripts/create-fixtures-from-real-skills.py`
+- 测试示例: `tests/test_matcher.py` (`TestAdvisor` class)
+- 覆盖率测试: `tests/test_coverage.py`
+
+---
+
 ## 🚨 重要前提：必须先审计实际 Skill 库
 
 这是从 SRA v2 评估框架实战中沉淀的关键发现。
@@ -366,3 +637,7 @@ no_trig_skills = [s for s in normal_skills if not s['triggers']]
 | 2026-05-04 | 同义词匹配应区分"精确命中trigger/name"和"宽泛命中description" | SRA matcher.py 改进 |
 | 2026-05-04 | Qrels 可从 skill triggers 自动生成，不需要人工标注（但 L3/L4 需要人工辅助） | SRA 评估框架设计 |
 | 2026-05-04 | Daemon 重启后才能加载代码改动——测试时必须先重启 | SRA Story 1 实战 |
+| 2026-05-07 | 仿真测试暴露的缺陷与 pytest 不同，必须同时跑两种测试 | SRA v1.1.0 Full QA |
+| 2026-05-07 | HTTP API 延迟约 225ms，是 CLI 的 7-8 倍，性能基准应区分 | SRA v1.1.0 压力测试 |
+| 2026-05-07 | 同义词表一个缺口就导致完全无匹配，是系统的命门 | SRA v1.1.0 仿真测试 |
+| 2026-05-07 | Fixture 必须 assert skills>=300 阻止 CI 退化到假数据 | SRA v1.1.0 测试改造 |

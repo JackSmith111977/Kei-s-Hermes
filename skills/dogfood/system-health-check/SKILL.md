@@ -24,6 +24,27 @@ metadata:
 
 > **核心理念**：生产级 LLM 应用需要防御性编程。不仅仅是看日志，而是建立 **可观测性（Observability）** 和 **容错机制（Resilience）**。
 
+## 〇、快速诊断：hermes doctor（首选）
+
+升级 v0.12.0 后，Hermes 内置了 `hermes doctor` 诊断工具：
+
+```bash
+# 一键健康检查
+hermes doctor
+
+# 自动修复可修复的问题
+hermes doctor --fix
+```
+
+**`hermes doctor --fix` 会自动修复：**
+- Config 版本迁移（如 v21 → v23）
+- WAL 文件 checkpoint（清理过大的 WAL）
+- Seed curator 默认配置项
+
+> ⚠️ 升级后第一步：运行 `hermes doctor --fix` 确保配置和数据库状态最新。
+
+---
+
 ## 一、LLM 可观测性四大支柱
 
 根据业界最佳实践，LLM Agent 的健康检查应覆盖以下四个维度：

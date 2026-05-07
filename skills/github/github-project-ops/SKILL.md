@@ -1,7 +1,7 @@
 ---
 name: github-project-ops
 description: GitHub 项目运维完整指南 — 仓库管理、分支保护、Issue/PR 工作流、CI/CD (Actions)、安全 (Secret Scanning/Dependabot/CodeQL)、Release (SemVer/semantic-release)、社区运营、备份迁移。
-version: 1.0.0
+version: 1.1.0
 triggers:
   - github
   - 项目运维
@@ -29,6 +29,15 @@ triggers:
   - stale bot
   - 备份仓库
   - repository management
+  - 文档一致性
+  - 代码审计
+  - 文档飘移
+  - doc drift
+  - 发布前准备
+  - pre-release
+  - 项目现状分析
+  - 代码文档对比
+  - documentation audit
 allowed-tools:
   - terminal
   - read_file
@@ -199,6 +208,20 @@ curl -s https://api.github.com/repos/:owner/:repo | \
 - 项目结构图遗漏 .github/ pyproject.toml 等重要文件
 - pip install 指令包含 --user 参数（PyPI 发布后不需要）
 - GitHub Topics/Description 为空（项目完全不可被搜索发现）
+
+### 1.6 深度文档审计模式（进阶）
+
+当需要系统性审计代码与文档的一致性时，使用以下 5 种结构化对比模式。详见 `references/code-doc-audit-patterns.md`。
+
+| 模式 | 目标 | 典型发现 |
+|:-----|:-----|:---------|
+| **A: CLI 命令表审计** | README 命令表 vs 实际 CLI 入口 | README 遗漏辅助命令 |
+| **B: API 端点审计** | API 文档 vs 实际路由 | 文档遗漏辅助端点、声明了不存在的端点 |
+| **C: 算法参数审计** | 文档中权重/阈值 vs 代码常量 | 代码有额外参数但文档未记录 |
+| **D: 版本号一致性扫描** | 全仓版本号引用一致性 | help 输出/安全表版本号过时 |
+| **E: 项目结构图审计** | 结构图 vs 实际文件树 | 遗漏新目录、已删除文件未更新 |
+
+**一致性评分标准**：按代码准确性(30%)、文档完整性(25%)、文档时效性(25%)、元数据一致性(20%) 四个维度评分，低于 70% 禁止发布。
 
 ---
 
@@ -452,7 +475,18 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
-### 4.4 环境保护
+### 4.5 Python CI 测试可移植性
+
+> 详细指南见 `references/python-ci-test-fixtures.md`
+
+当测试依赖本地环境路径（如 `~/.hermes/skills`）时，CI 环境会无法运行。解决方案是创建 `tests/fixtures/` 目录，用 10-20 个模拟数据文件替代真实环境依赖。
+
+**核心原则**：
+- Fixtures 放入 git 仓库（`tests/fixtures/`），clone 即用
+- 测试类始终初始化对象，用 `has_*` 标志位区分环境
+- CI 工作流不需要额外 setup 步骤
+
+详见 `references/python-ci-test-fixtures.md`。
 
 ```yaml
 # 生产部署需要审批
@@ -649,7 +683,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 6.4 完整流水线图
+### 6.4 发布前准备（手动流程）
+
+当需要手动准备一个版本发布时（不依赖 semantic-release），参考以下步骤：
+
+1. **分支**：创建 `prepare-release-vX.Y.Z` 分支
+2. **CHANGELOG**：基于 docs/ 目录的 EPIC/Sprint 记录整理变更
+3. **配置清理**：统一 pyproject.toml 和 setup.py，修复 deprecation 警告
+4. **版本号检查**：确保 pyproject.toml / __init__.py 版本号一致
+5. **构建验证**：`python3 -m build && twine check dist/*`
+6. **测试**：`python3 -m pytest tests/ -v`
+7. **打 tag**：`git tag vX.Y.Z && git push origin vX.Y.Z`
+8. **GitHub Release**：`gh release create vX.Y.Z --notes "..."`
+
+> 📋 完整操作步骤和详细检查清单见 `references/pre-release-checklist.md`
+
+### 6.5 完整流水线图
 
 ```
 [feat/fix/commit] → [Push → PR] → [CI 通过] → [Merge to main]

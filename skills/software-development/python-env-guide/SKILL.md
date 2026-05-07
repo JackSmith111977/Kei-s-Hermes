@@ -90,6 +90,33 @@ pip install requests   # 可能装了错误的地方
 python3 -m pip install weasyprint   # venv 里装，但 weasyprint 需要系统依赖
 ```
 
+### ⚠️ externally-managed-environment 错误
+
+Ubuntu 24.04+ 系统 Python 禁止 `pip install` 直接安装（PEP 668 保护）：
+
+```
+error: externally-managed-environment
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install
+    python3-xyz, where xyz is the package you are trying to install.
+```
+
+**解决方法**（按优先级）：
+
+| 方法 | 命令 | 说明 |
+|:----|:----|:------|
+| 🥇 使用 venv 的 pip | `python3 -m pip install <pkg>` | **推荐** — 当前活跃 venv 会自动选择 |
+| 🥇 确保 venv 有 pip | `python3 -m ensurepip --upgrade` | 如果 venv 缺少 pip 先运行此命令 |
+| 🥈 apt 安装 | `sudo apt install python3-<pkg>` | 系统级包，两个 Python 都能用 |
+| 🥉 强制安装 | `pip install <pkg> --break-system-packages` | ⚠️ 不推荐，可能破坏系统环境 |
+
+**判断当前在哪个环境**：
+```bash
+python3 -c "import sys; print(sys.prefix); print(sys.exec_prefix)"
+# ~/.hermes/hermes-agent/venv  → venv（安全的）
+# /usr                         → 系统（有保护）
+```
+
 ### 查看包在哪里
 ```bash
 # 查看包是否已装

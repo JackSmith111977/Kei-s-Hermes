@@ -23,6 +23,11 @@ state.db-wal
 models_dev_cache.json
 skills/.bundled_manifest
 
+# ── 运行时状态（curator 缓存／使用统计）──
+skills/.curator_state
+skills/.usage.json
+skills/.hub/
+
 # ── 会话记录（隐私）──
 sessions/
 logs/

@@ -88,6 +88,7 @@ Header: Authorization: Bearer {tenant_access_token}
 - 🔐 [认证指南](references/auth-guide.md) — token 获取、权限申请、安全最佳实践
 - ❌ [错误码速查](references/error-codes.md) — 常见错误码及解决方案
 - 🛠️ [Hermes 飞书工具](references/hermes-feishu-tools.md) — 内置工具能力详解
+- 🃏 [消息卡片配置](references/card-config.md) — Interactive Card 自动包装机制与维护指南
 
 ## 权限要求概览
 
@@ -120,5 +121,6 @@ Header: Authorization: Bearer {tenant_access_token}
 3. **分页**: 大部分列表接口支持 page_token 分页，单次最多 100 条
 4. **Webhook**: 事件订阅需要公网可访问的回调地址
 5. **文件/图片上传**：飞书**不支持**通过 send_message MEDIA 附件上传文件/图片，必须走飞书原生 API。
+6. **消息投递格式**：用户偏好将消息发送到**主聊天**而非话题/线程中。发送消息时注意不要继承话题上下文（如 cron 任务中使用 `deliver='origin'` 会保持话题上下文，需要时改为指定 `platform:chat_id`）。群聊中回复时同样避免创建新话题。
    - **发图片**: POST `/im/v1/images` (form-data `image_type=message`) -> 获得 `image_key` -> 发送 `msg_type=image`。
    - **发文件**: POST `/im/v1/files` -> 获得 `file_key` -> 发送 `msg_type=file`。

@@ -158,5 +158,81 @@ The response JSON includes the PR `number` — save it for later commands.
 
 To create as a draft, add `"draft": true` to the JSON body.
 
+## 🚩 PR 创建失败排查
+
+### 症状：`Resource not accessible by personal access token`
+
+gh 和 curl 都报这个错，说明当前 GitHub token **没有 pull requests write 权限**。
+
+### 根因
+
+GitHub 有两种 Personal Access Token：
+
+| Token 类型 | 权限模型 | 创建 PR 所需 |
+|:-----------|:---------|:-------------|
+| **Classic PAT** | 粗粒度 scope（如 `repo`） | `repo` scope 包含 PR 写权限 ✅ |
+| **Fine-grained PAT** | 细粒度按权限开关 | 必须显式开启 **"Pull requests: Read and write"** 🔧 |
+
+如果你用的是 fine-grained PAT（以 `github_pat_` 开头），即使仓库权限显示 `Admin: true`，也不代表能创建 PR —— 因为 fine-grained PAT 的权限是**按功能模块独立授权**的。
+
+### 解决方案
+
+#### 方案 A：在 GitHub 上给 token 添加权限
+1. 打开 https://github.com/settings/tokens
+2. 找到你的 fine-grained PAT
+3. 在 **Repository permissions** → **Pull requests** → 改为 **Read and write**
+4. 等待几秒后重试
+
+#### 方案 B：提供手动创建 PR 的链接（Token 权限不可改时）
+```bash
+BRANCH=$(git branch --show-current)
+REMOTE_URL=$(git remote get-url origin)
+OWNER_REPO=$(echo "$REMOTE_URL" | sed -E 's|.*github\.com[:/]||; s|\.git$||')
+
+echo "👉 https://github.com/$OWNER_REPO/compare/master...$BRANCH?expand=1"
+echo ""
+echo "📝 PR Title:"
+echo "<copy from git log -1 --format=%s>"
+echo ""
+echo "📝 PR Body (复制以下内容):"
+echo "---"
+echo "## 概述"
+echo ""
+echo "<简要说明改了什么>"
+echo "---"
+```
+
+用户打开链接后，GitHub Web UI 自动填充对比页面，点击 "Create pull request" 即可。
+
+#### 方案 C：切换到 Classic PAT
+创建一个 Classic PAT（Settings → Developer settings → Personal access tokens → Tokens (classic)），勾选 `repo` scope。然后用新 token：
+
+```bash
+# 更新 git 凭据
+git remote set-url origin https://<username>:<classic-pat>@github.com/<owner>/<repo>.git
+```
+
+### 验证 token 权限
+
+```bash
+# 检查 token 类型和可用权限
+TOKEN=$(grep "github.com" ~/.git-credentials | head -1 | sed 's|https://[^:]*:\([^@]*\)@.*|\1|')
+
+# Classic PAT 会显示 OAuth scopes
+curl -sI -H "Authorization: token $TOKEN" https://api.github.com/ | grep -i "x-oauth-scopes"
+
+# Fine-grained PAT 则不会显示 scopes header，但可以尝试创建 PR 来测试
+curl -s -X POST -H "Authorization: token $TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  https://api.github.com/repos/<owner>/<repo>/pulls \
+  -d '{"title":"test","head":"<branch>","base":"master"}' | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if 'html_url' in d:
+    print('✅ PR create OK')
+else:
+    print(f'❌ {d.get(\"message\", \"unknown error\")}')
+"
+```
 
 > 🔍 **## 4. Monitoring CI Status** moved to [references/detailed.md](references/detailed.md)

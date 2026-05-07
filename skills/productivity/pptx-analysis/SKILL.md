@@ -1,6 +1,7 @@
 ---
 name: pptx-analysis
-description: PPT 深度理解与解析原子技能。三层架构（结构解析→视觉分析→语义理解），27种设计缺陷检测，Vision AI + python-pptx 工具链。
+description: PPT 深度理解与解析原子技能。循环分析流水线（树状递归+中间反思+process files），三层架构（结构解析→视觉分析→语义理解），27种设计缺陷检测。
+version: 2.0.0
 triggers:
 - pptx analysis
 - pptx-analysis
@@ -11,6 +12,10 @@ triggers:
 - 设计缺陷检测
 - CRAP 原则检测
 - PPT 阅读理解
+- 循环分析
+- 深度分析
+- 迭代精炼
+- gleaning loop
 metadata:
   hermes:
     tags:
@@ -20,14 +25,122 @@ metadata:
     - slides
     - vision-analysis
     - design-flaws
+    - cyclic-analysis
+    - iterative-refinement
     category: productivity
     skill_type: doc-analysis
     format: pptx
+depends_on:
+  - analysis-workflow
+  - mermaid-guide
+design_pattern: Cyclic-Pipeline
 ---
-# PPT 深度理解与解析 Skill
+# PPT 深度理解与解析 Skill v2.0
 
-> **来源**：SlideAudit 论文（arxiv 2508.03630）+ VLM-SlideEval 论文（arxiv 2510.22045）+ python-pptx API + IBM Granite Vision 教程
-> **版本**：v1.0.0 | **日期**：2026-05-06
+> **来源**：SlideAudit（UIST 2025）+ VLM-SlideEval（NeurIPS 2025）+ DocRefine + DocETL Gleaning + LongRefiner 树状结构
+> **版本**：v2.0.0 | **日期**：2026-05-07
+
+---
+
+## 🔄 核心创新：循环分析流水线 (Cyclic Analysis Pipeline)
+
+### 为什么需要循环？
+
+传统单次分析（v1.0）只能提取表层信息。**SlideAudit 论文证明**：LLM 单次分析设计缺陷的 F1 仅 0.476~0.655，且对跨页叙事理解几乎无效。**VLM-SlideEval 论文建议**：使用 "critic-in-the-loop evaluators that drive iterative refinement"。
+
+### 五阶段循环架构
+
+```
+Phase 1: 粗分析 (Coarse Analysis)
+  ├─ 提取所有文本/表格/图片
+  └─ 识别章节边界和主题
+       ↓
+Phase 2: 缺口检测 (Gap Detection)
+  ├─ 识别信息缺失/模糊之处
+  ├─ 标记需要深挖的知识点
+  └─ 生成缺口报告 → 保存到 process_file
+       ↓ (如有缺口)
+Phase 3: 深潜分析 (Deep Dive Loop) ← 核心循环
+  ├─ 对每个缺口进行深度分析
+  ├─ 可触发子主题递归（树状下降）
+  ├─ 可联网搜索补充信息
+  ├─ 可渲染 Mermaid 图表辅助理解
+  └─ 更新 process_file
+       ↓
+Phase 4: 交叉验证 (Cross-Validation)
+  ├─ 对比多个来源验证一致性
+  ├─ 检查逻辑自洽性
+  └─ 标记已验证/待修正
+       ↓
+Phase 5: 树状合并 (Tree Merge)
+  ├─ 子主题结果合并到父主题
+  └─ 去重、排序、结构化输出
+       ↓
+┌─ 质量门禁 ←────────────────┐
+│  评分 ≥ 80？ → ✅ 完成       │
+│  评分 < 80？ → 🔄 进入下一轮  │
+└──────────────────────────────┘
+```
+
+### Process File 机制
+
+每轮分析的结果写入独立 process file，不累积在对话上下文中：
+
+```
+~/.hermes/learning/cycle-analysis/process_files/
+├── topic_name/
+│   ├── coarse_analysis.md      # Phase 1 输出
+│   ├── gap_analysis.md         # Phase 2 输出
+│   ├── deep_dive.md            # Phase 3 输出 (每次循环追加)
+│   ├── validation_report.md    # Phase 4 输出
+│   └── tree_merge.md           # Phase 5 输出
+├── topic_name_subtopic1/
+│   └── ...                     # 子主题独立分析
+└── master_state.json           # 总状态机
+```
+
+### 状态管理命令
+
+```bash
+# 初始化
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py init "主题名"
+
+# 管理进度
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py complete "主题名" coarse_analysis
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py fail "主题名" deep_dive "信息不足"
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py loop "主题名"
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py quality "主题名" 85
+
+# 添加子主题（树状递归）
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py subtopic "主题名" "子主题名"
+
+# 查看状态
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py status
+```
+
+### 树状递归处理
+
+```
+[父主题] 软件工程基本概念
+  ├─ [子主题 1] 软件四大特性
+  │   ├─ 复杂性 → 处理 → 验证 → ✅
+  │   ├─ 可变性 → 处理 → 验证 → ✅
+  │   ├─ 一致性 → 缺口→深潜→补充→✅
+  │   └─ 不可见性 → 处理 → 验证 → ✅
+  ├─ [子主题 2] 传统vs现代开发
+  │   └─ 处理 → 验证 → ✅
+  └─ [合并] → 输出完整章节分析
+```
+
+### 质量门禁评分公式
+
+```
+质量评分 = 信息覆盖度(30) + 交叉验证(25) + 可操作性(25) + 结构完整度(20)
+
+评分 ≥ 80：✅ 通过，进入下一主题
+评分 60-79：⚠️ 建议再循环一轮
+评分 < 60：🔄 强制进入下一轮循环（最多 3 轮）
+```
 
 ---
 

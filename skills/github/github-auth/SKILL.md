@@ -45,6 +45,7 @@ This skill sets up authentication so the agent can work with GitHub repositories
 | 需要添加 SSH key 到 GitHub | agent 提供公钥，用户去 https://github.com/settings/keys 添加 |
 | 新仓库首次推送（无 token） | 用户提供 PAT 或 配置 SSH key |
 | 仓库不存在/权限错误 | 用户确认仓库地址和权限 |
+| Token 创建 PR 失败 (`Resource not accessible`) | 告知用户两种 PAT 的区别，引导使用 Classic PAT |
 
 **正确流程：**
 1. Agent 先运行检测流检查认证状态和环境
@@ -153,12 +154,7 @@ Tell the user to go to: **https://github.com/settings/tokens**
 
 - Click "Generate new token (classic)"
 - Give it a name like "hermes-agent"
-- Select scopes:
-  - `repo` (full repository access — read, write, push, PRs)
-  - `workflow` (trigger and manage GitHub Actions)
-  - `read:org` (if working with organization repos)
-- Set expiration (90 days is a good default)
-- Copy the token — it won't be shown again
+- Select scopes:\n  - `repo` (full repository access — read, write, push, PRs)\n  - `workflow` (trigger and manage GitHub Actions)\n  - `read:org` (if working with organization repos)\n- Set expiration (90 days is a good default)\n- Copy the token — it won't be shown again\n\n> ⚠️ **重要：选择 Classic PAT（不是 Fine-grained PAT）**\n> 创建页默认推荐 Fine-grained PAT，但它的权限模型按功能模块独立授权，\n> **即使仓库级别给了 Admin，pull requests 写权限仍需单独开关**。\n> 如果 agent 需要创建 PR，请优先选择 **"Tokens (classic)"**\n> 并勾选 `repo` scope，这样所有仓库操作（含 PR）都能用。\n> \n> 如果只能用 Fine-grained PAT，则必须在\n> **Repository permissions → Pull requests → Read and write** 显式开启。
 
 **Step 2: Configure git to store the token**
 

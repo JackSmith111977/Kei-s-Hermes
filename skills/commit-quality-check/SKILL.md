@@ -226,6 +226,30 @@ find . -name "CHANGELOG*" -o -name "RELEASE*" 2>/dev/null | head -3 || echo "⚠
 
 **对策**：每次代码修改后，强制对照"修改类型→必须同步的文档"表。
 
+### 2b. API 端点声称 vs 实际实现的偏差
+
+**典型场景**：README 中声称 `/targets` 端点存在，但实际 HTTP Handler 中从未实现过该路由。这是文档一致性检查中最容易被忽略的一类——因为 README 的 API 表是手写的，和代码没有自动关联。
+
+**排查方法**：
+```bash
+# 1. 提取 README 中声明的所有端点
+grep -E '^\| \`/\w+' README.md | cut -d'`' -f2
+
+# 2. 提取实际代码中的所有路由
+#    Flask/FastAPI: grep -rn '@.*\.route|@.*\.get|@.*\.post' app/
+#    标准库 HTTP: grep -rn 'self.path == |def do_GET|def do_POST' *.py
+
+# 3. 对比两份列表，标记不一致的：
+#    - 文档有但代码没有 → 🔴 P0 必修
+#    - 代码有但文档没有 → 🟡 P1 建议补充
+```
+
+**检查清单扩展项**（添加到文档一致性检查表）：
+| 修改类型 | 必须同步的文档 | 检查方法 |
+|----------|---------------|---------|
+| 新增/删除/修改 API 端点 | README API 表、docs/ 相关文件 | grep 提取路由表对比 |
+| 新增/删除 CLI 子命令 | README 命令表、--help 输出 | 对比 COMMANDS dict 和文档表 |
+
 ### 3. 子代理验证能发现自身盲点
 
 用子代理作为 QA 来验证本 skill 时，发现了：
@@ -263,7 +287,43 @@ find . -name "CHANGELOG*" -o -name "RELEASE*" 2>/dev/null | head -3 || echo "⚠
 - 团队可以追踪"哪类问题最常出现"
 - 积累数据后可以针对性地改进 CI 流程
 
-### 7. 使用场景检查时间
+### 8. CI 环境测试适配 — Hermes 依赖测试的降级模式
+
+**问题场景**：在 GitHub Actions CI 中运行 Hermes 项目的测试时，`~/.hermes/skills` 目录不存在，导致依赖该目录的测试类（如 `TestAdvisor`）在 `setup_method` 中就崩溃，`self.advisor` 从未被初始化。
+
+**根因**：测试的 `setup_method()` 只有一条初始化路径——读取 `~/.hermes/skills`。当目录不存在时，什么都不创建，导致后续测试 `assert self.advisor is not None` 直接 AttributeError。
+
+**修复模式**（双模式初始化）：
+
+```python
+def setup_method(self):
+    skills_dir = os.path.expanduser("~/.hermes/skills")
+    if os.path.exists(skills_dir):
+        # 本地模式：使用真实技能目录
+        self.advisor = SkillAdvisor(skills_dir=skills_dir)
+        self.has_real_skills = True
+    else:
+        # CI 模式：用临时空目录兜底，确保对象初始化
+        import tempfile
+        self._tmp_skills = tempfile.mkdtemp()
+        self.advisor = SkillAdvisor(skills_dir=self._tmp_skills)
+        self.has_real_skills = False
+
+def teardown_method(self):
+    if hasattr(self, '_tmp_skills') and os.path.exists(self._tmp_skills):
+        import shutil
+        shutil.rmtree(self._tmp_skills, ignore_errors=True)
+```
+
+**关键原则**：
+- **对象始终创建** — 不要出现 `AttributeError: ... has no attribute 'advisor'`
+- **用 `has_real_skills` 标志位** — 依赖真实环境的测试（如推荐 PDF/飞书）用 `if not self.has_real_skills: return` 跳过
+- **清理临时目录** — 用 `teardown_method` 回收临时目录
+- **本地和 CI 都要过** — 修复后在本地 `pytest tests/ -q` 确认全绿，再推 CI
+
+**为什么不用 mock？** 真实技能目录的测试是集成测试，mock 会丢失真实匹配行为。双模式初始化保留了本地集成测试的价值，同时保证 CI 不自爆。
+
+### 7. 使用场景检查时间（原序号顺延）
 
 **不要在 CI 阶段才做这些检查**——那时已经来不及了。最佳时机：
 

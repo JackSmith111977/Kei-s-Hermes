@@ -27,7 +27,66 @@ metadata:
 ---
 # Mermaid 图表生成指南
 
-> **核心原则**：Mermaid 是“文本即图表”的工具。它允许你在 Markdown 中直接编写代码生成图表，非常适合版本控制和文档集成。
+> **核心原则**：Mermaid 是"文本即图表"的工具。它允许你在 Markdown 中直接编写代码生成图表，非常适合版本控制和文档集成。
+
+## ⚡ 渲染流水线 (Render Pipeline)
+
+### 本环境验证的 mermaid-cli 渲染方案
+
+```bash
+# 用包装脚本一键渲染（自动配置 Chrome 路径）
+mmdc-easy -i input.mmd -o output.svg -p puppeteer-config.json
+```
+
+### 环境工具链
+
+| 组件 | 路径/版本 | 说明 |
+|:---|:---|:---|
+| **mmdc** | `/usr/local/bin/mmdc` | mermaid-cli v11.14.0 |
+| **包装脚本** | `/usr/local/bin/mmdc-easy` | 自动设置 Chrome 路径 |
+| **Chrome** | `/usr/bin/google-chrome` | Google Chrome 147 |
+| **Puppeteer 配置** | `{ "executablePath": "/usr/bin/google-chrome", "args": ["--no-sandbox"] }` | Chrome 免沙箱运行 |
+
+### 安装指南（国内环境已验证）
+
+```bash
+# 跳过 Chrome 下载，使用系统已有 Chrome
+PUPPETEER_SKIP_DOWNLOAD=true \
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome \
+npm install @mermaid-js/mermaid-cli
+```
+
+安装后创建包装脚本（需要管理员权限）并配置 Chrome 免沙箱运行。
+
+### 批量渲染脚本
+
+```bash
+for mmd in *.mmd; do
+    name=$(basename "$mmd" .mmd)
+    mmdc-easy -i "$mmd" -o "output/${name}.svg" -p puppeteer-config.json
+done
+```
+
+### 备用方案：mermaid.ink API（无需安装）
+
+当 mmdc 不可用时，用在线 API 渲染：
+```python
+import base64, urllib.request
+with open("diagram.mmd") as f:
+    content = f.read()
+encoded = base64.urlsafe_b64encode(content.encode()).decode()
+url = f"https://mermaid.ink/svg/{encoded}"
+urllib.request.urlretrieve(url, "output.svg")
+```
+
+### ⚠️ 已知 Pitfalls（实战踩坑）
+
+| 问题 | 原因 | 解决方案 |
+|:---|:---|:---|
+| 全局安装权限错误 | 写 `/usr/lib/node_modules/` 需 root | 用本地安装 + symlink |
+| 自动下载 Chrome 超时 | Puppeteer 下载 ~300MB | 设 `PUPPETEER_SKIP_DOWNLOAD=true` |
+| 旧版环境变量不生效 | 新版 Puppeteer 改变量名 | 用 `PUPPETEER_SKIP_DOWNLOAD` |
+| npm 安装超时 | 包依赖重 | 设 `fetch-timeout=300000` |
 
 ## 触发条件
 

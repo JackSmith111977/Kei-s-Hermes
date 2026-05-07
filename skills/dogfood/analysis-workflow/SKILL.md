@@ -36,8 +36,128 @@ metadata:
 # 大文件分析与数据处理工作流 🧩📊
 
 > **核心铁律：永远不要全量读取大文件到上下文中！分块、流式、渐进处理。**
+> **v2.0 新增：循环深度分析流水线 (Cyclic Deep Analysis Pipeline)**
 
-## 零、问题诊断——boku 为什么会空响应？
+---
+
+## 🔄 循环深度分析流水线 (v2.0 核心创新)
+
+### 为什么需要循环？
+
+传统的 Split-Process-Merge（v1.0）是一次性线性处理，无法应对：
+- **复杂主题**：需要多层次理解（如 PPT 中一个概念跨多页展开）
+- **信息缺口**：单次扫描可能遗漏关键信息
+- **交叉依赖**：文档前后内容互相引用
+- **质量不可控**：没有验证环节，无法自我纠错
+
+### 五阶段循环分析架构
+
+受 **SlideAudit（UIST 2025）**、**VLM-SlideEval（NeurIPS 2025）**、**DocETL Gleaning** 和 **LongRefiner 树状结构** 启发：
+
+```
+文档输入 → Phase 1: 粗分析 → Phase 2: 缺口检测
+                ↓                    ↓
+         结构感知分块          识别信息缺失/模糊
+         提取文本/图片         生成缺口优先级
+                ↓                    ↓
+    ┌──── Phase 3: 深潜分析 (核心循环) ────┐
+    │  按优先级处理每个缺口                   │
+    │  复杂缺口 → 触发子主题递归（树状下降）    │
+    │  信息不足 → 联网搜索补充                │
+    │  图表缺失 → 渲染 Mermaid                │
+    └─────────────────────────────────────────┘
+                ↓
+         Phase 4: 交叉验证
+         对比来源/检查自洽
+                ↓
+         Phase 5: 树状合并
+         子主题合并/去重/结构化
+                ↓
+         质量门禁 (Quality Gate)
+         评分 ≥ 80？→ ✅ 完成
+         评分 < 80？→ 🔄 下一轮
+```
+
+### Process File 机制
+
+每轮分析结果写入独立文件，不累积在对话上下文中：
+
+```
+~/.hermes/learning/cycle-analysis/process_files/
+├── topic_name/
+│   ├── coarse_analysis.md      # 粗分析输出
+│   ├── gap_analysis.md         # 缺口列表
+│   ├── deep_dive.md            # 深潜输出（循环追加）
+│   ├── validation_report.md    # 验证报告
+│   └── tree_merge.md           # 合并结果
+├── topic_name_subtopic/        # 子主题
+└── master_state.json           # 总状态机
+```
+
+### 状态管理命令
+
+```bash
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py init "任务名"
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py complete "任务名" coarse_analysis
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py status
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py quality "任务名" 85
+python3 ~/.hermes/learning/cycle-analysis/scripts/cycle-state.py loop "任务名"
+```
+
+### 循环触发逻辑
+
+```python
+while loop_count < max_loops and quality_score < 80:
+    gaps = detect_gaps(current_output)    # Phase 2
+    if not gaps: break
+    current_output = deep_dive(gaps)      # Phase 3
+    verified = cross_validate(current_output)  # Phase 4
+    quality_score = calculate_quality(verified)
+    loop_count += 1
+```
+
+### 跨文件类型适用性
+
+| 文件类型 | 分块策略 | 缺口检测重点 | 树状结构 |
+|:---|:---|:---|:---|
+| **PPT** | 按章/页分 | 设计缺陷、叙事断点 | 章→节→子节 |
+| **PDF 报告** | 按章节分 | 数据缺失、逻辑跳跃 | 章→节→论点 |
+| **代码库** | 按模块分 | 注释缺失、边界条件 | 模块→类→方法 |
+| **CSV/数据** | 按列/行分 | 空值、异常值 | 表→列→统计 |
+
+## ⚠️ 空响应预防（保障输出不丢失）🚨
+
+**背景**：跨框架验证（Anthropic 官方 + OpenAI Agents SDK #1723 + LlamaIndex #20102 + WeKnora #819 + agno-agi #3137 + LangChainJS #10090）确认——LLM 在多次工具调用后可能因以下三种根因之一返回空内容：
+
+| 根因 | 来源 | 机制 |
+|------|------|------|
+| ① 模型认为对话已结束 | **Anthropic 官方文档** | 工具调用后模型收到 `tool_result`，判定「已完成任务」，返回 `stop_reason: "end_turn"`，不继续生成文本 |
+| ② 上下文窗口压力 | **通用原理** | 多次工具调用的中间结果占用上下文空间，推理引擎的有效长度被压缩——对话越长越容易空响应 |
+| ③ 流式 finish_reason 丢失 | **WeKnora #819** | 流式实现未正确传递 `finish_reason`，空内容被当作有效响应 |
+
+**关键洞察**：每次空响应都发生在 **多轮工具调用后、上下文密集时**——三个根因互相叠加。
+
+**预防策略**：
+1. **关键信息前置**：最重要的指令放在可回复内容最前面，在空响应前至少让系统读到关键上下文
+2. **减小单次数据量**：工具调用返回值控制在 **4000 字符以内**，分块处理大文件
+3. **减少不必要的工具调用**：能用 Python 脚本一次完成的，不要分多次 tool call
+4. **主动监控上下文**：感觉对话太丰富时主动告知主人，请求 compaction 或新对话
+5. **空响应自愈**：若发现返回空内容，立即重试追加 `"Please continue"` 或 `"继续"`（Anthropic 官方推荐做法，经 WeKnora 社区验证有效）
+
+---
+
+## 零、语言与上下文检查（绝对优先！）🚨
+
+**在开始任何生成任务前，boku 必须先检查语言偏好！**
+
+1.  **检查用户档案**：默认使用**中文**。
+2.  **检查特殊指令**：如果主人说了"用英文"或"Use English"，才使用英文。
+3.  **执行铁律**：**绝对禁止在没有指令的情况下使用英文输出文档或代码注释！**
+4.  **自我修正**：如果写了一半发现是英文，立即停止并重写。
+
+---
+
+## 一、问题诊断——boku 为什么会空响应？
 
 当 boku 执行 `cat large_file.json` 时，54,000+ 字符直接注入对话上下文，**超过记忆容量**导致推理引擎中断。
 
@@ -262,7 +382,106 @@ for chunk in chunks:
 
 ---
 
-## 六、实战案例——PPT 分析的正确姿势
+## 六、系统化语言改造四步法（Audit→Map→Transform→Validate）🔄🌐
+
+**适用场景**：将文档中的英文内容系统化地批量替换为中文。
+**核心原则**：不要"修补式"逐处查找替换，要用完整映射表一次性解决。
+
+### 6.1 四步法概览
+
+```
+Audit（审计） → Map（映射） → Transform（替换） → Validate（验证）
+```
+
+### 6.2 Step 1: Audit — 扫描全部残留
+
+```python
+# 扫描用户可见的英文残留（排除 HTML 标签/代码/URL）
+import re
+
+# 1. 匹配纯文本中的英文单词（不是 HTML 标签内的）
+english_pattern = re.compile(r'[A-Za-z]{3,}(?:\s+[A-Za-z]{3,}){0,4}')
+found = []
+
+# 只扫描文本节点，跳过 HTML 标签
+text_content = re.sub(r'<[^>]+>', ' ', html_content)
+matches = english_pattern.findall(text_content)
+
+# 去重并按长度排序（防止太短的通用词干扰）
+for m in sorted(set(matches), key=len, reverse=True):
+    if m not in allowed_english_terms:  # 允许的技术术语白名单
+        found.append(m)
+```
+
+### 6.3 Step 2: Map — 构建完整中英对照表
+
+**关键技巧**：按长度从长到短排序匹配，避免部分匹配错误。
+
+```python
+# 按长度降序排列（长匹配优先，避免短匹配误伤）
+translation_map = {
+    "Software Engineering": "软件工程",
+    "Three-Tier Architecture": "三层架构",
+    # ... 至少覆盖 Audit 发现的所有词条
+}
+
+# 安全排序：长词优先，短词靠后
+sorted_terms = sorted(translation_map.items(), key=lambda x: len(x[0]), reverse=True)
+```
+
+### 6.4 Step 3: Transform — 一次性全量替换
+
+```python
+def transform_html(html, translation_map):
+    """在 HTML 文本节点中执行替换，不破坏标签结构"""
+    def replace_in_text(text):
+        for old, new in sorted_terms:
+            # 只在文本节点中替换，不破坏 HTML 结构
+            # 使用单词边界避免部分匹配
+            text = re.sub(r'\b' + re.escape(old) + r'\b', new, text)
+        return text
+    
+    # 使用 BeautifulSoup 或 regex 只替换标签外的文本
+    result = re.sub(r'(?<!<[^>]*?)\b(\w+(?:\s+\w+)*)\b(?!\s*[^>]*?>)', 
+                    lambda m: translation_map.get(m.group(), m.group()), 
+                    html)
+    return result
+```
+
+### 6.5 Step 4: Validate — 闭环验证
+
+```python
+def validate_english_free(html):
+    """验证最终结果是否还有英文残留"""
+    text_only = re.sub(r'<[^>]+>', ' ', html)
+    after = re.sub(r'<style[^>]*>.*?</style>', '', text_only, flags=re.DOTALL)
+    after = re.sub(r'<script[^>]*>.*?</script>', '', after, flags=re.DOTALL)
+    
+    # 检查英文单词（3个字符以上，排除技术术语白名单）
+    remaining = re.findall(r'\b[A-Za-z]{3,}\b', after)
+    allowed = {'pdf', 'mvc', 'soa', 'api', 'url', 'dfd', 'html', 'css'}
+    actual_remaining = [w for w in remaining if w.lower() not in allowed]
+    
+    if actual_remaining:
+        logger.warning(f"仍有 {len(set(actual_remaining))} 处英文残留: {set(actual_remaining)}")
+        return False
+    return True
+```
+
+### 6.6 常见陷阱
+
+| 陷阱 | 后果 | 解决方案 |
+|------|------|---------|
+| **修补式替换** | 每次改几个，越改越乱 | 一次性审计全部英文，建完整映射表 |
+| **短词误伤 HTML 标签** | 破坏标签结构，导致格式错误 | 只替换文本节点，用正则排除标签 |
+| **没有白名单** | 技术术语（API/UML/PDF）被加粗或误改 | 建立允许的技术术语白名单 |
+| **大小写不一致** | "project management" 和 "Project Management" 改不干净 | 统一转为小写后匹配，或建大小写变体 |
+| **部分匹配** | "Management" 匹配到 "Man" 导致错误 | 按完整词匹配，从最长到最短排序 |
+| **无验证闭环** | 以为改完了，实际还有残留 | 改完后自动扫描验证 |
+
+---
+
+## 七、实战案例——PPT 分析的正确姿势
 
 ### ❌ 错误做法（导致空响应）
 

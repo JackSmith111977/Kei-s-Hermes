@@ -77,19 +77,45 @@ Mermaid 代码在代码编辑器里只是文本，如果需要放到 PPT、Word 
 
 1.  **安装** (需要 Node.js 环境):
     ```bash
-    npm install -g @mermaid-js/mermaid-cli
+    # 国内环境：用腾讯云镜像 + 跳过 Chrome 下载
+    PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome \
+    npm install @mermaid-js/mermaid-cli --registry=https://mirrors.tencentyun.com/npm
     ```
 
-2.  **基本用法**:
+2.  **Puppeteer 配置**:
+    创建 `puppeteer-config.json`:
+    ```json
+    { "executablePath": "/usr/bin/google-chrome", "args": ["--no-sandbox"] }
+    ```
+
+3.  **基本用法**:
     ```bash
-    # 将 .mmd 文件转为图片
-    mmdc -i input.mmd -o output.png
+    mmdc -i input.mmd -o output.png -p puppeteer-config.json
+    mmdc -i input.mmd -o output.svg -p puppeteer-config.json
     ```
 
-3.  **高级参数 (艾玛推荐)**:
-    *   **透明背景** (做 PPT 插图神器！): `mmdc -i input.mmd -o output.png -b transparent`
-    *   **深色主题**: `mmdc -i input.mmd -o output.png -t dark`
-    *   **输出 PDF**: `mmdc -i input.mmd -o output.pdf`
+4.  **高级参数**:
+    *   **透明背景** (做 PPT 插图神器！): `mmdc -i input.mmd -o output.png -b transparent -p puppeteer-config.json`
+    *   **深色主题**: `mmdc -i input.mmd -o output.png -t dark -p puppeteer-config.json`
+    *   **输出 PDF**: `mmdc -i input.mmd -o output.pdf -p puppeteer-config.json`
+
+### 备用方案：mermaid.ink 在线 API
+
+当 mmdc 不可用时，用在线 API 渲染（免安装）：
+```python
+import base64, urllib.request
+with open("diagram.mmd") as f:
+    content = f.read()
+# 去掉 YAML frontmatter（如果以 --- 开头）
+if content.strip().startswith("---"):
+    parts = content.split("---", 2)
+    if len(parts) >= 3:
+        content = parts[2].strip()
+encoded = base64.urlsafe_b64encode(content.encode()).decode()
+# 输出 SVG
+urllib.request.urlretrieve(f"https://mermaid.ink/svg/{encoded}", "output.svg")
+```
 
 ## 🌐 兼容性速查 (Compatibility)
 

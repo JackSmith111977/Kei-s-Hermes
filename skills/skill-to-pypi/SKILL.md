@@ -1,7 +1,7 @@
 ---
 name: skill-to-pypi
 description: "将 Hermes 内部组件（skill/脚本/工具）打包为独立的 Python 开源项目。涵盖项目结构初始化、模块化重构、pyproject.toml/setup.py 配置、测试框架搭建、Git 版本管理、覆盖率目标设定、LICENSE 选择等完整流程。\n\n从一次实战中沉淀：SRA (Skill Runtime Advisor) 从单脚本 skill-advisor.py 转化为独立 GitHub 仓库的完整经验。"
-version: 1.0.0
+version: 1.1.0
 triggers:
   - 开源
   - 发布到 PyPI
@@ -23,13 +23,22 @@ triggers:
   - pep 639
   - wheel
   - sdist
+  - 发布前准备
+  - 发行版
+  - first release
+  - CHANGELOG
+  - 文档一致性检查
+  - pre-release
+  - CI 配置
+  - GitHub Actions
+  - 自动测试
 design_pattern: Pipeline + Generator
 skill_type: Workflow
 ---
 
-# 📦 Skill to PyPI · 独立开源项目打包指南 v1.0
+# 📦 Skill to PyPI · 独立开源项目打包指南 v1.1.0
 
-> **经验来源**：SRA (Skill Runtime Advisor) 从 Hermes 内部单脚本 `skill-advisor.py` 转化为独立 GitHub 仓库的完整实战。
+> **经验来源**：SRA (Skill Runtime Advisor) 从 Hermes 内部单脚本 `skill-advisor.py` 转化为独立 GitHub 仓库的完整实战。  
 > **核心教训**：开源项目不是"把文件复制出来就行"，需要模块化重构、测试覆盖、文档完备、安装配置四大支柱。
 
 ---
@@ -161,18 +170,28 @@ include = ["your_package", "your_package.*"]
 testpaths = ["tests"]
 ```
 
-### 2.2 setup.py（兼容方式）
+### 2.2 setup.py（最小兼容方式）
+
+**不要**在 setup.py 中重复定义 `install_requires` 和 `extras_require`——这会导致 `install_requires overwritten in pyproject.toml` 警告。setup.py 应只做最小兼容包装，从 `__init__.py` 读取版本号：
 
 ```python
+"""Minimal setup.py for backward compatibility.
+All project metadata is defined in pyproject.toml.
+"""
+import re
+from pathlib import Path
 from setuptools import setup, find_packages
+
+# 从 __init__.py 读取版本号（单一事实来源）
+init_path = Path("your_package") / "__init__.py"
+version = re.search(
+    r'__version__\s*=\s*["\']([^"\']+)',
+    init_path.read_text()
+).group(1)
+
 setup(
-    name="sra-agent",
-    version="1.0.0",
+    version=version,
     packages=find_packages(),
-    install_requires=["pyyaml>=5.1"],
-    extras_require={"dev": ["pytest>=7.0"]},
-    entry_points={"console_scripts": ["sra=your_package.cli:main"]},
-    python_requires=">=3.8",
 )
 ```
 
@@ -371,18 +390,155 @@ git push origin v1.0.0
 
 ---
 
-## 七、✅ 发布检查清单
+## 七、发布前准备流程
 
-在发布前检查以下项目：
+在打标签和发布之前，创建一个独立的发布准备分支，按以下步骤系统性地准备：
 
-- [ ] 包结构：`pip install -e .` 能成功安装
-- [ ] CLI：`your-cli --help` 能正常显示
-- [ ] 测试：`pytest tests/ -v` 全部通过
-- [ ] README：包含安装、用法、快速开始
-- [ ] LICENSE：已选择许可证（推荐 MIT）
-- [ ] .gitignore：覆盖 Python 常见忽略模式
-- [ ] 版本号：`__init__.py` 和 `pyproject.toml` 一致
-- [ ] License 配置兼容：**不要用 PEP 639 新格式**（旧 twine/setuptools 不兼容）
+### 7.1 创建发布分支
+
+```bash
+git checkout -b release-v<version>
+```
+
+### 7.2 Step 1：项目现状分析
+
+对所有维度做全面摸底：
+
+| 维度 | 检查内容 |
+|:-----|:---------|
+| 代码质量 | 总行数、模块数、外部依赖、循环依赖 |
+| Git 状态 | 分支、标签、提交历史、远程仓库 |
+| 测试覆盖 | 测试数量、通过率、边界情况 |
+| 文档完备性 | README/RUNTIME/DESIGN/EPIC/SPRINT 等 |
+| 构建状态 | `python3 -m build` + `twine check` |
+| GitHub 仓库 | 描述、Topics、主页、Issue/PR 模板 |
+
+输出一份 `docs/PROJECT-STATUS-ANALYSIS.md` 报告。
+
+### 7.3 Step 2：创建 CHANGELOG.md
+
+基于 Keep a Changelog 格式 + SemVer：
+
+```markdown
+# Changelog
+
+## [Unreleased]
+
+### 🚀 Added
+- ...
+
+### 🛠️ Changed
+- ...
+
+### 🐛 Fixed
+- ...
+
+## [1.0.0] — 2026-01-01
+### 🚀 Added
+- 初始发布
+```
+
+如果 Git 历史较浅（如 squash merge 后只有 2 个 commit），从项目的 docs/ 目录（EPICs、Sprint 计划、设计文档）提取变更记录来编写 CHANGELOG。
+
+### 7.4 Step 3：代码-文档一致性检查
+
+**逐项对比所有文档与实际代码**：
+
+| 检查点 | 方法 | 严重度 |
+|:-------|:-----|:------:|
+| README CLI 命令表 vs 实际 CLI | `grep "COMMANDS" cli.py` vs README 表格 | 🔴 P0 |
+| README API 端点表 vs 实际 API | `grep "do_GET\|do_POST" daemon.py` vs README 表格 | 🔴 P0 |
+| 文档中已修复的问题描述 | 搜索"待修复""已知限制"等关键词 | 🔴 P0 |
+| 版本号一致性 | pyproject.toml / __init__.py / cli.py help / daemon.py | 🟡 P1 |
+| 项目结构图 vs 实际文件树 | 手动对比 | 🟡 P1 |
+| pip install 指令准确性 | 确认包名一致 | 🟡 P1 |
+| 作者签名 | cli.py version / __init__ / pyproject.toml authors | 🟢 P2 |
+
+按 P0→P1→P2 分级修复，修复后运行全套测试确保不破坏功能。
+
+### 7.5 Step 4：配置清理
+
+检查构建输出中的 deprecation 警告：
+
+```bash
+python3 -m build 2>&1 | grep -i "deprecat\|warning\|error"
+```
+
+常见问题：
+- ❌ `install_requires overwritten` → setup.py 和 pyproject.toml 配置重叠，统一到 pyproject.toml
+- ❌ `License classifiers are deprecated` → 添加 `license = "MIT"` 字段或忽略（build 仍然通过）
+- ❌ `requires-python` missing → 必须添加
+
+### 7.6 Step 5：添加 CI/CD
+
+创建 `.github/workflows/ci.yml`：
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [master, "release-*"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -v
+
+  build:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install build twine
+      - run: python3 -m build
+      - run: python3 -m twine check dist/*
+```
+
+> ⚠️ **注意**：推送 `.github/workflows/` 下的文件需要 GitHub Token 有 `workflow` 权限。如果推送被拒，在 https://github.com/settings/tokens 中勾选 `workflow` 权限。
+
+同时更新 README 添加 CI 徽章：
+```markdown
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+```
+
+### 7.7 Step 6：最终验证
+
+```bash
+# 1. 安全检查 — 无硬编码秘钥
+git diff --cached -S "gph_\|sk-\|token\|password\|api_key" || echo "✅ 安全"
+
+# 2. 测试 — 全部通过
+pytest tests/ -v
+
+# 3. 构建 — sdist + wheel
+python3 -m build && python3 -m twine check dist/*
+
+# 4. 版本号一致性
+# pyproject.toml / __init__.py / daemon.py / cli.py 所有版本号一致
+```
+
+**提交规范**：
+- `docs:` — 文档修复
+- `chore:` — 配置清理、作者签名更新
+- `ci:` — CI 配置文件添加
+
+---
+
+## 八、✅ 发布准备
+
+发布前请对照 **[第十节](#十-发布检查清单) 的完整检查清单** 逐项确认。
 
 ### ⚠️ PyPI License 配置避坑指南（实战教训）
 
@@ -415,37 +571,9 @@ ERROR  Invalid distribution metadata: unrecognized field 'license-file'
 
 ---
 
-## 八、Red Flags
-### 发布前快速验证脚本
+## 九、发布到 PyPI
 
-```bash
-#!/bin/bash
-set -e
-
-echo "🔍 检查版本号..."
-PYPROJ_VER=$(grep "^version" pyproject.toml | head -1 | cut -d'"' -f2)
-INIT_VER=$(grep "__version__" your_package/__init__.py | cut -d'"' -f2)
-echo "  pyproject.toml: $PYPROJ_VER"
-echo "  __init__.py:    $INIT_VER"
-[ "$PYPROJ_VER" = "$INIT_VER" ] || { echo "❌ 版本号不一致！"; exit 1; }
-
-echo "🔧 构建..."
-rm -rf dist/ build/ *.egg-info
-python3 -m build
-
-echo "✅ twine check..."
-python3 -m twine check dist/*
-
-echo "🧪 测试..."
-pytest tests/ -q
-
-echo ""
-echo "✅ 一切就绪！可以发布了。"
-echo "   上传命令: python3 -m twine upload dist/* -u __token__ -p 你的TOKEN"
-```
-## 八、发布到 PyPI（v1.1.0 新增）
-
-### 8.1 前置准备
+### 9.1 前置准备
 
 ```bash
 # 安装构建和发布工具
@@ -457,7 +585,7 @@ pip install build twine
 # 3. 保存 token （格式：pypi-xxxxxxxx）
 ```
 
-### 8.2 构建
+### 9.2 构建
 
 ```bash
 # 清理旧的构建产物
@@ -472,7 +600,7 @@ ls -lh dist/
 # → your_package-1.0.0-py3-none-any.whl
 ```
 
-### 8.3 验证包内容
+### 9.3 验证包内容
 
 ```bash
 python3 -m twine check dist/*
@@ -480,7 +608,7 @@ python3 -m twine check dist/*
 # 如果 ERROR → 需要修复再上传
 ```
 
-### 8.4 上传到 PyPI
+### 9.4 上传到 PyPI
 
 ```bash
 # 上传到正式 PyPI
@@ -490,7 +618,7 @@ python3 -m twine upload dist/* -u __token__ -p pypi-xxxxxxxx
 python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/* -u __token__ -p pypi-xxxxxxxx
 ```
 
-### 8.5 安装验证
+### 9.5 安装验证
 
 ```bash
 # 从 PyPI 安装
@@ -503,7 +631,7 @@ your-package --help
 python -c "from your_package import YourClass; print('OK')"
 ```
 
-### 8.6 常见构建错误
+### 9.6 常见构建错误
 
 | 错误 | 原因 | 修复 |
 |------|------|------|
@@ -513,7 +641,7 @@ python -c "from your_package import YourClass; print('OK')"
 | `InvalidDistribution: unrecognized field 'license-file'` | 新版 setuptools 自动生成，旧版 twine 不兼容 | 升级 twine 或忽略（PyPI 接受） |
 | `ModuleNotFoundError: No module named 'build'` | 未安装 build 工具 | `pip install build` |
 
-### 8.7 版本号管理策略
+### 9.7 版本号管理策略
 
 **统一管理三个位置的版本号：**
 
@@ -533,11 +661,70 @@ python -c "from your_package import YourClass; print('OK')"
 > setup(version=version, ...)
 > ```
 
+### 9.8 创建 GitHub Release
+
+PyPI 发布后，同步创建 GitHub Release：
+
+```bash
+# 切到 master、合并、打标签
+git checkout master
+git merge release-v<version>
+git tag v<version> && git push origin v<version>
+
+# 用 gh CLI 创建 Release（含二进制附件）
+gh release create v<version> \
+  -t "Project Name v<version>" \
+  -F CHANGELOG.md \
+  dist/*.whl dist/*.tar.gz
+
+# 或用 API
+curl -X POST https://api.github.com/repos/OWNER/REPO/releases \
+  -H "Authorization: token YOUR_TOKEN" \
+  -d '{"tag_name": "v<version>", "name": "Project Name v<version>", "body": "See CHANGELOG.md"}'
+```
+
+### 9.9 Daemon 感知的发布流程（适用于带后台进程的项目）
+
+如果项目有守护进程（如 SRA），发布时必须管理 daemon 生命周期：
+
+```bash
+# 发布全流程（带 daemon 管理）
+sra stop                          # 1. 停止 daemon
+pip uninstall my-package -y       # 2. 卸载旧版
+rm -rf dist/ build/ *.egg-info   
+python3 -m build                  # 3. 构建新版
+pip install dist/*.whl            # 4. 安装新版
+sra start                         # 5. 启动 daemon
+sra status                        # 6. 验证 daemon
+sra recommend 构建                 # 7. 快速功能验证
+
+# ⚠️ 关键陷阱
+# - pip uninstall 不重启 daemon → daemon 用的还是旧版代码
+# - 构建前必须清理 dist/ 避免上传旧产物
+# - PEP 668 环境需加 --break-system-packages
+```
+
+### 9.10 Token 安全存取模式
+
+```bash
+# 存储（~/.hermes/.env）
+echo "TWINE_USERNAME=__token__" >> ~/.hermes/.env
+echo "TWINE_PASSWORD=pypi-xxxx" >> ~/.hermes/.env
+chmod 600 ~/.hermes/.env
+
+# 使用时加载
+source ~/.hermes/.env
+twine upload dist/* -u "$TWINE_USERNAME" -p "$TWINE_PASSWORD"
+
+# 或单行注入（不落盘）
+TWINE_USERNAME=__token__ TWINE_PASSWORD=$(grep TWINE_PASSWORD ~/.hermes/.env | cut -d= -f2) twine upload dist/*
+```
+
 ---
 
-## 八、🛑 PyPI 发布实战排坑 v2.0
+## 十、🛑 PyPI 发布实战排坑
 
-### 8.1 pyproject.toml 配置关键事项
+### 10.1 pyproject.toml 配置关键事项
 
 **PEP 621 要求 `license` 为字符串而不是 `{text: "MIT"}` 对象：**
 
@@ -561,7 +748,7 @@ license = "MIT"    # 或用旧版 classifier 方式
 
 **兼容性问题：** twine ≤ 6.2.0 不识别这些新字段，会报 `InvalidDistribution: unrecognized field 'license-expression'`。
 
-### 8.2 解决方案对比
+### 10.2 解决方案对比
 
 | 方案 | 操作 | 复杂度 | 推荐度 |
 |------|------|--------|--------|
@@ -570,7 +757,7 @@ license = "MIT"    # 或用旧版 classifier 方式
 | **修复 wheel metadata** | 手动解压修改 METADATA 文件 | ⭐⭐⭐ 中 | ⭐ 不推荐 |
 | **升级 twine 到最新** | `pip install --upgrade twine` | ⭐ 低 | ⭐⭐ 当前最新版仍不兼容 |
 
-### 8.3 实战验证流程
+### 10.3 实战验证流程
 
 完整流程（从零到发布）：
 
@@ -608,50 +795,25 @@ dependencies = ["pyyaml>=5.1"]
 requires-python = ">=3.8"  # ← 这个字段容易遗漏
 ```
 
-#### 第 3 步：构建（降级版）
+#### 第 3 步：构建
 
 ```bash
-# 先用旧版 setuptools 避免 PEP 639 兼容问题
-pip install 'setuptools<68'
-
-# 构建
+# 清理旧的构建产物
 rm -rf dist/ build/ *.egg-info
 python3 -m build
 
-# 检查 METADATA 中是否有 License-Expression 字段
-python3 -c "
-import zipfile
-with zipfile.ZipFile('dist/*.whl') as z:
-    for name in z.namelist():
-        if name.endswith('METADATA'):
-            content = z.read(name).decode()
-            for line in content.split('\n'):
-                if 'license' in line.lower():
-                    print(line)  # 确认没有 License-Expression
-"
+# 确认没有 deprecation 警告
+python3 -m build 2>&1 | grep -i "error"
 ```
 
 #### 第 4 步：上传
 
 ```bash
-# 安装 twine
 pip install twine
-
-# 上传 wheel（优先）
 twine upload dist/*.whl -u __token__ -p 你的PyPI_TOKEN
-
-# 如果需要上传 sdist
-twine upload dist/*.tar.gz -u __token__ -p 你的PyPI_TOKEN
 ```
 
-#### 第 5 步：恢复环境
-
-```bash
-# 恢复最新版 setuptools
-pip install 'setuptools>=61.0'
-```
-
-### 8.4 发布后验证
+### 10.4 发布后验证
 
 ```bash
 # 方式一：pip 安装测试
@@ -667,7 +829,7 @@ python3 -c "from your_package import YourClass; print('OK')"
 your-cli --help
 ```
 
-### 8.5 已知问题 / 兼容性
+### 10.5 已知问题 / 兼容性
 
 | 环境 | 问题 | 处理 |
 |------|------|------|
@@ -676,7 +838,7 @@ your-cli --help
 | Python 3.12 | `pip install build` 可能报 `externally-managed-environment` | 加 `--break-system-packages` |
 | shell 屏蔽 token | `***` 屏蔽变量 | 用文件存储或手动输入 |
 
-### 8.6 发布的 pyproject.toml 黄金模板
+### 10.6 发布的 pyproject.toml 黄金模板
 
 ```toml
 [build-system]
@@ -719,7 +881,7 @@ include = ["package", "package.*"]
 testpaths = ["tests"]
 ```
 
-### 8.7 常见错误速查
+### 10.7 常见错误速查
 
 | 错误信息 | 原因 | 修复 |
 |----------|------|------|
@@ -729,33 +891,55 @@ testpaths = ["tests"]
 | `Bad credentials` | token 过期或格式不对 | 重新生成 PAT |
 | `externally-managed-environment` | 系统 Python 保护 | 加 `--break-system-packages` |
 | `Project not found` | 包名已存在 | 换名字或用 `--repository-url` 先试 test.pypi.org |
+| `refusing to allow a PAT to create or update workflow` | Token 缺少 `workflow` 权限 | GitHub Token 设置中勾选 `workflow` |
 
 ---
 
-## 九、☑️ 发布检查清单
+## 十一、☑️ 发布检查清单
 
-- [ ] 版本号：`pyproject.toml` / `setup.py` / `__init__.py` 三者一致
-- [ ] pyproject.toml 包含 `requires-python`
-- [ ] License 用 classifier 方式（`License :: OSI Approved :: MIT License`）
-- [ ] README.md 存在且格式正确
-- [ ] `.gitignore` 覆盖 `dist/ build/ *.egg-info .venv`
-- [ ] `pip install -e .` 能成功安装
+### 发布前（准备阶段）
+
+- [ ] CHANGELOG.md 存在，格式正确
+- [ ] 版本号：pyproject.toml / setup.py / __init__.py 三者一致
+- [ ] 文档一致性检查通过（README/RUNTIME/CLI/API 表完整）
+- [ ] pyproject.toml 包含 `requires-python` 和 `license`
+- [ ] setup.py 最小化（无配置重叠）
+- [ ] .gitignore 覆盖 dist/ build/ *.egg-info .venv
+- [ ] CI 配置文件已创建（.github/workflows/ci.yml）
+- [ ] README 添加 CI 徽章
+- [ ] `pip install -e ".[dev]"` 能成功安装
 - [ ] `pytest tests/ -v` 全部通过
-- [ ] CLI 入口有定义：`your-cli --help`
-- [ ] 构建产物检查：`python3 -m build`
-- [ ] 修复 setuptools 版本：降级到 <68
-- [ ] 上传：`twine upload dist/*.whl -u __token__ -p TOKEN`
-- [ ] 恢复 setuptools 版本
-- [ ] 打 git tag：`git tag v1.0.0 && git push origin v1.0.0`
+- [ ] CLI 入口正常工作：`your-cli --help`
+- [ ] 构建验证通过：`python3 -m build && twine check dist/*`
+- [ ] 安全检查通过：无硬编码 Token/密码
+- [ ] 作者签名已同步（cli.py cmd_version / __init__.py / pyproject.toml）
+
+### 发布中
+
+- [ ] 合并到 master 分支
+- [ ] 打 git tag：`git tag v<version> && git push origin v<version>`
+- [ ] pip install build twine
+- [ ] `rm -rf dist/ && python3 -m build && twine check dist/*`
+- [ ] `twine upload dist/* -u __token__ -p TOKEN`
+- [ ] 创建 GitHub Release：`gh release create v<version> -t "title" -F CHANGELOG.md`
+
+### 发布后
+
+- [ ] `pip install your-package` 验证安装
+- [ ] `your-cli --help` 验证 CLI
+- [ ] PyPI API 确认版本更新
 
 ---
 
-## 十、Red Flags
+## 十二、Red Flags
 
 - ❌ **内部依赖未消除**：包不能依赖 `~/.hermes/` 路径，必须通过参数/环境变量配置
 - ❌ **数据硬编码**：同义词表、工具路径等必须作为数据文件，不能写死在逻辑代码中
 - ❌ **测试覆盖率不足**：至少 38+ 测试，含端到端覆盖率测试
-- ❌ **忘记更新版本号**：三个地方要同步（`pyproject.toml` / `setup.py` / `__init__.py`）
-- ❌ **缺少脚本入口**：`pip install` 后要能直接 `your-cli --query` 运行
+- ❌ **忘记更新版本号**：三个地方要同步（pyproject.toml / setup.py / __init__.py）
+- ❌ **缺少脚本入口**：pip install 后要能直接 `your-cli --query` 运行
 - ❌ **循环依赖**：数据文件（synonyms.py）绝不能导入逻辑模块
 - ❌ **setuptools 版本太新导致 PyPI 拒绝**：≥69 生成 PEP 639 元数据，twine 不兼容
+- ❌ **文档落后于代码**：CLI 命令表/API 端点表/已知问题状态必须与代码同步
+- ❌ **CI 推送被拒**：.github/workflows/* 需要 GitHub Token 有 workflow 权限
+- ❌ **不检查构建警告**：deprecation 警告虽然不阻止构建，但应在发布前清理

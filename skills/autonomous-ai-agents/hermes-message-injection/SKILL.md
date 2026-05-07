@@ -1,7 +1,7 @@
 ---
 name: hermes-message-injection
 description: "向 Hermes Agent 的消息管道注入外部服务上下文（如 SRA 技能推荐）。每次用户消息自动拦截 → 调外部服务 → 将结果作为 [前缀] 注入到消息前。涵盖 run_agent.py 的 run_conversation() 注入点、module-level 缓存、降级策略。"
-version: 1.0.0
+version: 2.0.0
 triggers:
   - hermes 注入
   - hermes 消息拦截
@@ -10,7 +10,9 @@ triggers:
   - context injection
   - hermes hook
   - run_conversation
-  - 消息前置推理
+  - sra daemon
+  - sra start
+  - sra管理
   - 上下文注入
 depends_on:
   - hermes-agent
@@ -39,98 +41,27 @@ skill_type: Pattern
 - **结论：只能触发副作用（写日志/写文件），不能注入上下文**
 
 ### 方案 C: 改 `_build_system_prompt()` 或 `prompt_builder.py`
-- `_build_system_prompt()` 在整个 session 中**只调用一次**并缓存（见第 3933 行注释）
+- `_build_system_prompt()` 在整个 session 中**只调用一次**并缓存
 - 后续 `run_conversation()` 调用复用缓存的 system prompt
 - 后续消息不会触发外部服务查询
 - **结论：只对第一轮消息有效**
 
-## 最终方案: 改 `run_conversation()` 入口
+## ✅ 内置方案（Hermes v0.12.0+）
 
-### 原理
+**从 v0.12.0 开始，SRA 注入代码已经内置到 `run_agent.py` 中，无需手动修改。**
 
-`AIAgent.run_conversation()` 是**每轮消息的唯一入口**——CLI 和 Gateway 都走这个函数。
+### 注入点
 
-在第 8677 行 `user_msg = {"role": "user", "content": user_message}` 之前插入拦截逻辑：
+- **Module-level 函数**: `_query_sra_context()` — 第 891 行 (`run_agent.py`)
+  - 查询 `SRA_PROXY_URL`（默认 `http://127.0.0.1:8536`）的 `/recommend` 端点
+  - 返回 `[SRA] Skill Runtime Advisor 推荐:` 格式的上下文字符串
+  - 内置 MD5 hash 缓存（避免重复 HTTP 调用）
+  - 2 秒超时 + try/except 全catch → 服务不可用时自动降级
+- **注入时机**: `run_conversation()` 中 `# Add user message` 前（第 10802 行）
+  - 前缀注入到 user_message：`f"{_sra_ctx}\n\n{user_message}"`
+  - 覆盖 CLI + Gateway 所有入口
 
-```
-用户消息 → run_conversation(msg)
-              ↓
-          调外部服务 HTTP API
-              ↓
-          将结果作为 [TAG] 前缀注入到 msg 前
-              ↓
-          user_msg = {"role": "user", "content": "[TAG] ... \n\n原始消息"}
-              ↓
-          API call → LLM 感知上下文 → 回复
-```
-
-### 注入点（需改 run_agent.py）
-
-在 `run_conversation()` 方法中，找到 `# Add user message` 注释，在其前插入：
-
-```python
-# ── External Service Context Injection ──────────────────────────
-# Query external service and inject as prefix to user message.
-# Runs on EVERY turn. Silent on failure.
-_service_ctx = _query_service_context(user_message)
-if _service_ctx:
-    user_message = f"{_service_ctx}\n\n{user_message}"
-# ────────────────────────────────────────────────────────────────
-
-# Add user message
-user_msg = {"role": "user", "content": user_message}
-messages.append(user_msg)
-```
-
-### Module-level 函数模板
-
-在 `class AIAgent` 定义之前插入：
-
-```python
-_SERVICE_CACHE: dict = {}
-
-
-def _query_service_context(user_message: str) -> str:
-    """Query external service and return formatted context prefix.
-
-    Called on every conversation turn.  Uses MD5 hash cache to avoid
-    redundant queries during retries. Returns empty string on failure.
-    """
-    import urllib.request
-    import json as _json
-    import hashlib
-
-    service_url = os.environ.get("SERVICE_URL", "http://127.0.0.1:8536/recommend")
-
-    _msg_hash = hashlib.md5(user_message.encode("utf-8")).hexdigest()[:12]
-    if _SERVICE_CACHE.get("last_hash") == _msg_hash:
-        return _SERVICE_CACHE.get("last_result", "")
-
-    try:
-        req = urllib.request.Request(service_url, method="POST")
-        payload = _json.dumps({"message": user_message}).encode("utf-8")
-        req.data = payload
-        req.add_header("Content-Type", "application/json")
-
-        with urllib.request.urlopen(req, timeout=2.0) as resp:
-            data = _json.loads(resp.read().decode("utf-8"))
-
-        context = data.get("context", "") or data.get("rag_context", "")
-        if not context:
-            _SERVICE_CACHE.update(last_hash=_msg_hash, last_result="")
-            return ""
-
-        result = f"[SERVICE] 外部推荐:\n{context}"[:2500]
-
-        _SERVICE_CACHE.update(last_hash=_msg_hash, last_result=result)
-        return result
-
-    except Exception:
-        _SERVICE_CACHE.update(last_hash=_msg_hash, last_result="")
-        return ""
-```
-
-## 关键设计决策
+### 关键设计决策
 
 | 决策 | 选择 | 理由 |
 |------|------|------|
@@ -140,27 +71,61 @@ def _query_service_context(user_message: str) -> str:
 | **超时** | 2 秒 | 快速失败，不阻塞消息 |
 | **降级** | try/except 全 catch，返回空字符串 | 服务不可用时不影响正常对话 |
 
-## 搜索助手
+### 搜索助手
 
 ```bash
 # 找到注入点
-grep -n "# Add user message" ~/.hermes/hermes-agent/run_agent.py
+grep -n "_query_sra_context\|SRA Context" ~/.hermes/hermes-agent/run_agent.py
 
-# 找到 class AIAgent 之前的位置（插入模块函数）
-grep -n "^class AIAgent" ~/.hermes/hermes-agent/run_agent.py
+# 验证函数定义
+grep -n "def _query_sra_context" ~/.hermes/hermes-agent/run_agent.py
 ```
 
-## 验证方法
+## 🚀 SRA Daemon 管理
+
+SRA 注入代码依赖外部的 SRA Daemon 服务。需要单独启动。
+
+### 安装确认
 
 ```bash
-cd ~/.hermes/hermes-agent
-source venv/bin/activate
-python3 -c "
-import sys; sys.path.insert(0, '.')
-from run_agent import _query_service_context
-result = _query_service_context('测试消息')
-print('注入成功' if result else '无注入内容')
-"
+which sra                # 确认 CLI 已安装
+sra --version            # 显示版本
+```
+
+SRA 包作为 editable 安装（`pip install -e`）在 `/tmp/sra-agent/`。
+
+### 启动/停止
+
+```bash
+sra start                # 后台守护进程模式（fork）
+sra stop                 # 停止
+sra restart              # 重启
+sra status               # 查看状态
+sra attach               # 前台运行（调试用）
+```
+
+### 验证
+
+```bash
+# 健康检查
+curl http://127.0.0.1:8536/health
+
+# 技能推荐测试
+curl -X POST http://127.0.0.1:8536/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"message": "帮我写个python脚本"}'
+```
+
+### 默认端口
+
+HTTP API: `8536`（通过 `~/.sra/config.json` 的 `http_port` 配置）
+
+### 开机自启（systemd）
+
+```bash
+sra install-service      # 生成 service 文件到 /tmp/srad.service
+sudo cp /tmp/srad.service /etc/systemd/system/
+sudo systemctl enable --now srad
 ```
 
 ## 与 Hook 系统的关系
