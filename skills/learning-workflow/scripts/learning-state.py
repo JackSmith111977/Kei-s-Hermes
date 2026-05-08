@@ -5,6 +5,9 @@ learning-state.py v2.0 — 学习流程状态机管理（多任务版）
   python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py init "主题"
   python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py check <step> [task_id]
   python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py complete <step> [task_id]
+  python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py reject <step> <reason> [task_id]
+  python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py regress <target_step> [task_id]
+  python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py loop-status [task_id]
   python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py status [task_id]
   python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py list
   python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py reset [task_id]
@@ -176,6 +179,13 @@ def init_state(topic):
         "task_id": task_id,
         "created_at": datetime.now().isoformat(),
         "current_step": 1,
+        "loop_count": {
+            "r1": 0,
+            "r2": 0,
+            "r3": 0,
+            "qg": 0
+        },
+        "refusal_log": [],
         "steps": {
             k: {
                 "status": "pending",
@@ -435,6 +445,7 @@ def _archive_and_save(task_state, remaining_state):
         "created_at": task_state.get("created_at", ""),
         "completed_at": datetime.now().isoformat(),
         "final_progress": progress,
+        "loop_count": task_state.get("loop_count", {}),
     })
     save_history(history)
     
@@ -442,6 +453,127 @@ def _archive_and_save(task_state, remaining_state):
     save_state(remaining_state)
     
     print(f"✅ 任务已归档：{task_state['topic']} ({progress}%)")
+
+
+def regress_step(target_step, task_id=None):
+    """回退到指定步骤（重置该步骤及后续所有步骤为 pending）"""
+    state = load_state()
+    task_id, task_state = _resolve_task(state, task_id)
+    if not task_state:
+        sys.exit(1)
+    
+    step_keys = list(STEPS.keys())
+    if target_step not in step_keys:
+        print(f"🚨 未知步骤：{target_step}")
+        print(f"💡 可用步骤: {', '.join(step_keys)}")
+        sys.exit(1)
+    
+    target_idx = step_keys.index(target_step)
+    current_idx = task_state.get("current_step", 1) - 1
+    
+    if target_idx >= current_idx:
+        print(f"🚨 无法回退：{target_step} (索引 {target_idx}) 不在已完成步骤之前")
+        print(f"💡 当前步骤: step{current_idx + 1} ({step_keys[current_idx] if current_idx < len(step_keys) else '完成'})")
+        sys.exit(1)
+    
+    for i in range(target_idx, len(step_keys)):
+        task_state["steps"][step_keys[i]]["status"] = "pending"
+        if "completed_at" in task_state["steps"][step_keys[i]]:
+            del task_state["steps"][step_keys[i]]["completed_at"]
+    
+    task_state["current_step"] = target_idx + 1
+    
+    state[task_id] = task_state
+    save_state(state)
+    
+    progress = compute_progress(task_state)
+    loop = task_state.get("loop_count", {}).get("r1", 0) + \
+           task_state.get("loop_count", {}).get("r2", 0) + \
+           task_state.get("loop_count", {}).get("r3", 0)
+    print(f"🔄 [{task_id}] 已回退到 {target_step}")
+    print(f"📊 当前进度: {progress}%")
+    print(f"🔄 本次循环: L2 总计 {loop} 次")
+    print(f"⏭️  继续从 STEP {target_idx + 1} 开始")
+
+
+def reject_step(step_name, reason, task_id=None):
+    """标记某步骤为'需重做'，记录原因"""
+    state = load_state()
+    task_id, task_state = _resolve_task(state, task_id)
+    if not task_state:
+        sys.exit(1)
+    
+    step = task_state["steps"].get(step_name)
+    if not step:
+        print(f"🚨 未知步骤：{step_name}")
+        print(f"💡 可用步骤: {', '.join(STEPS.keys())}")
+        sys.exit(1)
+    
+    step["status"] = "needs_revision"
+    step["rejected_at"] = datetime.now().isoformat()
+    step["reject_reason"] = reason
+    
+    if "completed_at" in step:
+        del step["completed_at"]
+    
+    # 记录到 refusal_log
+    task_state.setdefault("refusal_log", []).append({
+        "step": step_name,
+        "reason": reason,
+        "rejected_at": step["rejected_at"]
+    })
+    
+    state[task_id] = task_state
+    save_state(state)
+    
+    print(f"🔴 [{task_id}] {step_name} 标记为 \"需重做\"")
+    print(f"📝 原因: {reason}")
+
+
+def loop_status(task_id=None):
+    """显示循环状态"""
+    state = load_state()
+    task_id, task_state = _resolve_task(state, task_id)
+    if not task_state:
+        return
+    
+    loop_count = task_state.get("loop_count", {"r1": 0, "r2": 0, "r3": 0, "qg": 0})
+    refusal_log = task_state.get("refusal_log", [])
+    
+    print(f"🔄 循环状态: [{task_id}] {task_state['topic']}")
+    print()
+    print(f"  L2 中间反思循环 (上限 2 次/检查点):")
+    print(f"    R1 搜索质量: {loop_count.get('r1', 0)}/2 " +
+          ("⚠️ 已达上限" if loop_count.get('r1', 0) >= 2 else "✅ 还有空间"))
+    print(f"    R2 理解深度: {loop_count.get('r2', 0)}/2 " +
+          ("⚠️ 已达上限" if loop_count.get('r2', 0) >= 2 else "✅ 还有空间"))
+    print(f"    R3 提炼完整性: {loop_count.get('r3', 0)}/2 " +
+          ("⚠️ 已达上限" if loop_count.get('r3', 0) >= 2 else "✅ 还有空间"))
+    print(f"  L3 质量门禁 (上限 3 次):")
+    print(f"    QG 质量门禁: {loop_count.get('qg', 0)}/3 " +
+          ("⚠️ 已达上限" if loop_count.get('qg', 0) >= 3 else "✅ 还有空间"))
+    print()
+    
+    if refusal_log:
+        print(f"  📋 拒绝记录 ({len(refusal_log)} 条):")
+        for entry in refusal_log[-5:]:
+            print(f"    🔴 {entry['step']}: {entry['reason'][:80]}")
+    else:
+        print(f"  📋 无拒绝记录")
+    
+    # 步骤状态总览
+    print()
+    print(f"  📊 步骤状态:")
+    for name, info in task_state["steps"].items():
+        status_icon = {
+            "completed": "✅",
+            "in_progress": "🔄",
+            "pending": "⏳",
+            "skipped": "⏭️",
+            "needs_revision": "🔴"
+        }.get(info["status"], "❓")
+        step_display = list(STEPS.keys()).index(name) + 1
+        print(f"    {status_icon} step{step_display} {name}: {info['status']}")
 
 
 def _resolve_task(state, task_id):
@@ -551,7 +683,25 @@ if __name__ == "__main__":
     elif action == "progress":
         task_id = sys.argv[2] if len(sys.argv) > 2 else None
         show_progress(task_id)
+    elif action == "regress":
+        if len(sys.argv) < 3:
+            print("🚨 请提供目标步骤：learning-state.py regress step1_search")
+            sys.exit(1)
+        target_step = sys.argv[2]
+        task_id = sys.argv[3] if len(sys.argv) > 3 else None
+        regress_step(target_step, task_id)
+    elif action == "reject":
+        if len(sys.argv) < 4:
+            print("🚨 用法：learning-state.py reject <step> <reason>")
+            sys.exit(1)
+        step_name = sys.argv[2]
+        reason = sys.argv[3]
+        task_id = sys.argv[4] if len(sys.argv) > 4 else None
+        reject_step(step_name, reason, task_id)
+    elif action == "loop-status":
+        task_id = sys.argv[2] if len(sys.argv) > 2 else None
+        loop_status(task_id)
     else:
         print(f"🚨 未知操作：{action}")
-        print("可用操作: init, check, complete, status, list, reset, progress")
+        print("可用操作: init, check, complete, reject, regress, loop-status, status, list, reset, progress")
         sys.exit(1)

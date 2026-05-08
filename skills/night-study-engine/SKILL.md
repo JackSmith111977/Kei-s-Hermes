@@ -27,6 +27,8 @@ allowed-tools:
   - write_file
   - patch
   - cronjob
+  - web_search
+  - web_extract
   - mcp_tavily_tavily_search
   - mcp_tavily_tavily_extract
   - mcp_tavily_tavily_crawl
@@ -223,13 +225,34 @@ print(json.dumps(domains[0]))
 
 ---
 
-## 五、失败恢复机制
+### 失败恢复机制
 
 | 异常类型 | 恢复策略 |
 |----------|----------|
 | 搜索无结果 | 更换关键词，最多重试 3 次 |
+| Tavily API 限流 (rate limit) | 立即降级到 `web_search`/`web_extract`（无需重试 Tavily，因为限流通常是分钟级的），记录降级原因到日志中 |
+| Tavily API 配额耗尽 (quota exhaustion) | ⚠️ 比 rate limit 更严重——配额要到下个月才会重置！立即永久降级到 `web_search`/`web_extract` 并在日志中标记 `quota_exhausted`，后续所有轮次直接跳过 Tavily。错误特征：`This request exceeds your plan's set usage limit` |
+| Tavily Extract 失败 | 尝试用 `web_extract`（通用提取工具）替代，或直接从搜索结果摘要中提取关键信息 |
+
+### 主动配额管理（v2.1 新增）
+
+> 内置策略与详细实测数据参见 `references/cron-tavily-quota-strategy.md`
+
+当多个 Cron 轮次在一天内连续消耗 Tavily 配额时，月配额（1,000 credits）可能在 15 日后或 06:00+ 轮次时耗尽。推荐主动策略：
+
+| 策略 | 描述 |
+|------|------|
+| **时段感知** | 06:00+ 轮次直接使用 `web_search` 原生（跳过 Tavily，避免 MCP 级联锁定 ~58s） |
+| **配额预判** | 每月 10 日后（或首次 Tavily 失败后）默认降级至 `web_search`。实测：5月8日月配额已耗尽，15日阈值过于乐观。当 `month_day >= 10` 或检测到 `quota_exhausted` 错误时，直接跳过 Tavily。 |
+| **失败计数** | 同一会话中 Tavily 连续失败 ≥2 次 → 切换到 `web_search` |
+
+**实测验证**: 06:00 轮次纯 `web_search` 获得 8 个高质量官方源（Rust Blog、Next.js Blog、releases.rs），质量评分 95——比 Tavily 搜索效果更好、更快、无级联锁定风险。
+
+### 失败恢复（续）
+
+| 异常类型 | 恢复策略 |
+|----------|----------|
 | 网页无法访问 | 标记"不可读"，跳过并搜索替代来源 |
-| 质量评分 < 60 | 分析失败类型，回到对应步骤重新学习 |
 | Skill 更新失败 | 写入 gap_queue，下次 Review 重试 |
 | Cron 执行超时 | 标记"未完成"，下次轮次继续 |
 
@@ -284,7 +307,8 @@ print(json.dumps(domains[0]))
     └── night-study-engine/                  # 本 skill
         ├── SKILL.md
         ├── references/
-        │   └── quality-scoring-guide.md     # 质量评分细则
+        │   ├── quality-scoring-guide.md     # 质量评分细则
+        │   └── cron-tavily-quota-strategy.md # Tavily 配额管理与 Cron 时段降级策略（v2.1）
         ├── scripts/
         │   ├── select_domain.py             # 领域选择脚本
         │   └── update_knowledge_base.py     # 知识库更新脚本
@@ -320,6 +344,9 @@ print(json.dumps(domains[0]))
 5. **❌ 间隔复习未注册** — 学习完成后必须注册复习 cron
 6. **❌ 领域固定不变** — 应该动态发现和添加新领域
 7. **❌ 失败不恢复** — 遇到异常必须重试或降级，不可静默跳过
+8. **❌ Tavily API 失败不降级** — Tavily 是付费 API，容易遇到 rate limit。必须准备 `web_search`/`web_extract` 作为降级方案，不要因为 Tavily 失败就放弃学习轮次
+9. **❌ 仅依赖一种搜索工具** — 同一来源多个并行调用容易触发限流。建议交替使用 Tavily 和 web_search，或在 Tavily 限流时立即切换到 web_search
+- **❌ Tavily 限流后忽略 MCP 服务器状态级联** — 当 Tavily API 返回 rate limit 错误后，MCP 服务器可能将 Tavily 标记为"unreachable after 7 consecutive failures"并锁定 ~58 秒。此时不要重试 Tavily MCP 工具，而是**立即切换到备用的 web_search/web_extract 工具**。Tavily 限流→MCP 服务器级联锁定的行为容易让后续轮次误判"Tavily 挂了"，需要在日志中记录降级原因以便区分
 
 ---
 

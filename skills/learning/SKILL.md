@@ -339,6 +339,8 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 | 2026-05-04 | 本学习流程改进 | 自举式改进 learning-workflow | 多任务支持; 进度可视化; 反思机制 |
 | 2026-05-04 | 深度循环学习机制 | 引入认知科学基础 + AI自改进前沿 | Spaced Repetition/Active Recall/Interleaving 映射到AI学习; Deep Loop Gate; Reflection Tokens; 间隔复习(1天/7天/30天); 学习质量评分公式 |
 | 2026-05-04 | GitHub 提交质量检查 | git -S pickaxe 脱敏陷阱; 子代理验证找盲点; 文档一致性是AI项目最大痛点 | git diff脱敏需grep辅助; 按P0/P1/P2分优先级; 结构化报告可审计可比较; 不要在CI阶段才检查; 代码改了必须同步文档 |
+| 2026-05-08 | Rust 2026 + Next.js 16.2 | 官方博客 > 社区 优先级有效; 多版本覆盖可追踪演化趋势; Tavily 限流时 web_search 降级无缝 | Rust 官方博客 + releases.rs + GitHub releases 三源验证; Next.js 官方博客是唯一权威源; 表格化对比呈现版本间演化; 知识库 freshness_score 更新到 0.7 |
+| 2026-05-08 | TypeScript 6.0/7.0 + Rust 1.95 + Python 3.15b1 + Go 1.27 | 多语言并行学习有效——4种语言一次覆盖; Beta 发布监测很重要——Python 3.15b1 新增 4 个 PEP (sentinel/frame pointers/等) 不在 alpha 阶段; 版本桥接意识——TS 6.0 是桥接版, TS 7.0 才是真正目标 | 跨语言版本追踪矩阵表(语言×特性); Beta发布监测: 检查 alpha→beta 间新增 PEP; Bridge-vs-destination 定位: TS 6.0 做迁移, TS 7.0 做真升级; Tavily 配额在 5月8日即耗尽(非5月15日), 早期全降级策略已验证 |
 
 ## 知识库索引
 

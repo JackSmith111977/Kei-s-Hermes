@@ -641,3 +641,4 @@ no_trig_skills = [s for s in normal_skills if not s['triggers']]
 | 2026-05-07 | HTTP API 延迟约 225ms，是 CLI 的 7-8 倍，性能基准应区分 | SRA v1.1.0 压力测试 |
 | 2026-05-07 | 同义词表一个缺口就导致完全无匹配，是系统的命门 | SRA v1.1.0 仿真测试 |
 | 2026-05-07 | Fixture 必须 assert skills>=300 阻止 CI 退化到假数据 | SRA v1.1.0 测试改造 |
+| 2026-05-07 | PyPI 上传前必须先检查版本号是否已被占用，否则 400 | SRA v1.1.0 发行实战 |

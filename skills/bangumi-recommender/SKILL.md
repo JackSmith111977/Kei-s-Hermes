@@ -1,7 +1,7 @@
 ---
 name: bangumi-recommender
 description: "Bangumi API integration for anime recommendation, calendars, and search."
-version: 1.0.0
+version: 1.1.0
 triggers: ["番剧推荐", "新番", "Bangumi", "Anime", "番组表"]
 metadata:
   hermes:
@@ -33,7 +33,7 @@ metadata:
 
 ## 📅 2026 年新番与 ACG 资讯
 
-> 最后更新：2026-05-07（夜自习自动更新）
+> 最后更新：2026-05-08（凌晨自习自动更新）
 
 ### 2026 春季番 (Spring 2026, 4月开播)
 
@@ -47,6 +47,44 @@ metadata:
 **周一档完整列表**：Farming Life in Another World S2、The Klutzy Class Monitor、Observation Log of My Fiancee Who Calls Herself a Villainess、Release that Witch (donghua)、Witch Hat Atelier
 
 **周二档完整列表**：Eren the Southpaw、Even a Replica Can Fall in Love、Food Diary of Miss Maid、I Made Friends With the Second Prettiest Girl、Liar Game、Marriagetoxin、Most Heretical Last Boss Queen 等
+
+---
+
+### 🏆 Spring 2026 中季深度分析 (Mid-Season Review)
+
+> **更新**: 2026-05-08 | **数据来源**: Anime-Roulette、CBR、Anime Tiger、Lost in Anime、Girltaku | **50+ 部新番放送中**
+
+#### 🔥 最强新人 TOP 5（按热度排名）
+
+| 排名 | 作品 | 工作室 | 播出平台 | 核心看点 | 评分/热度指标 |
+|------|------|--------|----------|----------|--------------|
+| 🥇 | **Witch Hat Atelier** (魔法帽的工坊) | BUG FILMS | CR (周一) | Eisner/Harvey 双奖漫画，Ghibli级视觉表现力，魔力图案(Sigil)驱动的硬核魔法系统 | \"年度最佳动画有力竞争者\" — CBR 9/10 |
+| 🥈 | **Nippon Sangoku** (日本三国) | Studio Kafka | Amazon Prime | 后末日日本三国鼎立，政治辩论题材，图书管理员主角用辩才统一国家 | MAL **8.45** (47K会员),小岛秀夫力荐, NYT 报道 |
+| 🥉 | **Daemons of the Shadow Realm** (Yomi no Tsugai) | Bones | CR (周五) | 荒川弘(FMA)最新作改编，双胞胎×神秘怪物，BONES 安藤真裕×高木登黄金组合 | 24集系列，\"sasuga\"级开幕 |
+| 4 | **Agents of the Four Seasons: Dance of Spring** | Wit Studio | Amazon Prime | Violet Evergarden 编剧新作，四季代理人的奇幻物语，WIT 顶级作画 | 4/5 ⭐ 评价，\"催泪文学\"定位 |
+| 5 | **Akane-banashi** | Zexcs | CR (周二) | Jump 落语题材，证明\"表演类动画也可以很燃\"，讲谈/表演与个人执念的深度叙事 | 突破性改编，文化输出力 MAX |
+
+**综合评价**: Spring 2026 被评论界称为「**史上最强春季档之一**」，与 Summer 2026 形成\"最拥挤年份\"——超过 50 部新番+续作同期，JJK S3/Frieren S2/推子 S3 等年度大作还在秋季待机。
+
+#### 🎬 人气续作表现评估
+
+| 作品 | 表现 | 评价 |
+|------|------|------|
+| **Re:Zero S4** | 🔥 火热 | RT 用户分 **mid-90s**，Auguria Dunes 篇进入 Pleiades Watchtower 剧情，\"S3 节奏问题后的回归\" |
+| **One Piece: Elbaph Arc** | 🔥 火热 | 史上最长休整期(3个月)后回归，作画全面升级，新OP\"即日经典\" |
+| **Dorohedoro S2** | 🔥 火热 | 6年等待，MAPPA 打斗编排更进一步，\"暴力与幽默完美融合\" |
+| **Classroom of the Elite S4** | ✅ 稳定 | 90分钟首集，White Room 新角色，退学风险升级 |
+| **Dr. Stone: Science Future Part III** | ✅ 稳定 | 前往美洲大陆，科学奇观持续输出 |
+| **That Time I Got Slime S4** | ✅ 稳定 | 动画预算明显提升，政治叙事深化 |
+| **Dandelion** (空知英秋新作) | ✅ 有趣 | 银魂式幽默×\"企业天使\"设定，Netflix 独占 |
+
+#### 🌟 必看原创新作
+
+| 作品 | 工作室 | 类型标签 | 看点 |
+|------|--------|----------|------|
+| **Möbius Dust** (メビウス・ダスト) | 動画工房 | 原创/SF日常 | Project ANIMA 大赏作品，监督岩崎太郎(甘々と稲妻)，系列构成富田頼子(着せ恋/逃げ若) |
+
+---
 
 ### 2026 年度备受期待新作
 
@@ -179,29 +217,52 @@ FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑
 
 ### 🔥 2026年5月重大新闻 (May 2026)
 
-> **更新**: 2026-05-07 (夜自习)
+> **更新**: 2026-05-08 (凌晨自习)
 
 #### 五等分的新娘新动画项目 (May 2)
 - **官方宣布**: 「五等分的新娘」新动画项目正式启动
 - **两项企划**:
-  1. 小说版动画化 — 原作者 Negi Haruba 监修的完整续作
-  2. 原作未动画化章节改编 — 补完粉丝期待的场景
+  1. **小说《五等分の花嫁【春夏秋冬】》TV动画化** — 原作者 Negi Haruba 完全监修，Hajime Asano 执笔的完整续作
+  2. **新作OVA** — 原作未动画化章节改编，补完粉丝期待场景
+- **声优全员回归**: 松岡禎丞、花澤香菜、竹達彩奈、伊藤美来、佐倉綾音、水瀬いのり
 - **累计发行**: 2000万册+（截至2026年5月）
 
 #### One Piece Netflix 重制版 (May 5)
 - **定档**: 2027年2月
 - **制作**: Wit Studio
-- **覆盖范围**: East Blue篇前50章 → 7集 300分钟
+- **覆盖范围**: East Blue篇前50章 → **7集 300分钟**（单集约43分钟，近乎原版2倍长度）
+- **制作阵容**: 
+  - 监督: Masashi Koizuka (进击的巨人、Moonrise)
+  - 助监督: Hideaki Abe (咒术回战)
+  - 系列构成: Taku Kishimoto (Sakamoto Days、Fruits Basket)
+  - 角色设计/总作监: Kyoji Asano (间谍过家家)、Takatoshi Honda (In/Spectre)
 - **首集上映**: World Tour 2026 夏季开始先行放映
-- **特色**: 从风车村 Partys Bar 场景开始，重绘经典
+- **特色**: 从风车村 Partys Bar 场景开始，全部一次性发布
 
 #### Kagurabachi 动画化确认 (April 27)
 - **开播**: 2027年4月
-- **制作**: Cypic (Umamusume: Cinderella Gray 同团队)
-- **导演**: Tetsuya Takeuchi | **角色设计**: Keigo Sasaki
-- **声优**: Taihi Kimura (主角 Chihiro Rokuhira)
-- **累计发行**: 400万册+ (Vol.11)
-- **World Tour**: 2026夏季先行20分钟，日本首映完整第1集
+- **制作**: Cypic (CyPictures，Umamusume: Cinderella Gray 同团队)
+- **导演**: Tetsuya Takeuchi (SAO S2动作作监、天国大魔境) | **角色设计**: Keigo Sasaki (青之驱魔师、七宗罪)
+- **声优**: Taihi Kimura (第20回声优奖新人奖) — 主角 Chihiro Rokuhira
+- **累计发行**: 400万册+ (Vol.11, May 1)
+- **World Tour**: 2026夏季第1话20分钟先行 → 日本巡演最终站全篇上映
+- **Jump 24号** (5月11日): 封面+卷头彩页，第1回人气投票结果发表
+
+#### Cardfight!! Vanguard 完全新作TV动画 (May 4)
+- **宣布**: 2026年5月3-4日「大ヴァンガ祭2026」正式发表
+- **开播**: 2027年预定
+- **制作**: **Kinema Citrus** (来自深渊、盾之勇者成名录)
+- **角色原案·构成**: 伊藤彰（历代Vanguard漫画化担当）
+- **背景**: 2026年的「Divinez 幻真星戦編」为最终季，2027年开始全新系列
+
+#### The World Is Dancing 世は踊る (May 7)
+- **开播**: **2026年7月2日** (周四 22:00 JST)，夏季新番
+- **制作**: Cypic (原CygamesPictures)
+- **原作**: Kazuto Mihara 的 Noh 能乐题材漫画（Morning连载）
+- **监督**: Toshimasa Kuroyanagi (Great Passage、Backflip!!)
+- **声优追加**: Takahiro Sakurai (足利义满)、Nobuo Tobita、Mamiko Noto、Inori Minase、Hazuki Seto
+- **OP**: Macaroni Empitsu「shusho」
+- **看点**: 讲述少年Zeami（观阿弥）创立能乐的故事，京都动画的品质+能乐大师监修
 
 #### Summer 2026 中季评价 (Mid-Season)
 - **领跑**: Bleach TYBW - The Calamity 压倒性热度
@@ -221,7 +282,8 @@ FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑
 
 | 作品 | 开播时间 | 工作室 | 类型 | 备注 |
 |------|----------|--------|------|------|
-| **Kagurabachi** | 2027年4月 | Cypic | 动作/超自然 | Jump新生代旗舰 |
-| **One Piece Netflix重制** | 2027年2月 | Wit Studio | 冒险 | East Blue 50章 |
-| **Re:Zero S4** | 待定 | White Fox | 异世界 | MAL Top 5 |
+| **Kagurabachi** | 2027年4月 | Cypic | 动作/超自然 | Jump新生代旗舰，制作人竹内哲也+佐々木啓悟 |
+| **THE ONE PIECE (Netflix重制)** | **2027年2月** | **Wit Studio** | 冒险 | East Blue 50章→7集300min |
+| **Cardfight!! Vanguard 新系列** | 2027年 | Kinema Citrus | 卡片对战 | 伊藤彰原案，接续Divinez最终季 |
+| **Re:Zero S4** | 待定 | White Fox | 异世界 | MAL Top 5，RT mid-90s好评 |
 | **Dungeon Meshi S2** | 待定 | Trigger | 奇幻/美食 | 原作完结 |

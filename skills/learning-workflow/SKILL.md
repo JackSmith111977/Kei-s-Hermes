@@ -1,7 +1,7 @@
 ---
 name: learning-workflow
-description: "所有学习/研究任务的强制流程拦截器。通过状态机+文件标志物实现防跳过机制。任何涉及'学习、研究、了解、搞懂'的请求必须先走此流程。v4.0 重大更新：三层迭代循环架构（子主题递归+中间反思+质量门禁）、螺旋式学习模式。"
-version: 4.0.0
+description: "所有学习/研究任务的强制流程拦截器。通过状态机+文件标志物实现防跳过机制。v5.0 重大更新：循环真正落地——learning-state.py 新增 regress/reject/loop-status 命令，reflection-gate.py 实现 R1/R2/R3/Quality Gate 自动化检查，子代理裁判打破自评自判。"
+version: 5.0.0
 triggers:
   - 学习
   - 研究
@@ -32,10 +32,17 @@ design_pattern: Pipeline
 skill_type: Workflow
 ---
 
-# 🧠 Learning Workflow · 强制学习流程 v4.0
+# 🧠 Learning Workflow · 强制学习流程 v5.0
 
 > **铁律**：任何学习任务（用户说"学习/研究/了解XXX"）必须严格走此流程。
-> **v4.0 重大更新**：三层迭代循环架构、螺旋式学习模式、中间反思检查点。
+> **v5.0 重大更新**：循环真正落地 — 状态机三剑客 (regress/reject/loop-status) + 反射门禁 (reflection-gate.py R1/R2/R3/QG) + 子代理裁判
+>
+> **依赖脚本**：
+> - `scripts/learning-state.py` — 状态机管理（init/complete/reject/regress/loop-status/check/reset）
+> - `scripts/reflection-gate.py` — 反射门禁自动化评分（r1/r2/r3/quality）
+>
+> **参考文件**：
+> - `references/cycle-troubleshooting.md` — 循环故障五层诊断指南（当门禁不触发时排查用）
 
 ---
 
@@ -173,6 +180,53 @@ STEP 0(分析) → STEP 1(搜索) → [R1反思] →
 
 > 🚨 **硬拦截**：前置步骤的 artifact 文件不存在时，禁止进入下一步！
 
+### v5.0 新命令 — 循环控制三剑客
+
+| 命令 | 作用 | 示例 |
+|:---|:---|:---|
+| `learning-state.py regress <step> [task_id]` | 🔙 回退到指定步骤（重置后续所有步骤为 pending） | `regress step1_search "my_task"` |
+| `learning-state.py reject <step> <reason> [task_id]` | 🔴 标记步骤为"需重做"，记录原因到 refusal_log | `reject step1_search "缺少官方来源"` |
+| `learning-state.py loop-status [task_id]` | 🔄 显示 L2/L3 循环次数 + 拒绝记录 + 步骤状态 | `loop-status "my_task"` |
+
+**循环上限**：
+- L2 中间反思（R1/R2/R3）：各 **2** 次
+- L3 质量门禁（QG）：**3** 次
+- 超过上限时自动拦截，引导用户手动评估
+
+### v5.0 反射门禁系统
+
+在每个检查点（R1/R2/R3/QG），使用 `reflection-gate.py` 进行自动化评分：
+
+```bash
+# 搜索质量检查（STEP 1 后）
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py r1 <task_id>
+
+# 理解深度检查（STEP 2 后）
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py r2 <task_id>
+
+# 提炼完整性检查（STEP 3 后）
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py r3 <task_id>
+
+# 质量门禁（STEP 5 后）
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py quality <task_id>
+```
+
+**输出格式**（JSON）：
+```json
+{"gate": "r1", "passed": true, "score": 85,
+ "failures": [{"check": "覆盖度", "detail": "...", "severity": "medium"}],
+ "recommendation": "通过，进入 STEP 2",
+ "loop": {"current": 1, "max": 2}}
+```
+
+**判定逻辑**：
+| score | 结果 | 操作 |
+|:-----:|:----:|:----|
+| ≥ 80 | ✅ 优质通过 | 直接进入下一步 |
+| 60-79 | ⚠️ 边界通过 | 进入下一步 + 标记待改进 |
+| 40-59 | 🔴 拦截 + 子代理裁判 | 子代理评估后决定回退或放行 |
+| < 40 | 🛑 强制拦截 | 自动 `regress` 回退 |
+
 ---
 
 ## 三、各步骤详细指令
@@ -245,10 +299,37 @@ STEP 0(分析) → STEP 1(搜索) → [R1反思] →
 - 来源权威性是否达标？
 - 是否有官方文档或权威教程？
 
-**执行方式**：
-- 在 STEP 1 完成后，自动检查 `raw_search_results.md`
-- 如果 R1 失败 → 记录 `loop_count += 1`，回到 STEP 0 或 STEP 1
-- 如果 `loop_count >= 3` → 报告用户请求协助
+**执行方式（v5.0 自动化）**：
+
+**Step 1 — 自动门禁**（每次必做）：
+```bash
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py r1 <task_id>
+```
+- **exit code = 0** (score ≥ 60) → 通过，进入 STEP 2
+- **exit code = 1** (score < 60) → 🛑 拦截！自动执行：
+  ```bash
+  # 自动回退到 STEP 0 或 STEP 1（根据失败类型）
+  python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py regress step0_map <task_id>
+  # 或
+  python3 ~/.hermes/skills/learning-workflow/scripts/learning-state.py regress step1_search <task_id>
+  ```
+- 循环次数自动递增，可通过 `loop-status` 查看
+
+**Step 2 — 子代理裁判**（当 score 在 40-70 之间时触发）：
+用 delegate_task 启动独立子代理作为第三方裁判：
+
+```python
+delegate_task(
+    goal="以严格的质量检查员身份，评估学习任务的搜索质量",
+    context=f"引用文件：~/.hermes/learning/raw_search_results.md\n"
+            f"知识图谱：~/.hermes/learning/knowledge_map.md\n"
+            f"reflection-gate.py 给分：{score}/100\n"
+            f"请给出：1) 具体改进建议 2) pass/fail 判断 3) 改进优先级",
+    toolsets=['terminal', 'file']
+)
+```
+- 子代理判 **fail** → 执行 regress 回退
+- 子代理判 **pass** → 进入 STEP 2（即使自动门禁是 40-70 的边界分）
 
 ---
 
@@ -281,10 +362,17 @@ STEP 0(分析) → STEP 1(搜索) → [R1反思] →
 - 还是只是复制粘贴？
 - 能否用自己的话解释给他人？
 
-**执行方式**：
-- 在 STEP 2 完成后，自动检查 `reading_notes.md`
-- 如果 R2 失败 → 记录 `loop_count += 1`，回到 STEP 1 或 STEP 2
-- 如果 `loop_count >= 3` → 报告用户请求协助
+**执行方式（v5.0 自动化）**：
+
+**Step 1 — 自动门禁**：
+```bash
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py r2 <task_id>
+```
+- score ≥ 60 → 进入 STEP 3
+- score < 60 → 🛑 `learning-state.py regress step1_search` 或 `step2_read`
+
+**Step 2 — 子代理裁判**（score 40-70 时触发）：
+子代理评估 reading_notes.md 的理解深度，判 fail 则回退。
 
 ---
 
@@ -319,10 +407,17 @@ STEP 0(分析) → STEP 1(搜索) → [R1反思] →
 - 能否指导实际操作？
 - 结构是否完整？
 
-**执行方式**：
-- 在 STEP 3 完成后，自动检查 `extracted_knowledge.md`
-- 如果 R3 失败 → 记录 `loop_count += 1`，回到 STEP 2 或 STEP 3
-- 如果 `loop_count >= 3` → 报告用户请求协助
+**执行方式（v5.0 自动化）**：
+
+**Step 1 — 自动门禁**：
+```bash
+python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py r3 <task_id>
+```
+- score ≥ 60 → 进入 STEP 4
+- score < 60 → 🛑 `learning-state.py regress step2_read` 或 `step3_extract`
+
+**Step 2 — 子代理裁判**（score 40-70 时触发）：
+子代理评估 extracted_knowledge.md 的完整性，判 fail 则回退。
 
 ---
 

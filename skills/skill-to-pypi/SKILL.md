@@ -610,6 +610,17 @@ python3 -m twine check dist/*
 
 ### 9.4 上传到 PyPI
 
+**前置检查：确认版本号不冲突**
+```bash
+# 检查 PyPI 上是否已存在相同版本
+EXISTS=$(curl -s https://pypi.org/pypi/$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])")/json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['info']['version'])" 2>/dev/null)
+LOCAL=$(python3 -c "print(__import__('your_package').__version__)")
+if [ "$EXISTS" = "$LOCAL" ]; then
+  echo "❌ 版本 $LOCAL 已存在 PyPI，需要 bump 版本号"
+  exit 1
+fi
+```
+
 ```bash
 # 上传到正式 PyPI
 python3 -m twine upload dist/* -u __token__ -p pypi-xxxxxxxx
@@ -706,6 +717,8 @@ sra recommend 构建                 # 7. 快速功能验证
 
 ### 9.10 Token 安全存取模式
 
+**通用模式：**
+
 ```bash
 # 存储（~/.hermes/.env）
 echo "TWINE_USERNAME=__token__" >> ~/.hermes/.env
@@ -715,10 +728,15 @@ chmod 600 ~/.hermes/.env
 # 使用时加载
 source ~/.hermes/.env
 twine upload dist/* -u "$TWINE_USERNAME" -p "$TWINE_PASSWORD"
-
-# 或单行注入（不落盘）
-TWINE_USERNAME=__token__ TWINE_PASSWORD=$(grep TWINE_PASSWORD ~/.hermes/.env | cut -d= -f2) twine upload dist/*
 ```
+
+**SRA 实战引用（2026-05-07）：**
+- Token 已存入 `~/.hermes/.env`，变量名 `TWINE_PASSWORD` / `PYPI_TOKEN`
+- 版本号最终发布为 **v1.2.0**（非 v1.1.0，因 PyPI 不允许覆盖已存在的版本）
+- 发布步骤: bump version → build → twine upload → git tag → gh release
+- 结果: https://pypi.org/project/sra-agent/1.2.0/
+- GitHub Release: https://github.com/JackSmith111977/Hermes-Skill-View/releases/tag/v1.2.0
+- 发布命令: `source ~/.hermes/.env && twine upload dist/*`
 
 ---
 
@@ -892,6 +910,8 @@ testpaths = ["tests"]
 | `externally-managed-environment` | 系统 Python 保护 | 加 `--break-system-packages` |
 | `Project not found` | 包名已存在 | 换名字或用 `--repository-url` 先试 test.pypi.org |
 | `refusing to allow a PAT to create or update workflow` | Token 缺少 `workflow` 权限 | GitHub Token 设置中勾选 `workflow` |
+| `400 Bad Request` | 版本号已在 PyPI 存在，不允许覆盖 | bump 版本号（pyproject.toml + __init__.py + setup.py）后重新构建上传 |
+| `403 Forbidden` on upload | Token 作用域不匹配项目名或仅限 test.pypi.org | 确认 PyPI Token 的 Project scope 与包名一致，或改为 Entire account |
 
 ---
 

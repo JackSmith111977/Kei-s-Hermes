@@ -8,11 +8,11 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-07T08:00:00",
-      "freshness_score": 0.05,
+      "last_updated": "2026-05-08T00:00:00",
+      "freshness_score": 0.9,
       "review_schedule": {
-        "l1": "2026-05-06",
-        "l2": "2026-05-12",
+        "l1": "2026-05-09",
+        "l2": "2026-05-15",
         "l3": "2026-06-04"
       },
       "knowledge_gaps_filled": [
@@ -28,16 +28,21 @@
       "target_skill": "linux-ops-guide",
       "priority": 0.7,
       "schedule_interval_hours": 4,
-      "last_updated": "2026-05-06T02:00:00",
-      "freshness_score": 0.95,
+      "last_updated": "2026-05-08T08:00:00",
+      "freshness_score": 0.8,
       "review_schedule": {
-        "l1": "2026-05-07",
-        "l2": "2026-05-13",
-        "l3": "2026-06-06"
+        "l1": "2026-05-09",
+        "l2": "2026-05-15",
+        "l3": "2026-06-07"
       },
       "knowledge_gaps_filled": [
-        "Go 1.23/1.24 updates",
-        "TypeScript 5.5+ features"
+        "Go 1.24 Swiss Tables / weak pointer / tool directive",
+        "TypeScript 5.8 erasable syntax / require(esm)",
+        "Python 3.14 free-threaded / deferred annotations / t-strings / subinterpreters",
+        "TypeScript 6.0 major defaults changes / TS 7.0 Go compiler beta",
+        "Rust 1.95.0 cfg_select! / if-let guards / LLVM 22",
+        "Python 3.15.0b1 sentinel / frame pointers / JIT 8-9%",
+        "Go 1.27 uuid package / Unicode 17 / generic methods proposal"
       ]
     },
     {
@@ -47,11 +52,11 @@
       "target_skill": "bangumi-recommender",
       "priority": 0.5,
       "schedule_interval_hours": 8,
-      "last_updated": "2026-05-07T04:00:00",
-      "freshness_score": 0.1,
+      "last_updated": "2026-05-08T02:00:00",
+      "freshness_score": 0.95,
       "review_schedule": {
-        "l1": "2026-05-08",
-        "l2": "2026-05-14",
+        "l1": "2026-05-09",
+        "l2": "2026-05-15",
         "l3": "2026-06-07"
       },
       "knowledge_gaps_filled": [
@@ -62,7 +67,11 @@
         "One Piece Netflix重制版定档",
         "Kagurabachi动画化确认",
         "Summer 2026中季评价",
-        "Magical Girl Nanoha回归"
+        "Magical Girl Nanoha回归",
+        "Spring 2026中季深度分析(Witch Hat/Nippon Sangoku/Daemons)",
+        "Cardfight!! Vanguard 2027新系列(Kinema Citrus)",
+        "The World Is Dancing定档7月2日",
+        "Möbius Dust 動画工房原创新作"
       ]
     },
     {

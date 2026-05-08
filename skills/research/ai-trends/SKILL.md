@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.5.0
+version: 1.6.0
 triggers:
 - ai trends
 - ai前沿
@@ -65,6 +65,13 @@ metadata:
   - 新增 Effort Control（`xhigh` 级别），Cyber Verification Program
   - 定价不变：$5/M 输入，$25/M 输出
 - **MiniMax M2.7**：角色一致性与情感深度增强，开源 OpenRoom（基于 Web 的实时视觉反馈环境）
+- **xAI Grok 4.3**（2026.05.06）：xAI 最新发布，延续 Grok 系列推理能力
+- **MiniMax-M1**（2026.05）：**全球首个开源大规模混合注意力推理模型**，1M token 上下文窗口（与 Gemini 2.5 Pro 并列行业领先），80K 推理 token 输出
+  - 专有 Lightning Attention 机制，80K 深度推理仅需约 DeepSeek R1 30% 算力
+  - SWE-bench 验证集 56.0%（接近 DeepSeek-R1-0528 57.6%，大幅超越其他开源模型）
+  - 长上下文理解超 OpenAI o3 和 Claude 4 Opus，全球第二仅次于 Gemini 2.5 Pro
+  - Agent 工具使用（TAU-bench）领先所有开源模型，超 Gemini-2.5 Pro
+  - 开源权重 + 技术报告已发布
 
 ### 架构趋势
 
@@ -78,6 +85,8 @@ metadata:
 | 边缘 ML (Edge ML) | 模型从云端推到设备端运行，实时处理语音/视频/传感器数据，减少延迟和隐私风险，6G 设备结合 TinyML |
 | ParaRNN (ICLR 2026) | Apple 提出并行 RNN 训练框架，实现 665× 加速，首次训练出 7B 参数 RNN 达到 Transformer 级别语言建模性能 |
 | TurboQuant (ICLR 2026) | Google 提出 KV 缓存 3-bit 量化，6 倍内存压缩、8 倍注意力加速，解决长上下文推理的内存瓶颈 |
+| **混合注意力推理** (MiniMax-M1) | MiniMax 推出全球首个开源大规模混合注意力推理模型，Lightning Attention 机制实现 80K 推理 token 仅需 30% 算力 |
+| **Subquadratic Scaling** (SubQ) | SubQ 1M-Preview 使用 Sparse Subquadratic Attention（O(n) 线性缩放），在 12M token 时相比标准架构减少 ~1,000× 注意力计算，可能使向量数据库和 RAG 分块策略过时 |
 
 ### AI Agent 生态
 
@@ -102,6 +111,25 @@ metadata:
 - **PwC 2025 Agent 采用调查**：35% 组织广泛采用，27% 有限采用，17% 全公司实施
 - 安全问题：unrestricted tool use 仍存在安全隐患（工具投毒攻击 — 恶意 MCP 服务器通过注入指令操纵 Agent 行为）。Salesforce 通过可信网关模型（Trusted Gateway）允许管理员定义 Agent 可访问的 MCP 服务器
 
+### Agent 基础设施发展（2026.05 新增）
+
+| 事件 | 日期 | 重要性 | 详情 |
+|------|------|--------|------|
+| **AWS Agent Toolkit + MCP Server GA** | 2026.05.06 | 🔴 高 | AWS 推出生产级 Agent 工具包，含 40+ agent skills、全托管 MCP 服务器（IAM 护栏 + CloudWatch/CloudTrail 可观测性 + 沙箱代码执行），三个开箱即用 Agent 插件（Core/Data Analytics/Agents） |
+| **Google 50+ 托管 MCP 服务器 GA** | 2026.04.28 | 🔴 高 | Google Cloud 推出 50+ 全托管 MCP 服务器，覆盖 Spanner/AlloyDB/BigQuery/Cloud Storage/Workspace/Gmail/Pay/Wallet 等，原生 IAM Deny 策略 + Agent Registry + Model Armor（防注入攻击），支持 Gemini CLI/Claude/ChatGPT/VS Code/LangChain/CrewAI |
+| **Microsoft Agent Governance Toolkit (AGT)** | 2026.04 | 🟡 中 | 开源 MCP 安全治理层，Ed25519 + 量子安全 ML-DSA-65 身份体系，覆盖 OWASP MCP Top 10 中 7/10，支持 LangChain/AutoGen/CrewAI/Semantic Kernel/OpenAI Agents SDK/Google ADK 等 20+ 框架，Python/TS/.NET/Rust/Go SDK |
+| **MCP 2026 路线图发布** | 2026.03 | 🟡 中 | 四大方向：Streamable HTTP 无状态传输（6 月规范周期）、Agent-to-Agent 通信、企业认证（OAuth 2.1 PKCE）+ 审计合规、MCP Apps（工具返回交互式 HTML）、SSE 即将废弃 |
+| **MCPRated 索引上线** | 2026.05 | 🟢 低 | Agent 可读的 MCP 服务器质量索引，每天更新，4 轴评分（可靠性/文档/信任/社区），Agent 可在运行时发现和筛选 MCP 服务器 |
+| **MCP v2 Beta (@ai-sdk/mcp)** | 2026.03.13 | 🟡 中 | Vercel AI SDK MCP v2：独立稳定包，OAuth 2.0 内置，Structured Output（outputSchema），Elicitation 支持，Resources/Prompts 原语 |
+| **Claude Mythos + Project Glasswing** | 2026.05 | 🔴 高 | Anthropic "超级黑客"模型仅限 40 家合作伙伴使用，Amazon/Google/Microsoft/NVIDIA/Cisco 组成的 Project Glasswing 联盟，$100M 安全 credits + $4M 捐赠开源安全组织 |
+
+**MCP 生态关键趋势**：
+- 81% 远程 MCP 服务器已使用 OAuth 2.1 PKCE
+- MCP 注册中心 9,400+ 条目（2025.09 以来增长 407%）
+- Streamable HTTP 取代 SSE 成为主要传输协议 
+- MCP Apps（2026.01.26）首次扩展协议，工具可返回交互式 HTML UI（沙箱 iframe），已在 Claude/ChatGPT/Goose/VS Code 中支持
+- Microsoft Fabric MCP（Local GA + Remote Preview）将数据平台变为 AI 原生操作系统
+
 ### Multi-Agent Orchestrator 框架（2026.05 新增）
 
 | 框架 | GitHub Stars | 适用场景 | 核心特性 | 最新版本 |
@@ -124,14 +152,16 @@ metadata:
 | Agent | Stars | 开源 | 价格 | SWE-bench | Terminal-Bench | Context | MCP | 最佳场景 |
 |-------|-------|------|------|-----------|----------------|---------|-----|----------|
 | **Claude Code** | ~71K | 否 | $20-200/mo | 87.6% | 65.4% | 1M | 深度(3000+ hooks) | 架构设计、多文件重构、Frontend/UI |
-| **Codex CLI** | ~65K | Apache 2.0 | $20-200/mo | 78-80% | 77.3% | 192-400K | 支持 | DevOps、终端自动化、批处理任务 |
+| **Codex CLI** | ~65K | Apache 2.0 | $20-200/mo | 78-80% | **82.7%** | 192-400K | 支持 | DevOps、终端自动化、批处理任务 |
 | **Gemini CLI** | ~102K | Apache 2.0 | 免费(1000 req/day) | N/A | N/A | 1M | 支持 | 免费/评估、低成本原型 |
 | **OpenCode** | ~117K | Go | BYOK | 模型依赖 | 模型依赖 | 模型依赖 | Yes | 多模型自由(75+ models) |
+| **Twill** | 新 | Various | - | - | - | - | Yes | "始终在线"自主工程 |
 
 **关键洞察**：
 - **Claude Code** 代码质量最高 (87.6% SWE-bench Verified)，1M context window，Agent Teams 多 agent 协作
-- **Codex CLI** Token 效率 4x fewer tokens，Terminal-Bench 领导者 (77.3%)，Kernel-level sandboxing 安全
+- **Codex CLI** 更新后 Terminal-Bench 达 **82.7%**（GPT-5.5 驱动），Token 效率 4x fewer tokens，Kernel-level sandboxing 安全
 - **最佳组合**: Claude Code → Architecture + Frontend; Codex CLI → DevOps + Autonomous batch work
+- **openai-agents-python v0.16.0**（2026.05.07）：默认模型从 gpt-4.1 切换为 gpt-5.4-mini，新增 max_turns=None 禁用限制、工具并发配置、MCP 服务器前缀工具名
 
 **避坑指南**：
 - Claude Code $20 Pro plan rate limit (5小时限制，复杂任务可能用完 50-70%)
@@ -152,8 +182,11 @@ metadata:
 | **MoGA** | ICLR 2026 | Mixture-of-Groups Attention，精确 token 路由替代块级估计，支持 ~580K 上下文长视频生成 |
 | **GRAM** | ICLR 2026 Workshop | Generative Recursive reAsoning Models，概率递归推理，ARC-AGI 强竞争力，宽度扩展推理 |
 | **Drifting Models** | Kaiming He et al. | 一步生成范式，ImageNet FID 1.54，训练时演化 pushforward 分布 |
+| **DR-Venus-4B** | inclusionAI (2026.04) | 纯开源数据训练的 4B 深度研究 Agent，SFT + IGPO RL，超越 2-3x 更大模型。BrowseComp **29.1%**，arXiv:2604.19859 |
+| **OpenSeeker-v2** | 学术团队 (2026.05) | 开源搜索 Agent，BrowseComp **46.0%** SOTA，仅 **10.6K 数据点**纯 SFT 训练，30B 参数 |
+| **Google DeepMind Gemma 4** | Google (2026.05) | Apache 2.0 开源。26B-A4B MoE 达 31B Dense 旗舰 **97% 质量**，8 倍少算力。4 种规格：E2B/E4B/26B-MoE/31B，支持多模态 + 音频输入 |
 
-### 2026 趋势观察（中期更新）
+### 2026 趋势观察（2026.05 更新）
 
 1. 行业级消费级扩散模型将出现（Gemini Diffusion 可能率先），实现廉价、可靠、低延迟推理
 2. 开放权重社区将逐步采用带本地工具使用和更强 Agent 能力的 LLM
@@ -161,6 +194,10 @@ metadata:
 4. **AI Agent 正从原型走向企业级部署**：PwC 调查显示 35% 组织已广泛采用，Cloudflare+Stripe 实现全自动 Agent 部署管线
 5. **ICLR 2026 关键信号**：RNN 复兴（ParaRNN 让 7B RNN 达到 Transformer 水平）和 KV 缓存压缩（TurboQuant 3-bit 零损失）是两个重要方向
 6. **边缘推理加速**：模型向设备端迁移成为主流趋势，TinyML 与 6G 结合
+7. **三大云厂商 MCP 基础设施竞争**（2026.05 关键转折）：AWS（Agent Toolkit + MCP Server GA）、Google（50+ 托管 MCP 服务器）、Microsoft（MCP Fabric + AGT）均在本月推出生产级 Agent 基础设施
+8. **开源深度研究 Agent 突破**：DR-Venus-4B（纯开源数据 4B，超 2-3x 更大模型）和 OpenSeeker-v2（46.0% BrowseComp SOTA，仅 10.6K 数据点 SFT）证明小模型+优质数据可超越大模型+海量数据
+9. **混合注意力推理成为新趋势**：MiniMax-M1 全球首个开源大规模混合注意力模型，SubQ 线性缩放注意力（~1,000× 计算减少）可能改变 RAG 范式
+10. **"智能每参数"成为新前沿**：GPT-5.5 Instant 不再追求参数规模，而是"高保真可靠性"（52.5% 幻觉减少）；Gemma 4 26B MoE 达 31B 旗舰 97% 质量仅需 1/8 算力
 
 ---
 
@@ -239,6 +276,14 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 | **VideoMind** | Video Reasoning | Chain-of-LoRA agent，时序定位视频理解 |
 | **Paper2Code** | ML Automation | 多 Agent LLM 从论文生成代码仓库 |
 
+### 推理引擎与工具链更新（2026.05 新增）
+
+| 项目 | 版本 | 日期 | 亮点 |
+|------|------|------|------|
+| **vLLM** | v0.20.1 | 2026.05.04 | DeepSeek V4 稳定性专注：Multi-stream pre-attention GEMM、attn GEMM knob 调优、all-to-all 通信优化 |
+| **HuggingFace Transformers** | v5.7.0 | 2026.04.28 | 新模型：Laguna (Poolside MoE, sigmoid MoE router)、DEIMv2 (57.8 AP 目标检测)、SAM3-LiteText (88% 轻量化文本编码器)、QianfanOCR (Baidu 4B 端到端文档理解)；`transformers serve` 新增 `/v1/completions` 端点和多模态支持 |
+| **AReaL** | v1.0.2 | 2026.03.17 | 快速 RL 框架，新增 Qwen3.5 支持（Dense + MoE）、Online Distillation、双语文档 |
+
 ---
 
 > 📌 **更新日志**
@@ -248,3 +293,4 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-07: v1.3 更新 — 新增 Multi-Agent Orchestrator 框架对比（Microsoft Agent Framework、Scion、Agentspan、Orloj）；CLI Coding Agents 详细对比表（Claude Code/Codex CLI/Gemini CLI/OpenCode）；选型决策树和避坑指南；Token 效率对比（Codex 4x fewer tokens）；更新 SWE-bench 最新数据（Claude Code 87.6%）
 > - 2026-05-07: v1.4 更新 — LLM 2026 Flagship 详细对比表（DeepSeek R1/Claude 4.5/Gemini 2.5/GPT-4.1 等 12 模型）；新增 Shannon/MARSYS/REDEREF 框架；LLM 选型决策树；ICLR 2026 补充论文（LipNeXt/Newt/Cosmos Policy/VideoMind/Paper2Code）
 > - 2026-05-07: v1.5 更新 — GPT-5.5 Instant 完整规格（Memory Sources、自我错误恢复、API 端点）；Kimi K2.6 GA 详细规格（1T/32B MoE、12h 运行、300-agent 群、Partner 验证）；Nemotron 3 Nano Omni 扩展（部署路径、H Company 实测）；Gemini API File Search 多模态化；新增 ICLR 2026 论文（MoGA 长视频生成、GRAM 递归推理、Drifting Models 一步生成）
+> - 2026-05-08: **v1.6 更新** — 新增 Agent 基础设施发展（AWS Agent Toolkit GA、Google 50+ 托管 MCP 服务器、Microsoft AGT、Claude Mythos+Project Glasswing、MCP 2026 路线图、MCP v2 Beta）；Gemma 4 开源（26B MoE 旗舰 97% 质量）；MiniMax-M1 混合注意力推理模型；DR-Venus-4B / OpenSeeker-v2 开源深度研究 Agent；Grok 4.3、SubQ 次二次缩放注意力；Codex CLI Terminal-Bench 82.7%；openai-agents-python v0.16.0 默认模型切换；vLLM v0.20.1 DeepSeek V4 稳定化；Transformers v5.7.0 新模型；更新 2026 趋势观察（10 条）

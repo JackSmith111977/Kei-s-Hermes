@@ -103,6 +103,8 @@ git remote set-url origin "$REMOTE_BASE"
 | **Cron 环境隔离** | cron 任务无交互式 shell 的环境变量 | 用独立文件而非环境变量 |
 | **代理环境** | 某些网络环境需代理才能访问 GitHub | `git -c http.proxy="http://127.0.0.1:7890" push` |
 | **SCM 工具脱敏** | Hermes 的 `patch` 工具在写入含认证相关字符串时会自动处理，可能影响内容完整性 | 用 `write_file` 完整重写 |
+| **运行时状态文件混入** | rsync 从 `~/.hermes/skills/` 同步时，会将 `.curator_state`、`.usage.json`、`.hub/` 等本地缓存/状态文件也复制进来，污染 git 仓库 | 在部署目录 `.gitignore` 中添加排除规则 |
+| **HERMES_REPO_URL 环境变量** | cron 任务指令中引用此变量控制是否推送：未设置时只同步+commit，设置后才 push | 由 cron job 指令逻辑判断，非脚本内部逻辑；用于区分纯本地备份与远程同步 |
 
 ## 定时任务配置
 
@@ -132,6 +134,27 @@ ls -la ~/.hermes/.deploy_token
 # 3. 验证远程仓库更新
 git -C /tmp/hermes-catgirl-deploy log --oneline -1
 ```
+
+## 部署目录 .gitignore 维护
+
+skills 目录同步时会带入运行时状态文件，需在部署目录 `.gitignore` 中排除：
+
+```gitignore
+# ── 运行时状态（curator 缓存／使用统计）──
+skills/.curator_state
+skills/.usage.json
+skills/.hub/
+```
+
+**验证排除生效：**
+```bash
+cd /tmp/hermes-catgirl-deploy
+# 确认这些文件不在 git tracked 中
+git ls-files skills/.curator_state skills/.usage.json | wc -l
+# 应输出: 0
+```
+
+当有新的运行时文件被带入时，先 `git reset HEAD <file>` 取消暂存，再更新 `.gitignore`。
 
 ## 更新认证令牌
 

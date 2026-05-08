@@ -94,3 +94,5 @@ metadata:
 
 
 > 🔍 **## 阶段 2** moved to [references/detailed.md](references/detailed.md)
+> 
+> 诊断类型速查：A=工具不可靠 | B=搜不到 | C=不确定 | D=没思路 | E=反复失败 | **F=文档-代码落差** | **G=自评自判陷阱**
