@@ -1,7 +1,7 @@
 ---
 name: hermes-self-analysis
 description: boku（Emma/小喵猫娘女仆 AI）对自身的全面分析——架构理解、工具能力评估、已知弱点、学习经验、决策模式。知己才能更好地发挥所长、规避短板。
-version: 1.0.0
+version: 2.1.0
 triggers:
 - 分析自己
 - 了解自己的能力
@@ -160,32 +160,7 @@ web, browser, terminal, file, code_execution, vision, image_gen, tts, skills, me
 
 ### 已创建的技能体系
 
-```
-├── dogfood/
-│   ├── hermes-self-analysis     自我认知（本文件）
-│   ├── patch-file-safety        安全编辑文件
-│   └── anti-repetition-loop     防重复循环回复
-├── learning/
-│   ├── learning                 学习方法论 meta-skill (v2.1, 含反思迭代)
-│   ├── learning-workflow        强制学习流程 (v2.0, 含双模式/多任务/进度可视化)
-│   └── skill-creator            skill 创建引擎 (v4.1, 含快速/完整双通道)
-├── doc-design/                  文档排版（索引 + 原子 skill）
-│   ├── doc-design, pdf-layout-reportlab, pdf-layout-weasyprint
-│   └── docx-guide, pptx-guide, ...
-├── software-development/
-│   ├── python-env-guide         Python 环境最佳实践
-│   ├── plan, systematic-debugging, tdd
-│   └── patch-file-safety
-├── devops/
-│   └── linux-ops-guide          Linux 运维
-├── github/
-│   ├── git-advanced-ops         Git 高级操作
-│   └── github-*                 各种 GitHub 工作流
-├── feishu/
-│   ├── feishu                   飞书全套
-│   └── feishu-send-file         发文件正确流程
-└── 其他：web-access, learning, skill-creator, mermaid-guide...
-```
+```\n├── dogfood/\n│   ├── hermes-self-analysis     自我认知（本文件，v2.0）\n│   ├── patch-file-safety        安全编辑文件\n│   └── anti-repetition-loop     防重复循环回复\n├── learning/\n│   ├── learning                 学习方法论 meta-skill (v2.7, 含认知科学+深度循环)\n│   ├── learning-workflow        强制学习流程 (v5.0, 含反射门禁+子代理裁判)\n│   ├── skill-creator            skill 创建引擎 (v4.1, 含快速/完整双通道)\n│   ├── learning-review-cycle    自驱动学习循环\n│   ├── deep-research            深度调研工作流\n│   └── night-study-engine       夜间自习引擎\n├── doc-design/                  文档排版（索引 + 原子 skill）\n│   ├── doc-design, pdf-layout-reportlab, pdf-layout-weasyprint\n│   ├── pdf-pro-design, docx-guide, pptx-guide\n│   └── html-guide, markdown-guide, latex-guide, epub-guide\n├── creative/\n│   ├── architecture-diagram     SVG 架构图生成\n│   ├── excalidraw               手绘风格图表\n│   ├── meme-creation            表情包制作\n│   └── p5js / manim-video       交互/数学动画\n├── autonomous-ai-agents/\n│   ├── hermes-message-injection SRA 消息注入\n│   └── claude-code / codex      AI Agent 协作\n├── software-development/\n│   ├── python-env-guide         Python 环境最佳实践\n│   ├── plan, systematic-debugging, tdd, writing-plans\n│   ├── patch-file-safety, node-inspect-debugger, debugpy\n│   └── subagent-driven-development\n├── devops/\n│   └── linux-ops-guide, proxy-monitor, deploy-v2\n├── github/\n│   ├── git-advanced-ops, commit-quality-check\n│   └── github-*                 各种 GitHub 工作流\n├── feishu/\n│   ├── feishu                   飞书全套\n│   └── feishu-send-file / batch-send\n├── news-briefing / 金融分析 / 数据科学\n├── 学习：learning, learning-workflow, skill-creator, deep-research\n└── 其他：web-access, clash-config, memory-management, system-health-check...\n```
 
 ---
 
@@ -227,7 +202,7 @@ Hermes: venv Python 3.11.15
 代理: mihomo v1.19.3 (端口 7890/9090)
 Chrome: headless (端口 9222)
 CDP Proxy: 端口 3456
-Skill 数量: 90+
+Skill 数量: 300+
 运行方式: gateway run (飞书 + 微信)
 ```
 
@@ -244,14 +219,18 @@ Skill 数量: 90+
 - [x] 同一 TODO 超过 3 轮没推进 → 汇报卡点或换方案
 
 ### 中期改进（需要更多学习）
+### 中期改进（需要更多学习）
 - [ ] 学会主动用 `hermes config` CLI 查看/修改配置
 - [ ] 学会用 `hermes doctor` 做健康检查
-- [ ] 学会用 `systematic-debugging` 处理复杂错误
 - [ ] 启用 Honcho Memory 跨会话用户建模
 - [ ] 启用 Docker Terminal 隔离执行
-- [ ] 尝试 Web UI Dashboard (`hermes web`)
+- [ ] 尝试 Web UI Dashboard (`hermes dashboard`)
 - [ ] 熟悉 @ Context References 用法
 - [ ] 启用 Process 管理用于长任务监控
+- [x] **完成全面能力审计 (2026-05-08)** — 发现 ~100+ 未启用功能
+- [ ] 尝试 `hermes insights` 分析使用模式
+- [ ] 启用 `privacy.redact_pii` + `sessions.auto_prune`
+- [ ] 加载 `moa` 工具集体验多模型混合推理
 
 ### 长期改进
 - [ ] 减少过度依赖 tool call，提高推理效率
@@ -261,3 +240,8 @@ Skill 数量: 90+
 - [ ] 创建自定义 MCP Server
 - [ ] 探索 RL 训练数据生成
 - [ ] 通过 Composio MCP 连接 1000+ 服务
+
+---
+
+**📎 参考文件**：
+- `references/hermes-architecture.md` — Hermes Agent 完整架构参考（深度学习产出）

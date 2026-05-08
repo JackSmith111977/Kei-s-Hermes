@@ -12,6 +12,11 @@ triggers:
   - run_conversation
   - sra daemon
   - sra start
+  - 启动sra
+  - 开启sra
+  - 下载sra
+  - 安装sra
+  - 更新sra
   - sra管理
   - 上下文注入
 depends_on:
@@ -85,33 +90,55 @@ grep -n "def _query_sra_context" ~/.hermes/hermes-agent/run_agent.py
 
 SRA 注入代码依赖外部的 SRA Daemon 服务。需要单独启动。
 
-### 安装确认
+### 📌 关键路径
+
+| 路径 | 说明 |
+|------|------|
+| `~/.hermes/hermes-agent/venv/bin/srad` | 守护进程启动命令（必须用 venv 版本） |
+| `~/.hermes/hermes-agent/venv/bin/sra` | CLI 查询命令（必须用 venv 版本） |
+| `/tmp/sra-latest/` | Editable pip 安装源码（从 GitHub 克隆） |
+| `~/.sra/srad.sock` | Unix Socket |
+| `~/.sra/srad.log` | 日志文件 |
+| `~/.sra/config.json` | 用户配置 |
+
+### ✅ 前置条件
+
+**国内服务器**：GitHub 下载前必须先启动 mihomo 代理，否则 `git clone` 会超时。
+
+### 安装
 
 ```bash
-which sra                # 确认 CLI 已安装
-sra --version            # 显示版本
-```
+# 1. 确保代理已启动（国内服务器必需）
+mihomo -f /etc/mihomo/config.yml -d /etc/mihomo
 
-SRA 包作为 editable 安装（`pip install -e`）在 `/tmp/sra-agent/`。
+# 2. 设置代理环境变量后 git clone
+export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
+cd /tmp
+git clone https://github.com/JackSmith111977/Hermes-Skill-View.git sra-latest
+
+# 3. 安装到 Hermes venv（⚠️ 必须用 --no-build-isolation，venv 中 setuptools 较旧）
+~/.hermes/hermes-agent/venv/bin/python3 -m pip install --no-build-isolation -e /tmp/sra-latest
+```
 
 ### 启动/停止
 
 ```bash
-sra start                # 后台守护进程模式（fork）
-sra stop                 # 停止
-sra restart              # 重启
-sra status               # 查看状态
-sra attach               # 前台运行（调试用）
+# ⚠️ 必须用 Hermes venv 中的命令（系统 Python 找不到 skill_advisor 模块）
+~/.hermes/hermes-agent/venv/bin/srad     # 启动守护进程（后台）
+~/.hermes/hermes-agent/venv/bin/sra stop # 停止
 ```
+
+**说明**：新版 SRA（v1.2.0+）用 `srad` 命令启动守护进程，`sra` 命令仅用于停止和查询。
 
 ### 验证
 
 ```bash
-# 健康检查
-curl http://127.0.0.1:8536/health
+# ❌ 不要直接 curl（当前 shell 可能设了 http_proxy，会走代理导致失败）
+# ✅ 用 --noproxy 绕过：
+curl -s --noproxy '*' http://127.0.0.1:8536/health
 
 # 技能推荐测试
-curl -X POST http://127.0.0.1:8536/recommend \
+curl -s --noproxy '*' -X POST http://127.0.0.1:8536/recommend \
   -H "Content-Type: application/json" \
   -d '{"message": "帮我写个python脚本"}'
 ```
@@ -120,12 +147,11 @@ curl -X POST http://127.0.0.1:8536/recommend \
 
 HTTP API: `8536`（通过 `~/.sra/config.json` 的 `http_port` 配置）
 
-### 开机自启（systemd）
+### 查看版本
 
 ```bash
-sra install-service      # 生成 service 文件到 /tmp/srad.service
-sudo cp /tmp/srad.service /etc/systemd/system/
-sudo systemctl enable --now srad
+# sra --version 在新版中会当作查询字符串，需用 Python 检查
+~/.hermes/hermes-agent/venv/bin/python3 -c "import skill_advisor; print(skill_advisor.__version__)"
 ```
 
 ## 与 Hook 系统的关系

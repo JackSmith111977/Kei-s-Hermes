@@ -1,7 +1,7 @@
 ---
 name: github-deploy-upload
 description: 安全地将本地部署目录通过定时 cron 推送到 GitHub 仓库。涵盖认证令牌安全存储（独立文件 600 权限）、git remote 内容自动清理、远程分支适配等实践。
-version: 1.0.0
+version: 1.1.0
 triggers:
 - deploy upload
 - deploy-upload
@@ -104,6 +104,7 @@ git remote set-url origin "$REMOTE_BASE"
 | **代理环境** | 某些网络环境需代理才能访问 GitHub | `git -c http.proxy="http://127.0.0.1:7890" push` |
 | **SCM 工具脱敏** | Hermes 的 `patch` 工具在写入含认证相关字符串时会自动处理，可能影响内容完整性 | 用 `write_file` 完整重写 |
 | **运行时状态文件混入** | rsync 从 `~/.hermes/skills/` 同步时，会将 `.curator_state`、`.usage.json`、`.hub/` 等本地缓存/状态文件也复制进来，污染 git 仓库 | 在部署目录 `.gitignore` 中添加排除规则 |
+| **技能目录内嵌 .git 仓库** | 某些 skill 目录（如 `web-access`）本身包含 `.git/` 目录，rsync 复制后部署目录 git 会将其检测为子模块（"modified content, untracked content"），导致 `git status` 异常 | 在 `.gitignore` 中添加 `skills/**/.git/` 排除所有内嵌 git 仓库；同步后清理已复制的 `.git/` 目录 |
 | **HERMES_REPO_URL 环境变量** | cron 任务指令中引用此变量控制是否推送：未设置时只同步+commit，设置后才 push | 由 cron job 指令逻辑判断，非脚本内部逻辑；用于区分纯本地备份与远程同步 |
 
 ## 定时任务配置
@@ -137,13 +138,19 @@ git -C /tmp/hermes-catgirl-deploy log --oneline -1
 
 ## 部署目录 .gitignore 维护
 
-skills 目录同步时会带入运行时状态文件，需在部署目录 `.gitignore` 中排除：
+skills 目录同步时会带入运行时状态文件，以及某些技能目录自身包含的 `.git/` 仓库，需在部署目录 `.gitignore` 中排除：
 
 ```gitignore
 # ── 运行时状态（curator 缓存／使用统计）──
 skills/.curator_state
 skills/.usage.json
 skills/.hub/
+
+# ── 内嵌 git 仓库（子模块检测问题）──
+# rsync 会将 skill 目录中的 .git/ 也复制过来，
+# 导致部署目录 git 将其检测为子模块
+skills/web-access/.git/
+skills/**/.git/
 ```
 
 **验证排除生效：**
@@ -152,6 +159,18 @@ cd /tmp/hermes-catgirl-deploy
 # 确认这些文件不在 git tracked 中
 git ls-files skills/.curator_state skills/.usage.json | wc -l
 # 应输出: 0
+
+# 确认没有内嵌 .git 被跟踪（子模块检测问题）
+git status skills/ | grep -c 'modified content' || echo "无子模块检测问题"
+```
+
+**修复已混入的内嵌 .git：**
+```bash
+cd /tmp/hermes-catgirl-deploy
+# 查找并清理 skill 目录中混入的 .git/
+find skills/ -maxdepth 2 -name '.git' -type d 2>/dev/null
+# 清理（确认无误后）
+# find skills/ -maxdepth 2 -name '.git' -type d -exec rm -rf {} + 2>/dev/null || true
 ```
 
 当有新的运行时文件被带入时，先 `git reset HEAD <file>` 取消暂存，再更新 `.gitignore`。

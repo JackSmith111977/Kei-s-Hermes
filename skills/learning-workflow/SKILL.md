@@ -1,7 +1,7 @@
 ---
 name: learning-workflow
 description: "所有学习/研究任务的强制流程拦截器。通过状态机+文件标志物实现防跳过机制。v5.0 重大更新：循环真正落地——learning-state.py 新增 regress/reject/loop-status 命令，reflection-gate.py 实现 R1/R2/R3/Quality Gate 自动化检查，子代理裁判打破自评自判。"
-version: 5.0.0
+version: 5.2.0
 triggers:
   - 学习
   - 研究
@@ -37,12 +37,7 @@ skill_type: Workflow
 > **铁律**：任何学习任务（用户说"学习/研究/了解XXX"）必须严格走此流程。
 > **v5.0 重大更新**：循环真正落地 — 状态机三剑客 (regress/reject/loop-status) + 反射门禁 (reflection-gate.py R1/R2/R3/QG) + 子代理裁判
 >
-> **依赖脚本**：
-> - `scripts/learning-state.py` — 状态机管理（init/complete/reject/regress/loop-status/check/reset）
-> - `scripts/reflection-gate.py` — 反射门禁自动化评分（r1/r2/r3/quality）
->
-> **参考文件**：
-> - `references/cycle-troubleshooting.md` — 循环故障五层诊断指南（当门禁不触发时排查用）
+> **依赖脚本**：\n> - `scripts/learning-state.py` — 状态机管理（init/complete/reject/regress/loop-status/check/reset）\n> - `scripts/reflection-gate.py` — 反射门禁自动化评分（r1/r2/r3/quality）+ MIN_LOOPS 最小循环检查 + 递进等级惩罚\n>\n> **参考文件**：\n> - `references/cycle-troubleshooting.md` — 循环故障五层诊断指南（当门禁不触发时排查用）\n> - `references/karpathy-bounded-autonomy.md` — Karpathy 约束理论在学习流程中的应用（v5.1）\n> - `references/experience-format.md` — 经验积累系统格式指南与提取流程（v5.2）
 
 ---
 
@@ -193,6 +188,30 @@ STEP 0(分析) → STEP 1(搜索) → [R1反思] →
 - L3 质量门禁（QG）：**3** 次
 - 超过上限时自动拦截，引导用户手动评估
 
+### v5.1 新增 — 最小循环次数 + 递进循环设计（基于 Karpathy 约束理论）
+
+> **核心变化**：循环不能"一轮游"。即使第 1 轮得分够高，也必须进入第 2 轮深度验证。
+
+**最小循环次数**：
+- L2 中间反思（R1/R2/R3）：最少 **1 次**（= 必须进入第 2 轮）
+- L3 质量门禁（QG）：最少 **1 次**（= 必须进入第 2 轮）
+- 第 1 轮强制通过但标记"进入第 2 轮" → 第 2 轮才真正计为"通过"
+
+**递进循环等级**：
+
+| 循环次数 | 等级名称 | 评分标准 | 通过门槛 |
+|:---:|:---|:---:|:---:|
+| 第 1 次 | 🌐 **广度扫描** | 正常评分 | raw ≥ 60 |
+| 第 2 次 | 🔍 **深度挖掘** | 标准严格 10 分 | effective ≥ 60（需 raw ≥ 70） |
+| 第 3 次 | ✨ **精炼优化** | 标准严格 20 分 | effective ≥ 60（需 raw ≥ 80） |
+
+**为什么需要递进？**
+- 第 1 轮广度扫描：容易达标但只覆盖表面，目的是**识别所有候选**
+- 第 2 轮深度挖掘：强制交叉验证和深入分析，保证**信息质量和可靠性**
+- 第 3 轮精炼优化：按需执行，用于**打磨细节和查漏补缺**
+
+**代码实现**：`reflection-gate.py` 中的 `MIN_L2_LOOPS`、`MIN_L3_LOOPS`、`PROGRESSIVE_LEVELS`
+
 ### v5.0 反射门禁系统
 
 在每个检查点（R1/R2/R3/QG），使用 `reflection-gate.py` 进行自动化评分：
@@ -216,7 +235,7 @@ python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py quality <t
 {"gate": "r1", "passed": true, "score": 85,
  "failures": [{"check": "覆盖度", "detail": "...", "severity": "medium"}],
  "recommendation": "通过，进入 STEP 2",
- "loop": {"current": 1, "max": 2}}
+ "loop": {"current": 1, "max": 2, "min": 1, "level": 2, "level_name": "深度挖掘"}}
 ```
 
 **判定逻辑**：
@@ -226,6 +245,12 @@ python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py quality <t
 | 60-79 | ⚠️ 边界通过 | 进入下一步 + 标记待改进 |
 | 40-59 | 🔴 拦截 + 子代理裁判 | 子代理评估后决定回退或放行 |
 | < 40 | 🛑 强制拦截 | 自动 `regress` 回退 |
+
+**循环递进判定（v5.1 新增）**：
+- 除了原始 score，`reflection-gate.py` 还应用了**递进等级惩罚**（level_penalty）
+- `effective_score = raw_score + level_penalty`（惩罚为负数）
+- 同时强制检查 **MIN_LOOPS** — 未达到最小循环次数时 passed=false
+- `loop` 字段新增 `min`、`level`、`level_name` 标识当前递进阶段
 
 ---
 
@@ -262,9 +287,10 @@ python3 ~/.hermes/skills/learning-workflow/scripts/reflection-gate.py quality <t
 ### STEP 1: 🔍 联网搜索（必须执行）
 
 1. 加载 `web-access` skill
-2. 使用 Tavily MCP 搜索 3-5 个高质量来源
-3. **必须**将搜索结果原文摘要写入 `~/.hermes/learning/raw_search_results.md`
-4. **进度汇报**：`learning-state.py complete step1_search`
+2. 使用 `web_search`（Hermes 原生，优先）或 `mcp_tavily_tavily_search` 搜索 3-5 个高质量来源
+3. 使用 `web_extract`（原生）或 `mcp_tavily_tavily_extract` 提取内容；需 JS 渲染时用 `browser_navigate` + `browser_console`
+4. **必须**将搜索结果原文摘要写入 `~/.hermes/learning/raw_search_results.md`
+5. **进度汇报**：`learning-state.py complete step1_search`
 
 **🚩 禁止行为**：
 - ❌ 用训练数据里的知识冒充搜索结果
@@ -335,9 +361,37 @@ delegate_task(
 
 ### STEP 2: 📖 深度阅读（快速模式跳过）
 
-1. 使用 `mcp_tavily_tavily_extract` 或 `mcp_tavily_tavily_crawl` 提取正文
+1. 使用 `web_extract`（Hermes 原生，优先）或 `mcp_tavily_tavily_extract` / `mcp_tavily_tavily_crawl` 提取正文
 2. **必须**将阅读笔记写入 `~/.hermes/learning/reading_notes.md`
-3. 笔记格式：`## 来源 URL\n- 核心观点\n- 可操作建议\n- 与主题的相关性`
+3. 笔记格式（两种方式均可，**关键：每个观点都必须绑定来源**）：
+
+   **方式 A — 按来源组织：**
+   ```markdown
+   ## 来源: {URL}
+   ### 核心观点
+   - {观点1} [来源: {URL}]
+   - {观点2}
+   ### 可操作建议
+   - {建议}
+   ```
+
+   **方式 B — 按主题组织（推荐，便于理解）：**
+   ```markdown
+   ## {主题标题}
+   ### 核心概念
+   - {概念} [来源: {URL}]
+   - {概念} [来源: {URL}]
+   ### 关键洞察
+   - {洞察} [来源: {URL}，{URL}—交叉验证]
+   
+   ## 交叉验证
+   | 概念 | 来源 1 | 来源 2 | 来源 3 | 一致？ |
+   |------|--------|--------|--------|:------:|
+   | {概念} | {URL} ✅ | {URL} ✅ | {URL} ✅ | ✅ |
+   ```
+
+   > ⚠️ **R2 门禁关键点**：整理笔记时，**每个观点必须绑定来源 URL**。不要只写概念不写来源。交叉验证表格能显著提升 R2 评分。
+
 4. **进度汇报**：`learning-state.py complete step2_read`
 
 **快速模式跳过**：直接标记为 skipped 并记录原因
@@ -479,9 +533,11 @@ STEP 5 验证结果 →
 | VALIDATE_CHECK | STEP 5 后 | 验证是否充分？是否覆盖了正常流和异常流？ | 回到 STEP 0-4 (质量门禁) |
 
 **循环次数限制**：
-- L2 中间反思：R1/R2/R3 各最多 2 次
-- L3 质量门禁：最多 3 次循环
-- 超过限制则报告用户请求协助
+- L2 中间反思：R1/R2/R3 **最少 1 次**，最多 2 次
+- L3 质量门禁：**最少 1 次**，最多 3 次循环
+- 递进节奏：第 1 轮广度扫描(合格线60) → 第 2 轮深度挖掘(合格线70) → 第 3 轮精炼优化(合格线80)
+- 未达到最小循环次数时，即使分数 ≥ 60 也会被拦截进入下一轮
+- 超过最大限制则报告用户请求协助
 
 ### STEP 6: 📝 反思迭代（v3.1 增强）
 
@@ -490,7 +546,15 @@ STEP 5 验证结果 →
 1. 运行 `learning-state.py list` 查看任务概览
 2. **搜索策略反思**：本次搜索效果如何？记录可复用的技巧
 3. **更新 learning skill**：将本次积累的方法论改进写入 learning skill
-4. **归档任务**：`learning-state.py reset [task_id]`
+4. **🗂️ 经验提取**（v5.2 新增）：检查是否有可复用的经验，按标准格式写入 `~/.hermes/experiences/active/`
+   - 判断标准：发现可复用的方法/解决了卡住的问题/验证了假设
+   - 格式：YAML frontmatter + 结构化 body
+   - 分类：experience（动作级）/ skill（任务级）/ rule（原则级）
+   - 评分：reusability (high/medium/low) + confidence (1-5)
+   - 若 reusability=high → 自动更新对应 skill 的 references/
+   - 更新 `~/.hermes/experiences/index.md` 目录
+   - 详见 learning skill Stage 6 Step 9
+5. **归档任务**：`learning-state.py reset [task_id]`
 
 **反思输出格式**：
 ```markdown
@@ -584,9 +648,12 @@ before_step2 = ["step0_map", "step1_search"]
 3. **检查是否产生知识缺口**（v3.0 新增）
    - 如果学习过程中遇到困难、发现 skill 过时 → 调用 `review-engine.py gap-add`
    - 示例：`review-engine.py gap-add knowledge_outdated "WeasyPrint v62 API 变更" high`
-4. 执行**学习反思**（STEP 6）
-5. **归档状态**：`learning-state.py reset [task_id]`
-6. 询问是否将本次流程经验**沉淀为永久 skill**
+4. **🗂️ 经验提取归档**（v5.2 新增）
+   - 按 STEP 6 第 4 步的标准，将本次学习产生的可复用经验写入 `~/.hermes/experiences/active/`
+   - 更新 `~/.hermes/experiences/index.md`
+5. 执行**学习反思**（STEP 6）
+6. **归档状态**：`learning-state.py reset [task_id]`
+7. 询问是否将本次流程经验**沉淀为永久 skill**
 
 ---
 
@@ -635,15 +702,21 @@ Review环(定时) → 扫描新鲜度，自动探测缺口
 - 复习时自动加载对应 skill，检查新鲜度
 - 如果发现问题 → 自动加入 gap_queue
 
-### 8.5 防无限循环（v4.0 增强）
+### 8.5 防无限循环 + 防一轮游（v4.0 增强 / v5.1 补完）
 
 **三层循环各自的限制**：
 
-| 循环层 | 最大次数 | 超过限制处理 |
-|--------|---------|-------------|
-| L1 子主题递归 | 3 层深度 | 报告用户，不再拆分 |
-| L2 中间反思 | 每检查点 2 次 | 自动进入下一层循环 |
-| L3 质量门禁 | 3 次 | 报告用户，请求协助 |
+| 循环层 | 最小次数 | 最大次数 | 超过上限处理 |
+|--------|:-------:|:-------:|-------------|
+| L1 子主题递归 | 0（可选） | 3 层深度 | 报告用户，不再拆分 |
+| L2 中间反思 | **1**（v5.1 新增） | 每检查点 2 次 | 自动进入下一层循环 |
+| L3 质量门禁 | **1**（v5.1 新增） | 3 次 | 报告用户，请求协助 |
+
+**递进节奏**（Karpathy Bounded Autonomy 模式）：
+- 第 1 轮（广度扫描）：全面覆盖，但**不通过**——强制进入第 2 轮
+- 第 2 轮（深度挖掘）：深入验证，合格线提升 10 分
+- 第 3 轮（精炼优化）：精雕细琢，合格线提升 20 分
+- 每轮都比上一轮更深、更严格
 
 **防循环叠加**：
 - 自动触发的学习任务**禁止再次触发自动学习**

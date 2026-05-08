@@ -1,7 +1,7 @@
 ---
 name: system-health-check
 description: Hermes Agent 系统健康检查、LLM 可观测性与自动修复指南。涵盖 429 限流降级、Fallback 链断裂、辅助模型配置、日志分析、Ci...
-version: 2.0.0
+version: 2.1.0
 triggers:
 - 健康检查
 - 诊断
@@ -16,6 +16,7 @@ metadata:
     - fallback
     - observability
     - circuit-breaker
+    - vision
     category: dogfood
     skill_type: diagnosis
     design_pattern: inversion
@@ -120,7 +121,7 @@ fallback_providers:
 - provider: glm
   model: glm-4
   base_url: https://open.bigmodel.cn/api/paas/v4
-  key_env: GLM_API_KEY  # 建议增加第三个 fallback
+  key_env: GLM_API_KEY
 ```
 
 ### 🔴 告警 2：辅助模型（Auxiliary）无 Fallback
@@ -139,7 +140,7 @@ Auxiliary compression: connection error on auto and no fallback available
 ```yaml
 auxiliary:
   compression:
-    provider: deepseek          # 指定轻量模型专门做压缩
+    provider: deepseek
     model: deepseek-v4-flash
   session_search:
     provider: deepseek
@@ -159,6 +160,77 @@ auxiliary:
 **对策**：
 - 文本发送偶发失败，属于上游 iLink 服务问题。
 - boku 侧无法修复，但可监控失败频率，若持续失败则告警。
+
+### 🟡 告警 4：browser_vision 超时/卡死
+
+**表现**：
+```
+用户：怎么卡在这里了？
+日志：[Auxiliary vision: using gemini (gemini-3-flash-preview)]
+     → 之后完全静默 8+ 分钟无任何日志
+```
+
+**根因诊断链路**（按顺序排查）：
+
+```
+① agent.log 确认 vision API 调用开始时间
+    ↓
+② 检查 auxiliary.vision.timeout 配置（默认 120s）
+    ↓
+③ 如果 provider=google，检查 GeminiNativeClient 默认 read timeout
+   → gemini_native_adapter.py:834 默认 read=600s（10分钟！）
+   → 即使 per-request timeout 设了 60s，底层 httpx 可能未被正确 override
+   → 修复：改 read=120s（或更低）
+    ↓
+④ 如果从中国访问 Gemini API，检查是否被区域封锁：
+   → HTTP 403 "User location is not supported for the API use"
+   → 此错误不可修复，必须换 provider
+    ↓
+⑤ 测试 vision provider 连通性：
+   # 测试 OpenRouter Qwen VL（从中国直连已验证）
+   curl -s --noproxy '*' --max-time 30 -X POST "https://openrouter.ai/api/v1/chat/completions" \
+     -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+     -d '{"model":"qwen/qwen3-vl-32b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"hi"}]}],"max_tokens":10}'
+```
+
+**修复方案**（按优先级）：
+
+| 方案 | 操作 | 适用场景 |
+|:---|:---|:---|
+| **A. 加超时兜底** | `gemini_native_adapter.py` 中改 `read=600.0` → `read=120.0` | Gemini 能用但响应慢 |
+| **B. 切换 provider** | `config.yaml` 中 `vision.provider: openrouter` + `model: qwen/qwen3-vl-32b-instruct` | Gemini 被区域封锁 / 需要国内直连 |
+| **C. 换 API 端点** | 用 OpenRouter 的 qwen VL 系列（已验证可用） | 需要免费/低价方案 |
+
+**已验证可行的 Vision Provider 配置**：
+
+```yaml
+# config.yaml auxiliary.vision
+# 方案 1：OpenRouter + Qwen VL（从中国直连，已验证 ✅）
+vision:
+  model: qwen/qwen3-vl-32b-instruct
+  provider: openrouter
+  timeout: 60
+
+# 方案 2：DashScope 阿里云百炼（国内直连，需有效 Key）
+# model: qwen3-vl-plus
+# provider: custom
+# base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+# 注意：DASHSCOPE_API_KEY 可能已过期
+
+# 方案 3：Google Gemini（需要代理 + 不保证国内可用）
+# model: gemini-3-flash-preview
+# provider: google
+```
+
+**免费额度参考**（截至 2026-05）：
+
+| Provider | 费用 | 国内直连 | 已验证 |
+|:---|:---:|:---:|:---:|
+| OpenRouter Qwen3-VL-32B | ~$0.00003/次 | ✅ | ✅ |
+| 阿里云百炼 Qwen3-VL-Plus | 新用户 100万 tokens/模型 | ✅ | ❌ Key 过期 |
+| Google Gemini Flash | 15 RPM 免费 | ❌ 区域封锁 | ✅ 通过代理但不稳 |
+
+**调试技巧**：当 browser_vision 卡住时，检查 agent.log 中 `Auxiliary vision: using` 行之后的日志间隔。如果 > 120s 无后续日志 → 大概率是 GeminiNativeClient 的 read timeout 问题。
 
 ---
 

@@ -576,6 +576,8 @@ hermes config set auxiliary.vision.provider <your_provider>
 hermes config set auxiliary.vision.model <model_name>
 ```
 
+**Vision-specific troubleshooting:** See `skill_view(name='hermes-agent', file_path='references/gemini-vision-config.md')` for known timeout issues, China-region blocks, alternative providers (OpenRouter + Qwen-VL), and curl-based verification commands.
+
 ---
 
 ## Where to Find Things
@@ -597,6 +599,7 @@ hermes config set auxiliary.vision.model <model_name>
 | Gateway logs | `~/.hermes/logs/gateway.log` |
 | Session files | `~/.hermes/sessions/` or `hermes sessions browse` |
 | Source code | `~/.hermes/hermes-agent/` |
+| Prompt Assembly & SOUL.md mechanics | `skill_view(name='hermes-agent', file_path='references/prompt-assembly.md')` |
 
 ---
 

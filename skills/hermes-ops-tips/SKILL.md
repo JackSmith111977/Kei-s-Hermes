@@ -1,7 +1,7 @@
 ---
 name: hermes-ops-tips
 description: "Hermes 运维与工具流最佳实践。包含 Hermes 手动升级流程、SRA Proxy 修复、高清架构图生成 (SVG + cairosvg)、Memory 降级策略。"
-triggers: [高清截图, cairosvg, sra proxy bug, 架构图, memory full, hermes运维, 升级hermes, hermes升级, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复]
+triggers: [高清截图, cairosvg, sra proxy bug, 架构图, memory full, hermes运维, 升级hermes, hermes升级, sra升级, sra安装, sra重装, sra从源码安装, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复, browser vision, vision provider, 视觉模型, 截图卡住, 国内视觉api, openrouter vision, qwen vl]
 ---
 
 # Hermes Ops & Workflow Tips
@@ -150,7 +150,57 @@ rm -rf /tmp/hermes_latest.tar.gz /tmp/hermes_new/
 
 > 详细升级记录见 `references/hermes-upgrade-checklist.md`
 
-## 8. Statusline 运行状态诊断（集成后验证）
+## 8. SRA 从 GitHub 源码升级流程
+
+### 场景
+需要将 SRA（Skill Runtime Advisor）从 GitHub 源码升级/重装到最新版。安装目标为 Hermes Agent 的 venv。
+
+### 完整流程
+
+```bash
+# 1. 停止旧版 SRA Daemon
+~/.hermes/hermes-agent/venv/bin/sra stop
+
+# 2. 从 Hermes venv 卸载旧版
+~/.hermes/hermes-agent/venv/bin/python3 -m pip uninstall sra-agent -y
+
+# 3. 从 GitHub 克隆最新源码（需要代理）
+export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
+git clone https://github.com/JackSmith111977/Hermes-Skill-View.git /tmp/sra-latest
+
+# 4. 安装到 Hermes venv
+# ⚠️ 坑1: Hermes venv 的 pip 可能较旧，找不到 setuptools>=61.0（腾讯镜像无此版本）
+#     → 使用 --no-build-isolation 跳过构建隔离，直接用 venv 已有的 setuptools
+cd /tmp/sra-latest
+~/.hermes/hermes-agent/venv/bin/python3 -m pip install --no-build-isolation -e .
+
+# 5. 启动新版 SRA Daemon
+~/.hermes/hermes-agent/venv/bin/srad
+
+# 6. 测试新版（注意代理干扰！）
+# ⚠️ 坑2: 如果 http_proxy 环境变量设置了 127.0.0.1:7890，
+#     curl 会尝试将 localhost 请求也走代理，导致 502 Bad Gateway
+#     → 必须加 --noproxy '*' 绕过
+curl -s --noproxy '*' -X POST http://127.0.0.1:8536/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"message": "test"}'
+```
+
+### 常见坑
+
+| 坑 | 现象 | 原因 | 解决 |
+|:---|:-----|:-----|:-----|
+| **pip 找不到 setuptools** | `Could not find a version that satisfies the requirement setuptools>=61.0` | Hermes venv pip 较旧 + 腾讯内网镜像无新版 setuptools | 加 `--no-build-isolation` |
+| **curl 代理干扰** | curl 报 `502 Bad Gateway` 或请求去了 7890 端口 | `http_proxy` 环境变量导致 curl 代理所有流量，包括 localhost | 加 `--noproxy '*'` |
+| **系统 sra 找不到模块** | `ModuleNotFoundError: No module named 'skill_advisor'` | `/usr/local/bin/sra` 用系统 Python，但包装在 Hermes venv 里 | 始终用 `~/.hermes/hermes-agent/venv/bin/srad` 启动 |
+| **端口号不一致** | `sra start` 输出 8532 但 API 实际在 8536 | daemon.py 中 cmd_start 硬编码了 8532 | 修改 daemon.py 读取 `load_config()` |
+| **版本号返回旧版** | API 返回的 `sra_version` 与 pyproject.toml 不一致 | 代码中版本常量可能有缓存或硬编码 | 检查 `skill_advisor/__init__.py` 和 daemon 版号 |
+
+### 注意：使用 editable 安装后修改代码自动生效
+
+`pip install -e .` 以 editable 模式安装，修改 `/tmp/sra-latest/` 下的源码后重启 srad 即可生效，无需重新安装。
+
+## 9. Statusline 运行状态诊断（集成后验证）
 
 ### 场景
 statusline 代码已按第 6 节恢复（import 和调用点都存在），但飞书回复中未见 `───🤖 Model | 📊 ▰▰▰...` 脚注。如何定位问题？
@@ -252,6 +302,81 @@ journalctl --user -u hermes-gateway --since "10 sec ago" --no-pager | grep -i "s
 ```
 
 > 详细诊断要点见 `references/statusline-runtime-diagnostics.md`
+
+## 10. Vision Provider 配置与故障排查（国内服务器）
+
+### 场景
+国内服务器需要 `browser_vision` （截图分析）正常工作。默认 Gemini 从国内无法直接访问。
+
+### 各 Provider 实测状态（2026-05 月）
+
+| Provider | 模型 | 国内直连 | 费用 | 状态 |
+|:---------|:-----|:--------:|:----|:----|
+| **OpenRouter** | `qwen/qwen3-vl-32b-instruct` | ✅ 成功 | ~$0.00003/次 | **✅ 推荐使用** |
+| Google Gemini | `gemini-3-flash-preview` | ❌ "User location not supported" | 免费层 15RPM | ❌ 区域封锁 |
+| Aliyun DashScope | `qwen3-vl-plus` | ✅ 可达但 key 过期 | 新用户 100万 tokens 免费 | ⚠️ 需更新 API Key |
+| DeepSeek V4 | `deepseek-v4-flash` | ✅ 可达 | $0.14/百万tokens | ❌ 不支持 image_url |
+| OpenRouter 其他 | `qwen/qwen2.5-vl-72b-instruct` | ✅ 成功 | $0.00025/次 | ✅ 可选 |
+| LongCat | `LongCat-2.0-Preview` | ✅ 可达 | 已有额度 | ❌ 文本模型，不支持 vision |
+
+### 推荐配置 — OpenRouter + Qwen3-VL
+
+```yaml
+# ~/.hermes/config.yaml
+auxiliary:
+  vision:
+    api_key: ''                  # OpenRouter 自动从 OPENROUTER_API_KEY 读取
+    base_url: ''
+    model: qwen/qwen3-vl-32b-instruct   # 32B 模型，平衡质量与速度
+    provider: openrouter
+    timeout: 60
+```
+
+**前提**：`.env` 中必须有 `OPENROUTER_API_KEY=sk-or-...`。
+
+### 故障排查流程
+
+当 `browser_vision` 卡住或失败时：
+
+```
+浏览器截图卡住？
+├─ 检查 agent.log 是否有 "Auxiliary vision: using ..." 日志
+│   └─ 有 → 截图已完成，vision API 调用阶段卡住
+│   └─ 无 → 截图阶段卡住（检查 agent-browser CLI 是否安装）
+├─ vision API 调用卡住？
+│   ├─ timeout 设了多少？→ 默认 120s，建议 60s
+│   └─ GeminiNativeClient 默认 read timeout 是 600s！→ 改为 120s 或更低
+│       └─ 文件: `agent/gemini_native_adapter.py:834`
+├─ API 返回错误？
+│   ├─ 403 / "User location not supported" → Gemini 封锁，换 OpenRouter
+│   ├─ 400 / "unknown variant `image_url`" → 模型不支持 vision，换 VL 模型
+│   └─ 401 / "Incorrect API key" → API Key 过期或无效
+└─ 最终降级方案
+    └─ 即使 vision 失败，截图文件已保存到 cache/screenshots/，可用 MEDIA:<path> 发送
+```
+
+### 实测可用模型（从国内直连验证通过）
+
+```bash
+# 测试命令（替换 YOUR_KEY）
+curl -s --noproxy '*' --max-time 30 -X POST "https://openrouter.ai/api/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -d '{
+    "model": "qwen/qwen3-vl-32b-instruct",
+    "messages": [{"role":"user","content":[{"type":"text","text":"Describe this image"},
+      {"type":"image_url","image_url":{"url":"data:image/png;base64,<base64>"}}]}],
+    "max_tokens": 100
+  }'
+```
+
+注意：测试时务必加 `--noproxy '*'`，否则若设了 http_proxy，curl 会把 localhost 请求也走代理。
+
+### 超时配置要点
+
+- `config.yaml` → `auxiliary.vision.timeout`：单次 API 调用超时（建议 **60s**）
+- `gemini_native_adapter.py:834` → `httpx.Timeout(read=120.0)`：底层 HTTP 读取超时（默认 600s，**必须改**）
+- 两者都要改才能根治卡死问题。只改 config 可能被底层 httpx 默认 read timeout 覆盖。
 
 ## 7. 日常系统升级与配置优化流程
 

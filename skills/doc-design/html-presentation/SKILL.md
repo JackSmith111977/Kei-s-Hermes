@@ -428,7 +428,13 @@ HTML 编写 → CDN 启动 → 插件增强
 5. **reveal.js v4 vs v5**：插件 API 有变化，CDN 引用时注意版本一致性
 6. **纯 CSS 打印**：使用 `@media print` + `page-break-after: always` 控制分页
 
----
+### 可复用模板
+
+本 skill 的 `references/` 目录下提供了实战验证过的演示模板：
+
+| 文件 | 风格 | 来源 |
+|------|------|------|
+| `references/dracula-revealjs-template.md` | Dracula 主题 + 毛玻璃卡片 + Mesh Gradient | 2026-05-08 Gemini API 研究报告 |
 
 ## 六、🎨 7 种网页 UX/UI 设计风格 — 直接用于 PPT
 

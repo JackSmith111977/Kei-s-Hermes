@@ -7,6 +7,10 @@ version: 2.1.0
 triggers:
 - clash config
 - clash-config
+- 代理环境变量
+- 应用走不了代理
+- Network is unreachable
+- proxy env
 author: 小喵
 license: MIT
 allowed-tools:
@@ -52,6 +56,9 @@ metadata:
 **相关 Skill 联动**：
 - `web-access`：联网操作统一入口（会自动检查代理状态）
 - `browser-automation`：浏览器自动化（依赖代理访问外网）
+
+**📎 参考文件**：
+- `references/proxy-env-setup.md` — **代理环境变量三层配置法**：当应用走不了代理时的排查和解决方案（Python httpx/requests、Hermes vision 工具等）
 
 ---
 

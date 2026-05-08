@@ -144,6 +144,62 @@ def generate_with_dashscope(prompt: str, model: str = "wanx2.1-t2i-turbo"):
             time.sleep(3)
 ```
 
+### 方案四：Google Gemini Nano Banana（🍌 彩蛋模型）⚠️ 部分可用
+
+Google 内部代号 **Nano Banana** 的图片生成模型，在 Gemini API 速率限制文档中以 `Images Per Minute (IPM)` 指标被提及。
+
+**模型名**: `models/nano-banana-pro-preview`
+**替代模型**: `models/gemini-3-pro-image-preview`, `models/gemini-3.1-flash-image-preview`
+
+**已验证事实**:
+- ✅ 模型真实存在，可通过 OpenAI 兼容端点调用
+- ✅ 成功返回 `image/jpeg` MIME 类型（证明模型生成了图片）
+- ❌ OpenAI 兼容的 `/chat/completions` 端点无法正确处理图片输出 → 返回 `"Unhandled generated data mime type: image/jpeg"`
+- ⚠️ 原生 Google API (`generateContent`) 需要更高权限的 API Key（当前 Key 返回 403）
+
+**接入方式**（OpenAI 兼容端点，仅调用，暂无法取回图片）:
+```bash
+curl "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+  -H "Authorization: Bearer $GOOGLE_API_KEY" \
+  -d '{
+    "model": "models/nano-banana-pro-preview",
+    "messages": [{"role":"user","content":"一只可爱的猫娘女仆在服务器机房泡茶"}]
+  }'
+```
+
+**状态追踪**:
+| 日期 | 事件 |
+|------|------|
+| 2026-05-08 | 首次发现并验证 Nano Banana 模型存在，OpenAI 端点尚不能取回图片 |
+
+## 便捷脚本
+
+为了方便调用，以下脚本已安装到 `~/.hermes/scripts/`：
+
+| 脚本 | 用途 | 调用方式 |
+|------|------|---------|
+| `dashscope_gen.py` | 首选生图 — Dashscope 通义万相 | `python3 ~/.hermes/scripts/dashscope_gen.py "prompt" --size 1024*1024` |
+| `gemini_vision.py` | 图片理解 — Gemini API 分析图片 | `python3 ~/.hermes/scripts/gemini_vision.py image.jpg "描述这张图"` |
+| `fallback_search.py` | 搜索备选 — DuckDuckGo + 直接抓取 | `python3 ~/.hermes/scripts/fallback_search.py "关键词" --limit 5` |
+
+### Dashscope 生图（推荐首选）
+```bash
+python3 ~/.hermes/scripts/dashscope_gen.py "一只可爱的猫娘女仆" \
+  --model wanx2.1-t2i-turbo --size 1024*1024 --wait 45
+```
+- 支持尺寸：1:1, 16:9, 9:16, 3:4, 4:3
+- 免费额度：100 张文生图（90 天内）
+- 无需代理，国内直接访问
+
+### Gemini Vision（图片理解）
+```bash
+python3 ~/.hermes/scripts/gemini_vision.py screenshot.jpg \
+  "请详细描述这张图片的内容，包括文字" --model models/gemini-3-flash-preview
+```
+- 支持 jpg/png/webp/gif/bmp
+- 免费额度：输入输出完全免费
+- 需走 mihomo 代理
+
 ## 当前环境状态
 
 | 方案 | 状态 | 说明 |
@@ -152,6 +208,7 @@ def generate_with_dashscope(prompt: str, model: str = "wanx2.1-t2i-turbo"):
 | Fal.ai | ❌ 余额用尽 | 已配置但余额耗尽 |
 | Dashscope 通义万相 | ✅ 可用 | Key 已配置 |
 | 本地 SD | ❌ 不可用 | 无 GPU |
+| Google Gemini Nano Banana | ⚠️ 模型存在，端点不完善 | 见下方方案四 |
 
 ## Prompt 模板
 

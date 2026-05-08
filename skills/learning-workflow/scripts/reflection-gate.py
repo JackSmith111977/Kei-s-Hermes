@@ -32,6 +32,31 @@ QUALITY_WEIGHTS = {
 }
 MAX_L2_LOOPS = 2   # R1/R2/R3 各最多 2 次
 MAX_L3_LOOPS = 3   # QG 最多 3 次
+MIN_L2_LOOPS = 1   # 🔴 新增：R1/R2/R3 至少循环 1 次才能通过（防止"一轮游"）
+MIN_L3_LOOPS = 1   # 🔴 新增：QG 至少循环 1 次
+
+# 循环递进等级定义
+# 每次循环必须比上一次更深一层：
+#   Iter 1: 广度扫描 (Breadth Pass) — 覆盖全貌，找全所有候选
+#   Iter 2: 深度挖掘 (Depth Pass) — 深入验证，交叉对比
+#   Iter 3+: 精炼优化 (Refinement Pass) — 打磨细节，查漏补缺
+PROGRESSIVE_LEVELS = {
+    1: {
+        "name": "广度扫描",
+        "desc": "覆盖全貌，识别所有候选",
+        "min_score_penalty": 0,     # 第 1 轮正常评分
+    },
+    2: {
+        "name": "深度挖掘",
+        "desc": "深入验证关键发现，交叉对比",
+        "min_score_penalty": -10,   # 第 2 轮标准严格 10 分
+    },
+    3: {
+        "name": "精炼优化",
+        "desc": "打磨细节，查漏补缺",
+        "min_score_penalty": -20,   # 第 3 轮标准更严格
+    },
+}
 
 # ============================================================
 # 工具函数
@@ -120,8 +145,23 @@ def check_r1(task_id=None):
             "r1", False, 0,
             [{"check": "循环上限", "detail": f"R1 已达上限 {MAX_L2_LOOPS} 次", "severity": "fatal"}],
             "请手动评估是否继续，或扩大搜索范围后重试",
-            {"current": loop_count, "max": MAX_L2_LOOPS}
+            {"current": loop_count, "max": MAX_L2_LOOPS, "min": MIN_L2_LOOPS, "level": min(loop_count, 3)}
         )
+    
+    # 🔴 新增：最小循环次数检查
+    # 第 1 轮即使得分够高也不可通过，必须至少进入第 2 轮才有"深度"保障
+    if loop_count < MIN_L2_LOOPS:
+        failures_extra = []
+        if loop_count == 1:
+            failures_extra.append({
+                "check": "最小循环",
+                "detail": f"第 1 轮(广度扫描)必须进入第 2 轮(深度挖掘)才能通过",
+                "severity": "info"
+            })
+    
+    # 🔴 新增：获取当前循环的递进等级
+    prog_level = PROGRESSIVE_LEVELS.get(min(loop_count, 3), PROGRESSIVE_LEVELS[3])
+    level_penalty = prog_level["min_score_penalty"]
     
     # 读取搜索结果
     content = read_artifact("raw_search_results.md")
@@ -210,7 +250,19 @@ def check_r1(task_id=None):
             "severity": "medium"
         })
     
-    passed = score >= 60
+    # 🔴 应用递进等级惩罚
+    # 第 1 轮(广度扫描): 正常评分
+    # 第 2 轮(深度挖掘): 标准严格 10 分 → 需要 70+ 才能通过
+    # 第 3 轮(精炼优化): 标准严格 20 分 → 需要 80+ 才能通过
+    effective_score = score + level_penalty
+    
+    passed = effective_score >= 60
+    
+    # 🔴 最小循环强制拦截：未达到最小循环次数时，即使分数够也不通过
+    if loop_count < MIN_L2_LOOPS:
+        passed = False
+        for failure in failures_extra:
+            failures.append(failure)
     
     # 保存状态
     state = load_state()
@@ -222,16 +274,18 @@ def check_r1(task_id=None):
     if failures:
         main_failure = failures[0]["detail"][:60]
     
-    if score < 40:
+    if not passed and loop_count < MIN_L2_LOOPS:
+        recommendation = f"第 {loop_count} 轮({prog_level['name']})已完成广度扫描，请进入第 {loop_count + 1} 轮深度挖掘（{PROGRESSIVE_LEVELS.get(loop_count + 1, {}).get('desc', '深入验证')}）"
+    elif effective_score < 40:
         recommendation = f"回到 STEP 0 细化拆分主题（{main_failure}）"
-    elif score < 60:
+    elif effective_score < 60:
         recommendation = f"回到 STEP 1 补充搜索（{main_failure}）"
     else:
-        recommendation = "通过，进入 STEP 2 深度阅读"
+        recommendation = f"通过（第 {loop_count} 轮 {prog_level['name']}），进入 STEP 2 深度阅读"
     
     output_result(
-        "r1", passed, score, failures, recommendation,
-        {"current": loop_count, "max": MAX_L2_LOOPS}
+        "r1", passed, effective_score, failures, recommendation,
+        {"current": loop_count, "max": MAX_L2_LOOPS, "min": MIN_L2_LOOPS, "level": min(loop_count, 3), "level_name": prog_level["name"]}
     )
 
 
@@ -254,6 +308,18 @@ def check_r2(task_id=None):
             "请手动评估是否继续",
             {"current": loop_count, "max": MAX_L2_LOOPS}
         )
+    
+    # 🔴 最小循环检查 + 递进等级
+    if loop_count < MIN_L2_LOOPS:
+        failures_extra = [{
+            "check": "最小循环",
+            "detail": f"第 {loop_count} 轮(广度扫描)必须进入第 {loop_count + 1} 轮(深度挖掘)才能通过",
+            "severity": "info"
+        }]
+    else:
+        failures_extra = []
+    prog_level = PROGRESSIVE_LEVELS.get(min(loop_count, 3), PROGRESSIVE_LEVELS[3])
+    level_penalty = prog_level["min_score_penalty"]
     
     # 读取阅读笔记
     content = read_artifact("reading_notes.md")
@@ -353,23 +419,31 @@ def check_r2(task_id=None):
             "severity": "high"
         })
     
-    passed = score >= 60
+    # 🔴 应用递进等级惩罚 + 最小循环拦截
+    effective_score = score + level_penalty
+    passed = effective_score >= 60
+    if loop_count < MIN_L2_LOOPS:
+        passed = False
+        for failure in failures_extra:
+            failures.append(failure)
     
     # 保存状态
     state = load_state()
     state[tid] = task_state
     save_state(state)
     
-    if score < 40:
+    if not passed and loop_count < MIN_L2_LOOPS:
+        recommendation = f"第 {loop_count} 轮({prog_level['name']})已通过广度扫描，请进入第 {loop_count + 1} 轮深度挖掘"
+    elif effective_score < 40:
         recommendation = "回到 STEP 1 重新搜索更易懂的资料"
-    elif score < 60:
+    elif effective_score < 60:
         recommendation = "回到 STEP 2 重新阅读，重点关注实践部分"
     else:
-        recommendation = "通过，进入 STEP 3 知识提炼"
+        recommendation = f"通过（第 {loop_count} 轮 {prog_level['name']}），进入 STEP 3 知识提炼"
     
     output_result(
-        "r2", passed, score, failures, recommendation,
-        {"current": loop_count, "max": MAX_L2_LOOPS}
+        "r2", passed, effective_score, failures, recommendation,
+        {"current": loop_count, "max": MAX_L2_LOOPS, "min": MIN_L2_LOOPS, "level": min(loop_count, 3), "level_name": prog_level["name"]}
     )
 
 
@@ -391,6 +465,18 @@ def check_r3(task_id=None):
             "请手动评估是否继续",
             {"current": loop_count, "max": MAX_L2_LOOPS}
         )
+    
+    # 🔴 最小循环检查 + 递进等级
+    if loop_count < MIN_L2_LOOPS:
+        failures_extra = [{
+            "check": "最小循环",
+            "detail": f"第 {loop_count} 轮(广度扫描)必须进入第 {loop_count + 1} 轮(深度挖掘)才能通过",
+            "severity": "info"
+        }]
+    else:
+        failures_extra = []
+    prog_level = PROGRESSIVE_LEVELS.get(min(loop_count, 3), PROGRESSIVE_LEVELS[3])
+    level_penalty = prog_level["min_score_penalty"]
     
     content = read_artifact("extracted_knowledge.md")
     if not content:
@@ -494,22 +580,30 @@ def check_r3(task_id=None):
             "severity": "medium"
         })
     
-    passed = score >= 60
+    # 🔴 应用递进等级惩罚 + 最小循环拦截
+    effective_score = score + level_penalty
+    passed = effective_score >= 60
+    if loop_count < MIN_L2_LOOPS:
+        passed = False
+        for failure in failures_extra:
+            failures.append(failure)
     
     state = load_state()
     state[tid] = task_state
     save_state(state)
     
-    if score < 40:
+    if not passed and loop_count < MIN_L2_LOOPS:
+        recommendation = f"第 {loop_count} 轮({prog_level['name']})已通过广度扫描，请进入第 {loop_count + 1} 轮深度挖掘"
+    elif effective_score < 40:
         recommendation = "回到 STEP 2 重新阅读，补充缺失的结构要素"
-    elif score < 60:
+    elif effective_score < 60:
         recommendation = "回到 STEP 3 重新提炼，完善结构和代码示例"
     else:
-        recommendation = "通过，进入 STEP 4 Skill 脚手架"
+        recommendation = f"通过（第 {loop_count} 轮 {prog_level['name']}），进入 STEP 4 Skill 脚手架"
     
     output_result(
-        "r3", passed, score, failures, recommendation,
-        {"current": loop_count, "max": MAX_L2_LOOPS}
+        "r3", passed, effective_score, failures, recommendation,
+        {"current": loop_count, "max": MAX_L2_LOOPS, "min": MIN_L2_LOOPS, "level": min(loop_count, 3), "level_name": prog_level["name"]}
     )
 
 
@@ -531,6 +625,18 @@ def check_quality(task_id=None):
             "请手动评估，或考虑缩小学习范围",
             {"current": loop_count, "max": MAX_L3_LOOPS}
         )
+    
+    # 🔴 最小循环检查 + 递进等级
+    if loop_count < MIN_L3_LOOPS:
+        failures_extra_qg = [{
+            "check": "最小循环",
+            "detail": f"QG 第 1 轮必须进入第 2 轮综合验证才能通过",
+            "severity": "info"
+        }]
+    else:
+        failures_extra_qg = []
+    prog_level = PROGRESSIVE_LEVELS.get(min(loop_count, 3), PROGRESSIVE_LEVELS[3])
+    level_penalty = prog_level["min_score_penalty"]
     
     # 读取所有产出物
     km = read_artifact("knowledge_map.md") or ""
@@ -636,26 +742,34 @@ def check_quality(task_id=None):
             "severity": "high"
         })
     
-    passed = score >= 60
-    passed_with_warning = score >= 40 and score < 60
+    # 🔴 应用递进等级惩罚 + 最小循环拦截
+    effective_score = score + level_penalty
+    passed = effective_score >= 60
+    passed_with_warning = effective_score >= 40 and effective_score < 60
+    if loop_count < MIN_L3_LOOPS:
+        passed = False
+        for failure in failures_extra_qg:
+            failures.append(failure)
     
     state = load_state()
     state[tid] = task_state
     save_state(state)
     
-    if passed:
-        if score >= 80:
+    if not passed and loop_count < MIN_L3_LOOPS:
+        recommendation = f"QG 第 {loop_count} 轮已完成初步验证，请进入第 {loop_count + 1} 轮综合审查"
+    elif passed:
+        if effective_score >= 80:
             recommendation = "✅ 通过，进入 STEP 6 反思"
         else:
             recommendation = "⚠️ 通过但需标记'待改进'，进入 STEP 6 反思"
     elif passed_with_warning:
-        recommendation = f"回到 STEP 1-4 补充（得分 {score}，低于 60）"
+        recommendation = f"回到 STEP 1-4 补充（得分 {effective_score}，低于 60）"
     else:
-        recommendation = f"回到 STEP 0 重新规划（得分 {score}，严重不足）"
+        recommendation = f"回到 STEP 0 重新规划（得分 {effective_score}，严重不足）"
     
     output_result(
-        "quality", passed, score, failures, recommendation,
-        {"current": loop_count, "max": MAX_L3_LOOPS}
+        "quality", passed, effective_score, failures, recommendation,
+        {"current": loop_count, "max": MAX_L3_LOOPS, "min": MIN_L3_LOOPS, "level": min(loop_count, 3), "level_name": prog_level["name"]}
     )
 
 

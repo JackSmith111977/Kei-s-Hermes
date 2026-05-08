@@ -113,6 +113,7 @@ browser_console(expression="document.title")  → 执行 JS 表达式
 | snapshot 内容截断 | 页面太大（>8000字符） | 用 browser_snapshot(full=true) 或 browser_vision |
 | ref ID 失效 | 页面刷新后元素变化 | 重新调用 snapshot 获取最新 ref |
 | Chrome 未启动 | 进程未运行 | 先启动 headless Chrome |
+| **browser_vision 挂死 8+ 分钟** | GeminiNativeClient 默认 read timeout=600s，per-request timeout=120s 未必正确覆盖 | ① 优先用国内可达的 vision provider（不走 google） ② 或修改 `gemini_native_adapter.py:834` 将 `read=600.0` 改为 `read=120.0` ③ 或配置 config.yaml `auxiliary.vision.provider` 为非 google 的 provider |
 
 ---
 
@@ -135,7 +136,13 @@ browser_console(expression="document.title")  → 执行 JS 表达式
 
 ---
 
-## 六、性能优化
+## 七、参考文档
+
+- `references/gemini-vision-timeout-debug.md` — GeminiNativeClient vision 超时调试记录（国内环境 + 代理场景的挂死根因分析）
+
+---
+
+## 八、性能优化
 
 - **Chrome 启动后保持运行**，不要每次导航都重启
 - **优先用 snapshot 而非 vision**（snapshot 更快、无 token 消耗）

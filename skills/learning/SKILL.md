@@ -1,7 +1,7 @@
 ---
 name: learning
 description: "当你需要从零开始学习一个新主题、研究新技术、了解陌生领域时使用此 skill。涵盖：联网上下文补充引擎、过滤高质量信息、清洗冗余内容、精炼核心知识、最终通过 skill-creator 沉淀为可复用的 skill。v2.6 核心升级：强制联网补充协议，内置信息源分级、时效性门禁与交叉验证机制。"
-version: 2.7.0
+version: 2.8.0
 triggers:
 - 学习
 - 研究
@@ -101,11 +101,13 @@ depends_on:
 本 skill 成长的是以下 **6 种能力**，每次学习后都应迭代优化：
 
 ### 1. 信息收集能力
-- 如何高效使用 web-access 的各种工具（Search/Extract/Crawl/Map/Browser）
+- 如何高效使用 web-access 的各种工具（Search/Extract/Crawl/Map/Browser/CDP）
 - 如何组合不同搜索策略获取全面信息
 - 如何定位官方文档和权威来源
 - **研究分治策略**：复杂主题拆为 3-5 个原子子主题，每个独立搜索后合并
 - **交叉源对比法**：同一主题从 arXiv(学术)/Blog(实践)/GitHub(开源) 三个角度搜集
+- **CDP 浏览器获取**：需要 JS 渲染/登录态/反爬绕过时，优先使用 CDP 浏览器工具直达源头
+- **多工具编排**：Search(找线索) → Extract(获取内容) → Browser(深入源头) → Vision(验证) 的组合链
 
 ### 2. 信息过滤能力
 - 如何判断信息质量（官方 > 权威教程 > 社区 > 个人博客）
@@ -178,6 +180,57 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 **Step 2.5: 输出去噪与沉淀**
 - 剥离营销话术、SEO 填充内容、AI 生成痕迹。
 - 提取核心逻辑、代码片段、配置参数，存入临时笔记或 `references/`。
+
+**Step 2.6: 源头优先获取策略 (v2.8 新增)**
+在加载 web-access 后，根据信息类型选择工具链：
+
+1. **判断信息类型**（参照 web-access skill 的「源头信息获取框架」）
+   - 搜索引擎能搜到？→ `web_search` + `web_extract`
+   - 已知 URL 的静态页面？→ `web_extract` / `curl`
+   - 需要 JS 渲染的动态页面？→ `browser_navigate` + `browser_console`
+   - 需要登录态/反爬绕过？→ CDP Proxy 或复用已有 session
+   - SPA/API 数据？→ `browser_console` 捕获 Network response
+
+2. **选择工具链**（从 web-access 的工具组合矩阵中选择）
+   - 快速调研：`web_search` → `web_extract` × 3-5
+   - 深度调研：`web_search` → `browser_navigate`(直入源头) → `browser_console`(JS提取)
+   - 源头溯源：`web_search`(找源头URL) → `browser_navigate`(直达原始来源) → `browser_vision`(截图验证)
+   - 反爬绕过：CDP Proxy → anti-detection 脚本注入 → 真实点击
+
+3. **源头优先**：优先直接访问原始来源（官方文档、GitHub 源码、权威网站），避免过度依赖二手资料聚合站
+
+**Step 2.7: 信息溯源方法论 (v2.8 新增)**
+每个发现的信息片段必须追溯其原始来源：
+
+1. **前向追踪**：从搜索结果 → 找到引用的原始来源 URL
+   - 博客引用论文？→ 找到论文原文
+   - 社区帖引用官方文档？→ 找到官方文档原文
+   
+2. **后向验证**：从原始来源 → 检查是否有 ≥2 个独立来源佐证
+   - 官方文档 + 权威教程 = 可靠
+   - 仅社区帖 = 需进一步验证
+
+3. **横向比对**：同一信息在不同类型来源中的一致性
+   - 学术(arXiv) vs 实践(Blog) vs 开源(GitHub) 三方一致 → 高可信
+
+**质量标记系统**：
+| 标记 | 含义 | 使用 |
+|:---:|:----:|:----:|
+| 🥇 | 原始来源 | 官方文档/源码/一手数据 → 直接使用 |
+| 🥈 | 高质量二手 | 权威教程/学术论文 → 交叉验证后使用 |
+| 🥉 | 普通参考 | 博客/社区讨论 → 仅作为线索 |
+| ⚠️ | 需验证 | 仅单一来源/无日期标注 → 继续搜索 |
+
+**Step 2.8: 反爬应对策略 (v2.8 新增)**
+当 `web_extract` 或 `browser_navigate` 失败时（被 Cloudflare/反爬拦截）：
+
+```
+1. 先用 browser_vision 截图确认是否被拦截
+2. 尝试 CDP Proxy 操作有界面的浏览器（而非 headless）
+3. 尝试 curl + 代理 + 伪造 User-Agent
+4. 切换信息来源（放弃该站点，找替代源）
+5. 标记为「源不可达」并记录到 site-patterns/
+```
 
 ### Stage 3: 过滤与清洗
 
@@ -294,6 +347,30 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
      python3 ~/.hermes/skills/learning-review-cycle/scripts/review-engine.py gap-add knowledge_missing "描述" medium
      ```
 
+9. **🗂️ 经验提取与归档 (v2.8 新增 — 受 Post-mortem + PlugMem/MUSE 启发)**
+   每次学习完成后，必须评估是否有可复用的经验。
+
+   **判断标准**（至少满足一项）：
+   - 发现了一个可复用的方法/模式/原则
+   - 解决了以前卡住的问题，找到了可靠方案
+   - 验证了一个假设，推翻了错误认知
+
+   **提取流程**：
+   1. 判断是否有可复用的经验 → 无则跳过
+   2. 有则按标准格式写入 `~/.hermes/experiences/active/`
+   3. 分类：experience（动作级）/ skill（任务级）/ rule（原则级）
+   4. 评分：reusability (high/medium/low) + confidence (1-5)
+   5. 若 reusability=high → 自动更新对应 skill 的 references/
+   6. 更新 `~/.hermes/experiences/index.md` 目录
+   7. 注册间隔复习（7天后）
+
+   **经验类型体系**（借鉴 Experience Compression Spectrum）：
+   | 类型 | 压缩率 | 说明 | 存储位置 |
+   |:----:|:------:|:----|:---------|
+   | **Experience** | 低 | 具体情境下的发现，含背景 | experiences/active/ |
+   | **Skill** | 中 | 可重复的流程/模式 | experiences/skills/ → skill 更新 |
+   | **Rule** | 高 | 抽象原则，无具体绑定 | experiences/archive/ |
+
 ## 输出规范
 
 学习完成后，必须输出：
@@ -324,6 +401,7 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 - ❌ 复杂主题不拆分直接搜索 → 信息过载，应先研究分治
 - ❌ 长期任务不汇报进度 → 每完成一个 Stage 必须汇报
 - ❌ 只搜索不沉淀 → 学习必须产出知识文件
+- ❌ 经验不提取归档 → 每次学习后应检查是否有可复用的经验，按标准格式写入 ~/.hermes/experiences/
 
 ## 已积累的学习经验
 
@@ -340,7 +418,8 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 | 2026-05-04 | 深度循环学习机制 | 引入认知科学基础 + AI自改进前沿 | Spaced Repetition/Active Recall/Interleaving 映射到AI学习; Deep Loop Gate; Reflection Tokens; 间隔复习(1天/7天/30天); 学习质量评分公式 |
 | 2026-05-04 | GitHub 提交质量检查 | git -S pickaxe 脱敏陷阱; 子代理验证找盲点; 文档一致性是AI项目最大痛点 | git diff脱敏需grep辅助; 按P0/P1/P2分优先级; 结构化报告可审计可比较; 不要在CI阶段才检查; 代码改了必须同步文档 |
 | 2026-05-08 | Rust 2026 + Next.js 16.2 | 官方博客 > 社区 优先级有效; 多版本覆盖可追踪演化趋势; Tavily 限流时 web_search 降级无缝 | Rust 官方博客 + releases.rs + GitHub releases 三源验证; Next.js 官方博客是唯一权威源; 表格化对比呈现版本间演化; 知识库 freshness_score 更新到 0.7 |
-| 2026-05-08 | TypeScript 6.0/7.0 + Rust 1.95 + Python 3.15b1 + Go 1.27 | 多语言并行学习有效——4种语言一次覆盖; Beta 发布监测很重要——Python 3.15b1 新增 4 个 PEP (sentinel/frame pointers/等) 不在 alpha 阶段; 版本桥接意识——TS 6.0 是桥接版, TS 7.0 才是真正目标 | 跨语言版本追踪矩阵表(语言×特性); Beta发布监测: 检查 alpha→beta 间新增 PEP; Bridge-vs-destination 定位: TS 6.0 做迁移, TS 7.0 做真升级; Tavily 配额在 5月8日即耗尽(非5月15日), 早期全降级策略已验证 |
+| 2026-05-08 | TypeScript 6.0/7.0 + Rust 1.95 + Python 3.15b1 + Go 1.27 | 多语言并行学习有效；Beta 发布监测重要 | 跨语言版本追踪矩阵表；Bridge-vs-destination 定位 |
+| 2026-05-08 | **改进 web-access + learning 调研流程** | **源头优先范式转变：从「用什么工具搜」→「信息源头在哪，选什么工具直达」；CDP 提升为一等公民；建立反爬 L1-L6 应对体系；Research Agent 模式（Bounded Pipeline/PRISM/Multi-Source）引入学习流程** | **CDP 浏览器直达源头（GitHub 权威来源）；工具组合矩阵（Search→Extract→Browser→Vision）；信息溯源三步法（前向追踪/后向验证/横向比对）；provenance 记录格式；质量标记系统（🥇🥈🥉⚠️）** |
 
 ## 知识库索引
 
