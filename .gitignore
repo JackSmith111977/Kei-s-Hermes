@@ -50,6 +50,10 @@ Thumbs.db
 .update_check
 .mailmap
 
+# ── 内嵌 git 仓库（子模块检测问题）──
+skills/web-access/.git/
+skills/**/.git/
+
 # ── Python 虚拟环境──
 .venv/
 venv/
