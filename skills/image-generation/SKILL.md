@@ -14,6 +14,7 @@ metadata:
     - design
     - prompt-engineering
     category: creative
+    related_skills: ["web-ui-ux-design"]
     skill_type: library
     design_pattern: generator
 ---

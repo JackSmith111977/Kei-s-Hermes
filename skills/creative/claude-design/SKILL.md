@@ -7,7 +7,7 @@ license: MIT
 metadata:
   hermes:
     tags: [design, html, prototype, ux, ui, creative, artifact, deck, motion, design-system]
-    related_skills: [design-md, popular-web-designs, excalidraw, architecture-diagram]
+    related_skills: [design-md, popular-web-designs, excalidraw, architecture-diagram, web-ui-ux-design]
 ---
 
 # Claude Design for CLI/API Agents

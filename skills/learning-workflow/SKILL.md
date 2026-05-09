@@ -1,7 +1,7 @@
 ---
 name: learning-workflow
 description: "所有学习/研究任务的强制流程拦截器。通过状态机+文件标志物实现防跳过机制。v5.0 重大更新：循环真正落地——learning-state.py 新增 regress/reject/loop-status 命令，reflection-gate.py 实现 R1/R2/R3/Quality Gate 自动化检查，子代理裁判打破自评自判。"
-version: 5.2.0
+version: 5.4.0
 triggers:
   - 学习
   - 研究
@@ -37,7 +37,8 @@ skill_type: Workflow
 > **铁律**：任何学习任务（用户说"学习/研究/了解XXX"）必须严格走此流程。
 > **v5.0 重大更新**：循环真正落地 — 状态机三剑客 (regress/reject/loop-status) + 反射门禁 (reflection-gate.py R1/R2/R3/QG) + 子代理裁判
 >
-> **依赖脚本**：\n> - `scripts/learning-state.py` — 状态机管理（init/complete/reject/regress/loop-status/check/reset）\n> - `scripts/reflection-gate.py` — 反射门禁自动化评分（r1/r2/r3/quality）+ MIN_LOOPS 最小循环检查 + 递进等级惩罚\n>\n> **参考文件**：\n> - `references/cycle-troubleshooting.md` — 循环故障五层诊断指南（当门禁不触发时排查用）\n> - `references/karpathy-bounded-autonomy.md` — Karpathy 约束理论在学习流程中的应用（v5.1）\n> - `references/experience-format.md` — 经验积累系统格式指南与提取流程（v5.2）
+> **依赖脚本**：\n> - `scripts/learning-state.py` — 状态机管理（init/complete/reject/regress/loop-status/check/reset）\n> - `scripts/reflection-gate.py` — 反射门禁自动化评分（r1/r2/r3/quality）+ MIN_LOOPS 最小循环检查 + 递进等级惩罚\n>\n> **参考文件**：\n> - `references/cycle-troubleshooting.md` — 循环故障五层诊断指南（当门禁不触发时排查用）
+- `references/knowledge-base-patterns.md` — Hermes 知识库构建模式参考（Karpathy LLM Wiki + GBrain）\n> - `references/karpathy-bounded-autonomy.md` — Karpathy 约束理论在学习流程中的应用（v5.1）\n> - `references/experience-format.md` — 经验积累系统格式指南与提取流程（v5.2）
 
 ---
 
@@ -554,7 +555,34 @@ STEP 5 验证结果 →
    - 若 reusability=high → 自动更新对应 skill 的 references/
    - 更新 `~/.hermes/experiences/index.md` 目录
    - 详见 learning skill Stage 6 Step 9
-5. **归档任务**：`learning-state.py reset [task_id]`
+
+5. **🧬 L3 Brain 沉淀**（v5.4 新增）：检查本次学习是否产生了**可提炼为核心概念/实体/摘要/分析**的知识。
+   - 如果学习产出了一个**通用模式/方法论/原则** → 创建/更新 `brain/wiki/concepts/{name}.md`
+   - 如果学习中出现了**重要人物/工具/项目** → 创建/更新 `brain/wiki/entities/{name}.md`
+   - 如果学习来源于**某篇文档/论文** → 创建/更新 `brain/wiki/summaries/{name}.md`
+   - 如果学习产出了**对比分析/推演结论** → 创建/更新 `brain/wiki/analyses/{name}.md`
+   - 使用 `[[页面名称]]` 建立交叉引用
+   - 更新 `~/.hermes/brain/index.md` 索引
+   - 追加 `~/.hermes/brain/log.md` 日志条目
+   - 检查并更新 `~/.hermes/KNOWLEDGE_INDEX.md`（如涉及新主题）
+
+6. **🔗 自动 Skill 关联**（v5.3 新增）：如果本次学习创建了新 skill，自动扫描所有已有 skill 并建立关联关系
+   ```bash
+   # 自动执行关联
+   if [ -n "$NEW_SKILL_NAME" ]; then
+       echo "🔗 自动关联 skill: $NEW_SKILL_NAME"
+       python3 ~/.hermes/scripts/skill-auto-link.py auto-link "$NEW_SKILL_NAME"
+   fi
+   ```
+
+7. **🤖 自动知识沉淀**（v5.5 新增 — 自动化增强）：使用 `knowledge-ingest.py` 将本次学习的经验自动写入 L2/L3
+   ```bash
+   # 自动检测本次学习是否产生了可沉淀的知识
+   python3 ~/.hermes/scripts/knowledge-ingest.py --auto-detect
+   ```
+   相比第 4、5 步的手动方式，此步骤自动完成：文件创建 + 索引更新 + 交叉引用维护。
+
+8. **🏁 归档任务**：`learning-state.py reset [task_id]`
 
 **反思输出格式**：
 ```markdown
@@ -651,9 +679,13 @@ before_step2 = ["step0_map", "step1_search"]
 4. **🗂️ 经验提取归档**（v5.2 新增）
    - 按 STEP 6 第 4 步的标准，将本次学习产生的可复用经验写入 `~/.hermes/experiences/active/`
    - 更新 `~/.hermes/experiences/index.md`
-5. 执行**学习反思**（STEP 6）
-6. **归档状态**：`learning-state.py reset [task_id]`
-7. 询问是否将本次流程经验**沉淀为永久 skill**
+5. **🧬 L3 Brain 沉淀**（v5.4 新增）
+   - 按 STEP 6 第 5 步的标准，将本次学习产生的核心知识沉淀到 `~/.hermes/brain/wiki/`
+   - 更新 `~/.hermes/brain/index.md` + 追加 `log.md`
+   - 更新 `~/.hermes/KNOWLEDGE_INDEX.md`（如涉及新主题）
+6. 执行**学习反思**（STEP 6）
+7. **归档状态**：`learning-state.py reset [task_id]`
+8. 询问是否将本次流程经验**沉淀为永久 skill**
 
 ---
 

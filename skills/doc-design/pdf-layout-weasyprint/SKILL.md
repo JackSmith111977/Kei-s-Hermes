@@ -21,6 +21,7 @@ metadata:
     - chinese
     - layout
     category: doc-design
+    related_skills: ["pdf-layout-reportlab", "doc-design", "web-ui-ux-design"]
     skill_type: library-reference
     design_pattern: tool-wrapper
     related_skills:

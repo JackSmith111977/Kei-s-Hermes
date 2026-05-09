@@ -197,6 +197,12 @@ Response: { "data": { "file_key": "file_xxx" } }
 
 ## 3. 云文档 (docx/v1)
 
+> 📗 **深度参考**：建议配合 `references/docx-api-deep-reference.md` 阅读，其中包含：
+> - 52 种 Block 类型的完整对照表（含 BlockData、子块支持情况）
+> - Text Element 内容模型（text_run/mention_doc/reminder 等）
+> - 9 个实战场景的完整操作步骤（创建文档/Markdown 导入/图片插入/表格操作等）
+> - 权限对照表、错误码大全、新旧版差异
+
 ### 创建文档
 
 ```

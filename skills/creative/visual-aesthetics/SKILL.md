@@ -22,6 +22,7 @@ metadata:
     - beauty
     - visual-judgment
     - criteria
+    related_skills: ["web-ui-ux-design"]
     category: creative
     skill_type: library-reference
     design_pattern: tool-wrapper
@@ -100,6 +101,14 @@ metadata:
 3.  **一致性**：丑得有逻辑、有系统，还是单纯的乱？
 
 **结论**：无意图的混乱是丑，有意图的打破规则可能是艺术。
+
+---
+
+## 六、关联参考
+
+当需要分析具体 UI 设计风格或选择交互方案时，查阅配套参考文件：
+
+- `references/ui-ux-styles-reference.md` — UI 设计风格全景、UX 七大定律、无障碍基线、风格陷阱速查、情感化设计三层模型
 
 ---
 

@@ -85,10 +85,14 @@ Header: Authorization: Bearer {tenant_access_token}
 ## 详细参考
 
 - 📖 [API 速查表](references/api-quickref.md) — 各模块核心端点、参数、频率限制
+- 📗 [docx/v1 深度参考](references/docx-api-deep-reference.md) — 飞书文档 API 完整参考，含 52 种 Block 类型表、所有 API 场景、权限对照、代码示例
+- 📘 [文档创作避坑指南](references/document-creation-best-practices.md) — 实战陷阱总结：表格 children 数组、merge_info、Review 流程、选型决策
+- 📘 [创作最佳实践](references/document-creation-best-practices.md) — 表格处理避坑、convert+descendant 正确流程、Review 机制、所有权转移、HTML 文档替代方案
 - 🔐 [认证指南](references/auth-guide.md) — token 获取、权限申请、安全最佳实践
 - ❌ [错误码速查](references/error-codes.md) — 常见错误码及解决方案
 - 🛠️ [Hermes 飞书工具](references/hermes-feishu-tools.md) — 内置工具能力详解
 - 🃏 [消息卡片配置](references/card-config.md) — Interactive Card 自动包装机制与维护指南
+- 📐 [结构化文档创作最佳实践](references/document-creation-best-practices.md) — convert+descendant 的正确用法、表格处理、Review 机制、所有权转移
 
 ## 权限要求概览
 
@@ -124,3 +128,11 @@ Header: Authorization: Bearer {tenant_access_token}
 6. **消息投递格式**：用户偏好将消息发送到**主聊天**而非话题/线程中。发送消息时注意不要继承话题上下文（如 cron 任务中使用 `deliver='origin'` 会保持话题上下文，需要时改为指定 `platform:chat_id`）。群聊中回复时同样避免创建新话题。
    - **发图片**: POST `/im/v1/images` (form-data `image_type=message`) -> 获得 `image_key` -> 发送 `msg_type=image`。
    - **发文件**: POST `/im/v1/files` -> 获得 `file_key` -> 发送 `msg_type=file`。
+7. **消息卡片系统**：飞书网关自动将所有文本包装为 Interactive Card（JSON 1.0）。特性与更新：
+   - 🃏 **动态标题摘要**（v2.1 新增）：标题自动从内容提取（Markdown 标题→首行→默认"🐱 小玛"），详见 `references/card-config.md`
+   - 🔄 **流式编辑支持**（v2.1 新增，v2.2 修复跨段卡片，v3.0 进度合并）：`SUPPORTS_MESSAGE_EDITING = True`，结合 `GatewayStreamConsumer` 实现渐进式消息更新（需 `streaming.enabled: true`）。v2.2 新增 `preserve_message_on_break` 修复工具调用间 segment break 导致多卡片问题。v3.0 将工具进度消息喂入流消费者（`send_progress_messages()` → `GatewayStreamConsumer.on_delta()`），进度消息与 LLM 回复**合并到同一张卡片**，不再发送独立进度卡片。详见 `references/card-config.md`
+   - 🎨 **12 色智能头部**：按内容语义自动选色（error→红, warning→橙, success→绿, code→蓝等）
+   - 🔗 **URL 自动按钮**：检测链接自动生成可点击按钮
+   - 🎯 **卡片类型前缀**：`<!-- card:dashboard -->` 或 `<!-- card:progress -->` 触发专用卡片格式
+   - ⚠️ **修改 feishu.py 后必须重启网关**：`systemctl --user restart hermes-gateway`
+   - 📐 **大小限制**：卡片 JSON ≤ 30KB；`MAX_MESSAGE_LENGTH = 8000`

@@ -14,6 +14,7 @@ metadata:
     category: productivity
     skill_type: doc-generation
     format: html
+    related_skills: ["web-ui-ux-design"]
 ---
 # HTML/CSS 原子操作技能
 

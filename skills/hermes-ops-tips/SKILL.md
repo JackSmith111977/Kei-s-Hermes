@@ -1,7 +1,7 @@
 ---
 name: hermes-ops-tips
 description: "Hermes 运维与工具流最佳实践。包含 Hermes 手动升级流程、SRA Proxy 修复、高清架构图生成 (SVG + cairosvg)、Memory 降级策略。"
-triggers: [高清截图, cairosvg, sra proxy bug, 架构图, memory full, hermes运维, 升级hermes, hermes升级, sra升级, sra安装, sra重装, sra从源码安装, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复, browser vision, vision provider, 视觉模型, 截图卡住, 国内视觉api, openrouter vision, qwen vl]
+triggers: [高清截图, cairosvg, sra proxy bug, 架构图, memory full, hermes运维, 升级hermes, hermes升级, sra升级, sra安装, sra重装, sra从源码安装, sra卸载, sra uninstall, sra upgrade, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复, browser vision, vision provider, 视觉模型, 截图卡住, 国内视觉api, openrouter vision, qwen vl]
 ---
 
 # Hermes Ops & Workflow Tips
@@ -150,12 +150,41 @@ rm -rf /tmp/hermes_latest.tar.gz /tmp/hermes_new/
 
 > 详细升级记录见 `references/hermes-upgrade-checklist.md`
 
-## 8. SRA 从 GitHub 源码升级流程
+## 8. SRA 升级与卸载
 
-### 场景
-需要将 SRA（Skill Runtime Advisor）从 GitHub 源码升级/重装到最新版。安装目标为 Hermes Agent 的 venv。
+SRA v1.2.1+ 内置了自动化升级和卸载命令，推荐优先使用。手动流程仅保留作为备选/非标准环境下的降级方案。
 
-### 完整流程
+### 8.1 推荐方式—内置命令 (v1.2.1+)
+
+```bash
+# ── 升级 ──
+sra upgrade                    # 从 GitHub 拉取最新代码并重新安装
+sra upgrade --version 1.2.0    # 升级到指定版本（checkout tag）
+
+# ── 卸载 ──
+sra uninstall                  # 卸载包 + 移除 systemd 服务（保留 ~/.sra/ 配置）
+sra uninstall --all            # 完全卸载（含配置和索引数据）
+```
+
+**`sra upgrade` 的自动流程：**
+1. ⏹️ 自动停止运行中的 Daemon
+2. 📦 检查当前版本和安装模式（editable/标准）
+3. 🌐 自动检测代理端口（7890/7891/1080/1087）
+4. 🔄 已有 Git 仓库 → `git pull`；无则从 GitHub 克隆
+5. 🏷️ 指定 `--version` 则 checkout 对应 tag
+6. 🔧 `pip install --no-build-isolation -e .` 安装
+7. ⚠️ `--no-build-isolation` 失败时自动降级为标准安装
+
+**`sra uninstall` 的自动流程：**
+1. ⏹️ 自动停止 Daemon
+2. 🗑️ 移除 systemd 用户级服务（disable + 删文件 + daemon-reload）
+3. 📦 `pip uninstall sra-agent -y`
+4. 📁 `--all` 时删除 `~/.sra/`，否则提示保留
+5. ⚠️ 系统级 systemd 服务（需 sudo）仅打印提示，不强行删除
+
+### 8.2 备选—手动升级流程（非标准环境降级方案）
+
+**场景：** 内置 `sra upgrade` 不可用（网络受限、需要使用特定 venv、或环境特殊时）。
 
 ```bash
 # 1. 停止旧版 SRA Daemon

@@ -1,7 +1,7 @@
 ---
 name: learning-review-cycle
 description: "学习-Review-总结自驱动循环。定时扫描 skill 新鲜度、自动生成学习总结/周报/月报、探测知识缺口并生成学习建议。让整个 learning ecosystem 自动运转。"
-version: 1.0.0
+version: 1.1.0
 triggers:
   - review
   - 复盘
@@ -76,7 +76,9 @@ skill_type: Workflow
 
 | 扫描项 | 频率 | 数据源 | 产出 |
 |--------|------|--------|------|
-| **Skill 新鲜度** | 每周 | `skill_view()` 读取所有 SKILL.md 的 version/date | skill 老旧度报告 |
+| **🏗️ L1 Skill 新鲜度** | 每周 | `skill_view()` 读取所有 SKILL.md 的 version/date | skill 老旧度报告 |
+| **📁 L2 Experience 健康度** | 双周 | `~/.hermes/experiences/active/` 文件 mtime + index.md | 待归档经验、成熟经验升级建议 |
+| **🧬 L3 Brain 健康度** | 每月 | `~/.hermes/brain/wiki/` 页面 mtime + index.md | 孤立页面、死链、过期内容标记 |
 | **学习历史回顾** | 每周 | `~/.hermes/learning_history.json` | 最近学习总结 |
 | **使用频率分析** | 每月 | skill 文件修改时间 + learning state | 高频/低频 skill 列表 |
 | **知识缺口探测** | 每次任务失败后 | 任务执行日志/error trace | 学习建议（待学习队列） |

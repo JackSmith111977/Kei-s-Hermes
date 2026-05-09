@@ -39,6 +39,7 @@ metadata:
     - latex-guide
     - epub-guide
     category: productivity
+    related_skills: ["pdf-layout-reportlab", "pdf-layout-weasyprint", "docx-guide", "pptx-guide", "markdown-guide", "html-guide", "latex-guide", "epub-guide", "web-ui-ux-design"]
     skill_type: doc-generation
     design_pattern: index
 ---

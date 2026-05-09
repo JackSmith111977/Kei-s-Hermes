@@ -94,12 +94,14 @@ SRA 注入代码依赖外部的 SRA Daemon 服务。需要单独启动。
 
 | 路径 | 说明 |
 |------|------|
-| `~/.hermes/hermes-agent/venv/bin/srad` | 守护进程启动命令（必须用 venv 版本） |
-| `~/.hermes/hermes-agent/venv/bin/sra` | CLI 查询命令（必须用 venv 版本） |
-| `/tmp/sra-latest/` | Editable pip 安装源码（从 GitHub 克隆） |
+| `/tmp/sra-latest/venv/bin/sra` | CLI 命令（支持子命令: start/stop/attach/status/recommend 等） |
+| `/tmp/sra-latest/venv/bin/srad` | 旧版启动命令（仅调用 cmd_start，建议用 sra 替代） |
+| `/tmp/sra-latest/skill_advisor/` | SRA 源码目录 |
 | `~/.sra/srad.sock` | Unix Socket |
 | `~/.sra/srad.log` | 日志文件 |
 | `~/.sra/config.json` | 用户配置 |
+| `~/.config/systemd/user/srad.service` | 用户级 systemd 服务单元（推荐方式） |
+| `~/.config/systemd/user/hermes-gateway.service.d/sra-dep.conf` | Gateway 依赖配置 |
 
 ### ✅ 前置条件
 
@@ -116,19 +118,90 @@ export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
 cd /tmp
 git clone https://github.com/JackSmith111977/Hermes-Skill-View.git sra-latest
 
-# 3. 安装到 Hermes venv（⚠️ 必须用 --no-build-isolation，venv 中 setuptools 较旧）
-~/.hermes/hermes-agent/venv/bin/python3 -m pip install --no-build-isolation -e /tmp/sra-latest
+# 3. 安装到 SRA 自带的 venv（⚠️ 必须用 --no-build-isolation，venv 中 setuptools 较旧）
+cd /tmp/sra-latest
+python3.11 -m venv venv
+source venv/bin/activate
+pip install --no-build-isolation -e .
+
+# 4. 或者直接使用已有的 venv（如果已安装）
+/tmp/sra-latest/venv/bin/python3 -m pip install --no-build-isolation -e /tmp/sra-latest
 ```
 
-### 启动/停止
+### 🏆 推荐：systemd 用户级服务自启动
+
+这是生产环境推荐的方式，SRA Daemon 会随系统启动自动运行，崩溃后自动恢复。
+
+#### 服务单元
+
+**`~/.config/systemd/user/srad.service`**：
+```ini
+[Unit]
+Description=SRA — Skill Runtime Advisor Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/tmp/sra-latest/venv/bin/sra attach  # 前台运行模式
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=srad
+
+[Install]
+WantedBy=default.target
+```
+
+#### Gateway 依赖链
+
+**`~/.config/systemd/user/hermes-gateway.service.d/sra-dep.conf`**：
+```ini
+[Unit]
+Requires=srad.service
+After=srad.service
+```
+
+作用：确保 Gateway 启动时 SRA 已就绪，且 SRA 故障不会影响 Gateway。
+
+#### 启用并启动
 
 ```bash
-# ⚠️ 必须用 Hermes venv 中的命令（系统 Python 找不到 skill_advisor 模块）
-~/.hermes/hermes-agent/venv/bin/srad     # 启动守护进程（后台）
-~/.hermes/hermes-agent/venv/bin/sra stop # 停止
+systemctl --user daemon-reload          # 加载新服务
+systemctl --user enable srad.service    # 开机自启
+systemctl --user start srad.service     # 立即启动
+systemctl --user status srad.service    # 验证状态
+
+# Gateway 只需重启一次让依赖生效
+systemctl --user restart hermes-gateway
 ```
 
-**说明**：新版 SRA（v1.2.0+）用 `srad` 命令启动守护进程，`sra` 命令仅用于停止和查询。
+#### 管理命令
+
+```bash
+systemctl --user status srad              # 查看状态
+systemctl --user restart srad             # 重启 SRA
+systemctl --user stop srad                # 停止 SRA
+journalctl --user -u srad -n 50           # 查看日志
+journalctl --user -u srad -f              # 跟踪日志
+```
+
+### 手动启动/停止（开发调试用）
+
+```bash
+# ⚠️ 必须用 SRA venv 中的命令（系统 Python 找不到 skill_advisor 模块）
+
+# sra 命令支持子命令：
+/tmp/sra-latest/venv/bin/sra attach    # 前台运行（Type=simple 模式，Ctrl+C 停止）
+/tmp/sra-latest/venv/bin/sra start     # 后台守护进程（fork 模式）
+/tmp/sra-latest/venv/bin/sra stop      # 停止
+/tmp/sra-latest/venv/bin/sra status    # 查看状态
+/tmp/sra-latest/venv/bin/sra restart   # 重启
+/tmp/sra-latest/venv/bin/sra recommend <查询>  # 手动测试推荐
+
+# srad = cmd_start() 的快捷方式（仅启动，无子命令）
+/tmp/sra-latest/venv/bin/srad
+```
 
 ### 验证
 
@@ -150,8 +223,7 @@ HTTP API: `8536`（通过 `~/.sra/config.json` 的 `http_port` 配置）
 ### 查看版本
 
 ```bash
-# sra --version 在新版中会当作查询字符串，需用 Python 检查
-~/.hermes/hermes-agent/venv/bin/python3 -c "import skill_advisor; print(skill_advisor.__version__)"
+/tmp/sra-latest/venv/bin/python3 -c "import skill_advisor; print(skill_advisor.__version__)"
 ```
 
 ## 与 Hook 系统的关系

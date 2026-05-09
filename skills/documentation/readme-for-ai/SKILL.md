@@ -1,7 +1,7 @@
 ---
 name: readme-for-ai
 description: 编写模型友好型 README 的方法论。让 AI Agent 在阅读 README 后能自主完成安装、配置、运行全流程。
-version: 1.0.0
+version: 1.1.0
 triggers:
 - 写 README
 - 模型友好
@@ -36,7 +36,7 @@ AI 和人类的阅读理解方式不同：
 - 人类能脑补缺失步骤，AI 需要每一步都有命令
 - 人类能自己查资料，AI 需要 FAQ 给出恢复路径
 
-## 六大原则
+## 七大原则（v1.1 新增第 7 条）
 
 ### 1. 每步必有验证
 
@@ -78,6 +78,51 @@ sra recommend 画架构图
 ### 6. 配置可脚本化
 
 配置项可通过 CLI 修改，不需手改文件。
+
+### 7. 🆕 安装脚本自动探测系统，生成配置而非要求手动放置
+
+这是本次新增的核心原则。它的出发点是：
+
+> **AI Agent 无法执行「请手动复制文件到 XX 目录」这样的步骤。所有系统配置必须由安装脚本自动生成。**
+
+**常见反模式（❌ 不要这样做）：**
+```bash
+# README 中说：
+cp srad.service ~/.config/systemd/user/
+systemctl --user enable srad
+```
+AI Agent 读到这种指令会遇到问题：它不知道 `~` 展开后是什么路径，不知道目标目录是否存在，不知道文件权限是否正确。
+
+**正确模式（✅ 应该这样做）：**
+```bash
+# install.sh 内部：
+detect_os           # uname -s → linux/darwin/other
+detect_init         # /run/systemd/system → systemd/launchd/other
+check_sudo          # sudo -n true → true/false
+check_hermes        # command -v hermes → true/false
+
+case "$OS-$INIT" in
+  linux-systemd)
+    if $SUDO; then
+      生成 /etc/systemd/system/xxx.service
+    else
+      生成 ~/.config/systemd/user/xxx.service
+    fi
+    ;;
+  darwin-launchd)
+    生成 ~/Library/LaunchAgents/com.xxx.plist
+    ;;
+  *)
+    生成入口脚本 + 引导提示
+    ;;
+esac
+```
+
+**核心理念：不要「移植文件」，要「脚本生成」。**
+- ❌ 把 systemd 文件作为静态文件放入仓库 → AI 不知道放哪
+- ✅ 安装脚本检测系统 → 自动生成适配配置 → 自动启用
+
+详细设计模式参见 `references/cross-platform-install-pattern.md`
 
 ## README 结构
 

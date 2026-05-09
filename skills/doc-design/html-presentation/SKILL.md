@@ -1,7 +1,7 @@
 ---
 name: html-presentation
 description: 用 HTML/CSS 制作演示文稿的完整指南 — 替代传统 PPTX 的新思路。涵盖 reveal.js、Slidev、Marp、纯 CSS 四大方案，从选型到实操的全流程指导。v2.0 新增 7 种网页 UX/UI 设计风格实现（Glassmorphism/Neumorphism/Neubrutalism/Material You/日式侘寂/Mesh Gradient/赛博霓虹），可直接用于幻灯片设计。
-version: 2.0.0
+version: 2.1.0
 triggers:
   - HTML 做 PPT
   - 网页幻灯片
@@ -38,11 +38,13 @@ metadata:
     - slidev
     - marp
     category: doc-design
+    related_skills: ["web-ui-ux-design", "visual-aesthetics"]
     skill_type: reference
     design_pattern: tool-wrapper
 depends_on:
   - html-guide
   - weasyprint
+  - visual-aesthetics
 ---
 
 # HTML Presentation — 用网页技术做演示文稿
@@ -50,6 +52,26 @@ depends_on:
 > **核心思想**：演示文稿本质上是网页。用 HTML+CSS 替代 PPTX，获得版本控制、跨平台、无限自定义和原生交互能力。
 >
 > **适用场景**：技术演讲、代码演示、开源项目介绍、在线课程、自动化批量生成幻灯片
+
+---
+
+## ⚠️ 铁律：先加载设计 skill，再写一行代码
+
+**这是本次实战中最大的教训！** 不要在加载 `visual-aesthetics` 和 `web-ui-ux-design` 之前就动手写 HTML。
+
+### 强制工作流
+
+```
+接到「做网页 PPT」任务 →
+  1. 加载 SRA 推荐的 skill（必须 priority 最高）
+  2. skill_view("visual-aesthetics")     ← 否则不知道「美」的标准
+  3. skill_view("web-ui-ux-design")      ← 否则不知道布局/留白/配色
+  4. skill_view("html-presentation")     ← 本 skill
+  5. 先定义设计系统（CSS custom properties）
+  6. 再开始写内容
+```
+
+**每次产生这种「先干活后补设计」的错误时，必须反思并更新本 skill 的避坑指南。** 这不是审美问题，是工作流问题。
 
 ---
 
@@ -419,14 +441,22 @@ HTML 编写 → CDN 启动 → 插件增强
 ## 五、避坑指南
 
 1. **中文显示**：reveal.js 和 Marp 默认字体不含中文，必须指定中文字体
-   ```css
-   .reveal { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
-   ```
 2. **PDF 导出需要 Chrome**：Marp、reveal.js、Slidev 的 PDF 导出都依赖 Chromium
 3. **Marp 图片路径**：CLI 工作目录影响相对路径，建议用绝对路径或 `--input-dir`
 4. **Slidev 版本要求**：Node.js >= 20.12.0
 5. **reveal.js v4 vs v5**：插件 API 有变化，CDN 引用时注意版本一致性
 6. **纯 CSS 打印**：使用 `@media print` + `page-break-after: always` 控制分页
+
+### 🚨 实战教训（2026-05-09）
+
+7. **不要跳框架**：如果目标是视觉精致的 PPT，纯 CSS + scroll-snap 比 reveal.js 更可控。框架不是首选。
+8. **先加载设计 skill**：`skill_view("visual-aesthetics")` 和 `skill_view("web-ui-ux-design")` 必须在写任何 HTML 之前完成。否则你不知道「美」的标准。
+9. **先定义设计系统**：不要边写代码边决定颜色/间距/字号。先定义 CSS custom properties 作为 tokens，再填充内容。
+10. **每页留白 ≥ 60-80px**：内容不要撑满页面。Dieter Rams 原则：「好设计是尽可能少的设计」。
+11. **页面内容密度控制**：每页承载 3-4 个信息块（card/grid/item）为上限。宁可分页不要挤满。
+12. **统一卡片样式**：不要每种内容各写各的卡片。一个 `.card` 类 + 颜色变体（`.card-cyan` / `.card-pink`）足够。
+13. **考虑打印**：从第一行代码就加入 `@media print`。纯 CSS 方案原生支持打印，不需要 `?print-pdf`。
+14. **响应式起步**：用 `clamp()` 实现响应式字号 + 768px 断点 grid 转换，避免后期返工。
 
 ### 可复用模板
 
@@ -435,6 +465,8 @@ HTML 编写 → CDN 启动 → 插件增强
 | 文件 | 风格 | 来源 |
 |------|------|------|
 | `references/dracula-revealjs-template.md` | Dracula 主题 + 毛玻璃卡片 + Mesh Gradient | 2026-05-08 Gemini API 研究报告 |
+| `references/ai-coding-evolution-presentation-template.md` | **[新增]** Cyber 暗色主题 + Grid 卡片 + 数据指标 + 颜色标签系统 | 2026-05-09 AI 编程进化史研究报告 |
+- 完整模板文件位置：`~/.hermes/research/ai_coding_evolution_presentation.html`
 
 ## 六、🎨 7 种网页 UX/UI 设计风格 — 直接用于 PPT
 

@@ -1,7 +1,7 @@
 ---
 name: learning
 description: "当你需要从零开始学习一个新主题、研究新技术、了解陌生领域时使用此 skill。涵盖：联网上下文补充引擎、过滤高质量信息、清洗冗余内容、精炼核心知识、最终通过 skill-creator 沉淀为可复用的 skill。v2.6 核心升级：强制联网补充协议，内置信息源分级、时效性门禁与交叉验证机制。"
-version: 2.8.0
+version: 2.9.0
 triggers:
 - 学习
 - 研究
@@ -246,7 +246,8 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 
 详见 `references/detailed.md`
 
-**精炼模板**：
+#### 通用精炼模板
+
 ```markdown
 ## {主题}
 ### 核心概念
@@ -265,6 +266,45 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 ### 学习路径建议
 （如果复杂/进阶方向，推荐学习顺序）
 ```
+
+#### API 学习专用模板（Scene-by-Scene 场景化模式）⭐
+
+当学习一个 API 类主题时，推荐使用**场景化七段式结构**，比纯端点清单更有可操作性：
+
+```markdown
+## 一、核心概念
+（数据结构、关键模型、基础术语）
+
+## 二、API 完整参考
+### 2.1 模块A（按功能分组，而非按 HTTP method）
+- API 1: 端点 + 场景 + 频率限制 + 权限 + 请求/响应示例
+- API 2: ...
+
+### 2.2 模块B
+
+## 三、类型/模型完整对照表
+（枚举值表、参数对照表、状态码表 —— 表格式呈现）
+
+## 四、场景实战指引（9 场景法）⭐ 最高价值
+### A: 最常用场景（核心流程）
+（操作步骤、代码示例、注意事项）
+### B: 模板化场景
+### C: 数据导入/导出场景
+### D~I: 其他常见场景
+
+## 五、权限与认证
+（权限速查表、错误码大全）
+
+## 六、频率限制
+（API 维度的频率限制速查）
+
+## 七、新旧版差异（如适用）
+```
+
+**关键优势**：
+- 场景 A~I 让读者知道「什么时候用哪个 API」而非只是「有哪些 API」
+- 类型对照表用表格呈现，比文字描述更易检索
+- 权限和频率限制独立章节避免了在调用时报错才想起来查
 
 ### Stage 5: 知识整合（通过 skill-creator）
 
@@ -364,6 +404,12 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
    6. 更新 `~/.hermes/experiences/index.md` 目录
    7. 注册间隔复习（7天后）
 
+10. **🔗 自动 Skill 关联 (v2.9 新增)**：如果本次学习创建了新 skill，运行自动关联脚本扫描所有已有 skill 并建立 related_skills 双向引用。
+    ```bash
+    python3 ~/.hermes/scripts/skill-auto-link.py auto-link "<新skill名称>"
+    ```
+    此脚本使用同义词扩展 + 点积评分算法，自动识别关联度≥20分的skill并写入related_skills字段。详见 `~/.hermes/scripts/README-auto-link.md`。
+
    **经验类型体系**（借鉴 Experience Compression Spectrum）：
    | 类型 | 压缩率 | 说明 | 存储位置 |
    |:----:|:------:|:----|:---------|
@@ -420,7 +466,9 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 | 2026-05-08 | Rust 2026 + Next.js 16.2 | 官方博客 > 社区 优先级有效; 多版本覆盖可追踪演化趋势; Tavily 限流时 web_search 降级无缝 | Rust 官方博客 + releases.rs + GitHub releases 三源验证; Next.js 官方博客是唯一权威源; 表格化对比呈现版本间演化; 知识库 freshness_score 更新到 0.7 |
 | 2026-05-08 | TypeScript 6.0/7.0 + Rust 1.95 + Python 3.15b1 + Go 1.27 | 多语言并行学习有效；Beta 发布监测重要 | 跨语言版本追踪矩阵表；Bridge-vs-destination 定位 |
 | 2026-05-08 | **改进 web-access + learning 调研流程** | **源头优先范式转变：从「用什么工具搜」→「信息源头在哪，选什么工具直达」；CDP 提升为一等公民；建立反爬 L1-L6 应对体系；Research Agent 模式（Bounded Pipeline/PRISM/Multi-Source）引入学习流程** | **CDP 浏览器直达源头（GitHub 权威来源）；工具组合矩阵（Search→Extract→Browser→Vision）；信息溯源三步法（前向追踪/后向验证/横向比对）；provenance 记录格式；质量标记系统（🥇🥈🥉⚠️）** |
-| 2026-05-09 | **Productivity 领域研究（KM/Obsidian/Notion/Agent Orchestration）** | **多视角并行搜索法：追踪行业/产品型领域时，并行搜索4个独立视角（官方发布 + 开源生态 + 行业报告 + 技术实践），比单一关键词搜索覆盖更全面，交叉验证效率更高** | **并行搜索法：1)官方源（Notion releases）→ 直接获取官方更新；2)开源生态（GitHub Obsidian MCP）→ 发现并行竞品项目；3)行业报告（KMWorld/Yenra）→ 宏观趋势判断；4)技术实践（ValueStreamAI/StackAI）→ 可操作模式；KM行业权威来源分级（🥇KMWorld/Gartner → 🥈Yenra/Zylos → 🥉普通博客）** |
+| 2026-05-09 | **飞书文档 API docx/v1 深度研究** | **场景化 API 学习模式（Scene-by-Scene 七段式）** | **7 大章节 + 9 场景法** |
+| 2026-05-09 | **文档创作教训总结** | **铁律：不跳过困难部分 + 内置Review + 最小测试先行** | **最小测试用例→children数组建树→merge_info→6步Review清单** |
+| 2026-05-09 | **自我分析用delegate_task** | **系统性调查自身配置10项** | **发现30+遗漏数据：brain知识库/经验库/cron/Provider/安全/网关/SRA** |
 
 ## 知识库索引
 

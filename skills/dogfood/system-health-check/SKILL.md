@@ -18,6 +18,7 @@ metadata:
     - circuit-breaker
     - vision
     category: dogfood
+    related_skills: ["file-system-manager"]
     skill_type: diagnosis
     design_pattern: inversion
 ---

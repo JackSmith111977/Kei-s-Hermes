@@ -1,7 +1,7 @@
 ---
 name: commit-quality-check
 description: "GitHub 项目提交前文档与业务一致性检查 + 提交质量检查清单。涵盖 Conventional Commits 规范验证、安全红线扫描、文档一致性检查、变更范围评估。适用于任何需要做 git commit 或 PR 前自检的场景。"
-version: 1.1.0
+version: 1.2.0
 triggers:
   - 提交检查
   - 提交质量
@@ -16,6 +16,11 @@ triggers:
   - 质量门禁
   - 代码审查前自检
   - pre-push
+  - 忘了一致性检查
+  - 又忘了
+  - 还没检查
+  - 检查一下提交
+  - self review
 author: Emma (小喵)
 license: MIT
 metadata:
@@ -40,6 +45,9 @@ metadata:
 > 每次 git commit 或 PR 前，用此 Skill 做系统性自检。
 
 ## 触发方式
+
+**🚨 强制触发条件**：完成任何产生文件变更的任务后，在向用户汇报前必须触发此检查。
+即使不涉及 git commit，也需要做文档一致性和安全检查。
 
 在 commit 或 PR 前，直接说：
 - "帮我的提交做质量检查"
@@ -287,6 +295,18 @@ grep -E '^\| \`/\w+' README.md | cut -d'`' -f2
 - 团队可以追踪"哪类问题最常出现"
 - 积累数据后可以针对性地改进 CI 流程
 
+### 7. 使用场景检查时间
+
+**不要在 CI 阶段才做这些检查**——那时已经来不及了。最佳时机：
+
+| 时机 | 做什么 | 谁执行 |
+|------|--------|--------|
+| **完成任务后、汇报前** | Step 1-2 快速检（无 git 时也要跑） | AI Agent **必须先跑** |
+| **git commit 前** | Step 1 安全检查（快速） | 开发者 / AI Agent |
+| **git push 前** | Step 1-4 完整检查 | 开发者 / AI Agent |
+| **PR 创建时** | Step 1-6 全面检查 + 输出报告 | AI Agent |
+| **CI 流程** | 自动化验证（补充而非替代） | CI 系统 |
+
 ### 8. CI 环境测试适配 — Hermes 依赖测试的降级模式
 
 **问题场景**：在 GitHub Actions CI 中运行 Hermes 项目的测试时，`~/.hermes/skills` 目录不存在，导致依赖该目录的测试类（如 `TestAdvisor`）在 `setup_method` 中就崩溃，`self.advisor` 从未被初始化。
@@ -323,16 +343,43 @@ def teardown_method(self):
 
 **为什么不用 mock？** 真实技能目录的测试是集成测试，mock 会丢失真实匹配行为。双模式初始化保留了本地集成测试的价值，同时保证 CI 不自爆。
 
-### 7. 使用场景检查时间（原序号顺延）
+### 9. 🚨 致命陷阱：完成任务后直接汇报，跳过自检
 
-**不要在 CI 阶段才做这些检查**——那时已经来不及了。最佳时机：
+**场景**：AI Agent 完成了一个功能实现（建文件、改配置、写文档），然后直接向用户汇报完成，**没有先跑 commit-quality-check**。
 
-| 时机 | 做什么 | 谁执行 |
-|------|--------|--------|
-| **git commit 前** | Step 1 安全检查（快速） | 开发者 / AI Agent |
-| **git push 前** | Step 1-4 完整检查 | 开发者 / AI Agent |
-| **PR 创建时** | Step 1-6 全面检查 + 输出报告 | AI Agent |
-| **CI 流程** | 自动化验证（补充而非替代） | CI 系统 |
+**后果**：用户发现需要追着问「你有做一致性检测吗」，说明 Agent 的完成报告不完整、不可信。
+
+**根因**：Agent 认为「没有 git commit → 不需要质量检查」。但文档一致性检查和变更范围检查**不依赖 git**——即使只是对比「我做了什么」和「文档说了什么」就能发现问题。
+
+**对策**：
+1. **触发时机前置**：任何产生文件变更的任务完成后，在汇报前先跑 Step 2（文档一致性）+ Step 4（变更范围）
+2. **即使不 commit 也要检**：系统配置文件（如 `~/.config/systemd/`）、部署脚本等不在 repo 中的变更也要做一致性检查
+3. **汇报包含检查报告**：向用户汇报时，附上质量检查结果，让用户看到「我已自检过」
+4. **自我问责**：如果用户问「你检查了吗」→ 立即补跑检查 + 把教训加到 skill 的 pitfalls 中
+
+### 9b. 🔥 实战案例：写完功能直接 commit，忘了版本号一致性检查
+
+**场景**：在 SRA 项目中新增了 `upgrade` 和 `uninstall` 两个 CLI 命令。写完代码后直接 `git commit`，没有先做一致性检查。
+
+**后果**：用户提醒「你又忘了一致性检查了！」，补跑后发现 `daemon.py` 有三处硬编码版本号 `"1.1.0"`，与 `pyproject.toml` 的 `1.2.1` 不一致。
+
+**教训**：
+- **提交必须在自检之后**，不是自检在提交之后
+- 修改了 API 端点/CLI 命令 → 必须检查 HELP 文本、docstring、COMMANDS 注册表三者是否一致
+- 修改了代码逻辑 → 必须检查版本号/常量是否有多处散落的硬编码
+- 即使只是「新增功能」而非「修 Bug」，自检也不可跳过
+
+**版本一致性检查法**：
+```bash
+# 检查项目中所有硬编码版本号
+grep -rn '"1\.' --include="*.py" --include="*.toml" --include="*.json" . | grep -v __pycache__ | grep -v '.bak'
+# 对比 pyproject.toml 和 __init__.py 的版本
+grep "version" pyproject.toml
+grep "__version__" */__init__.py
+# 检查 daemon/HTTP handler 中是否有遗漏的硬编码版本
+grep -rn '"version"' --include="*.py" . | grep -v __pycache__
+```
+
 ## 参考
 
 - [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
