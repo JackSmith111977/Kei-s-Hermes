@@ -1,7 +1,7 @@
 ---
 name: github-deploy-upload
 description: 安全地将本地部署目录通过定时 cron 推送到 GitHub 仓库。涵盖认证令牌安全存储（独立文件 600 权限）、git remote 内容自动清理、远程分支适配等实践。
-version: 1.1.0
+version: 1.2.0
 triggers:
 - deploy upload
 - deploy-upload
@@ -106,6 +106,7 @@ git remote set-url origin "$REMOTE_BASE"
 | **运行时状态文件混入** | rsync 从 `~/.hermes/skills/` 同步时，会将 `.curator_state`、`.usage.json`、`.hub/` 等本地缓存/状态文件也复制进来，污染 git 仓库 | 在部署目录 `.gitignore` 中添加排除规则 |
 | **技能目录内嵌 .git 仓库** | 某些 skill 目录（如 `web-access`）本身包含 `.git/` 目录，rsync 复制后部署目录 git 会将其检测为子模块（"modified content, untracked content"），导致 `git status` 异常 | 在 `.gitignore` 中添加 `skills/**/.git/` 排除所有内嵌 git 仓库；同步后清理已复制的 `.git/` 目录 |
 | **HERMES_REPO_URL 环境变量** | cron 任务指令中引用此变量控制是否推送：未设置时只同步+commit，设置后才 push | 由 cron job 指令逻辑判断，非脚本内部逻辑；用于区分纯本地备份与远程同步 |
+| **`***` 脱敏陷阱** | `git remote get-url origin` 输出的 URL 中，token 部分会被 git 自动替换为 `***`。直接捕获此输出用于恢复 remote URL 会导致 literal `***` 写入 git config，认证失效 | 恢复 URL 时必须从 `~/.hermes/.deploy_token` 读取真实 token 重建 URL，而非依赖 captured output |
 
 ## 定时任务配置
 
@@ -129,10 +130,17 @@ git remote set-url origin "$REMOTE_BASE"
 # 1. 检查 git 配置文件干净
 grep -c '@' /tmp/hermes-catgirl-deploy/.git/config | grep -q '0' && echo "安全通过"
 
-# 2. 检查令牌文件权限
+# 2. 检查 remote URL 未被 '***' 污染（常见于捕获 git 脱敏输出后恢复）
+if git -C /tmp/hermes-catgirl-deploy remote get-url origin 2>/dev/null | grep -q '\*\*\*'; then
+    echo "WARNING: remote URL 含有 literal '***'，认证凭证已损坏！需从 .deploy_token 重新构造 URL"
+else
+    echo "remote URL 无 '***' 污染"
+fi
+
+# 3. 检查令牌文件权限
 ls -la ~/.hermes/.deploy_token
 
-# 3. 验证远程仓库更新
+# 4. 验证远程仓库更新
 git -C /tmp/hermes-catgirl-deploy log --oneline -1
 ```
 

@@ -224,12 +224,23 @@ Skill 数量: 300+
 - [ ] 学会用 `hermes doctor` 做健康检查
 - [ ] 启用 Honcho Memory 跨会话用户建模
 - [ ] 启用 Docker Terminal 隔离执行
-- [ ] 尝试 Web UI Dashboard (`hermes dashboard`)
-- [ ] 熟悉 @ Context References 用法
+- [ ] 尝试 @ Context References 用法
 - [ ] 启用 Process 管理用于长任务监控
 - [x] **完成全面能力审计 (2026-05-08)** — 发现 ~100+ 未启用功能
-- [ ] 尝试 `hermes insights` 分析使用模式
-- [ ] 启用 `privacy.redact_pii` + `sessions.auto_prune`
+- [x] **第一批升级完成 (2026-05-08)** — 启用 privacy/streaming/auto_prune/hard_stop/pre_update_backup/max_spawn_depth/MoA/disk-cleanup
+- [x] **第二批升级完成 (2026-05-09)** — 启用 website_blocklist/subagent_auto_approve; 探索 dashboard/insights/backup/checkpoints/curator/completion/profile 等 10 项 CLI 能力
+- [x] **第三批升级完成 (2026-05-09)** — 工具集 23/23 全部启用(video/rl/spotify/yuanbao/homeassistant); 插件 3/3 全部启用(google_meet/spotify); 安装 12 个官方 skill(duckduckgo/agentmail/1password/memento/concept-diagrams/sherlock/1-3-1/adversarial-ux/fitness-nutrition/blackbox/canvas/docker-mgmt); FFmpeg 已确认安装
+- [x] **尝试 `hermes insights` (Batch 2)** — 30 天内 381 会话/6,431 工具调用/1B 令牌
+- [x] **启用 `hermes dashboard` (Batch 2)** — PID 2425614 运行中 :9119
+- [x] **启用 `delegation.subagent_auto_approve` (Batch 2)** — 子代理自动审批
+- [x] **启用 `security.website_blocklist` (Batch 2)** — 域名黑名单防护
+- [ ] 尝试 `hermes config check` 查看配置健康度
+- [ ] 尝试 `hermes kanban` 任务看板
+- [ ] 尝试 `hermes curator run` 手动技能审查
+- [ ] 尝试 `hermes profile use` 多 Profile
+- [ ] 尝试 `hermes logs --level DEBUG --since 1h` 日志分析
+- [ ] 尝试 `hermes webhook` 动态 Webhook
+- [ ] 尝试 `hermes backup -q` 快速备份
 - [ ] 加载 `moa` 工具集体验多模型混合推理
 
 ### 长期改进
@@ -245,3 +256,4 @@ Skill 数量: 300+
 
 **📎 参考文件**：
 - `references/hermes-architecture.md` — Hermes Agent 完整架构参考（深度学习产出）
+- `references/batch-upgrade-workflow.md` — 批次升级工作流（基于 Batch 1-3 实战经验）

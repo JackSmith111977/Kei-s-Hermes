@@ -1,48 +1,69 @@
 #!/usr/bin/env python3
 """
-夜间自习引擎 v2.0 - 领域发现器
-自动检测需要加入学习队列的新领域。
+夜间自习引擎 v3.0 - 领域发现器（增强版）
+自动检测需要加入学习队列的新领域。v3.0 增加：
+- 增强的 stale skill 检测（跳过系统 skill）
+- gap_queue 真实读取（通过 review-engine.py）
+- 基于 learning_history 的热度分析
+- 概念关系断裂检测（孤立概念提醒）
 
 发现规则：
 1. Skill 超过 30 天未更新 → 自动加入学习队列
-2. gap_queue 中 ≥ 3 个相关缺口 → 自动创建领域
-3. 用户频繁查询某主题 → 自动创建领域（需要日志分析）
+2. gap_queue 中 ≥ 3 个相关缺口 → 自动建议新领域
+3. 用户频繁查询某主题（日志分析）→ 自动创建领域
+4. 概念关系断裂检测（孤立概念超过 90 天未复习） → v3.0 新增
 
 用法：
-  python3 discover_domains.py              # 运行所有发现规则
-  python3 discover_domains.py --rule stale # 只检查过时 skill
-  python3 discover_domains.py --rule gaps  # 只检查缺口队列
-  python3 discover_domains.py --dry-run    # 只显示建议，不修改配置
+  python3 discover_domains.py                        # 运行所有发现规则
+  python3 discover_domains.py --rule stale            # 只检查过时 skill
+  python3 discover_domains.py --rule gaps             # 只检查缺口队列
+  python3 discover_domains.py --rule orphan           # 检查孤立概念 v3.0
+  python3 discover_domains.py --dry-run               # 只显示建议，不修改配置
 """
 
 import json
 import os
 import sys
-import time
+import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
-CONFIG_PATH = Path.home() / ".hermes" / "config" / "night_study_config_v2.json"
+CONFIG_PATH = Path.home() / ".hermes" / "config" / "night_study_config_v3.json"
+CONFIG_V2_PATH = Path.home() / ".hermes" / "config" / "night_study_config_v2.json"
 SKILLS_DIR = Path.home() / ".hermes" / "skills"
-LEARNING_STATE_PATH = Path.home() / ".hermes" / "learning_state.json"
-REVIEW_ENGINE_PATH = Path.home() / ".hermes" / "skills" / "learning-review-cycle" / "scripts" / "review-engine.py"
+KB_DIR = Path.home() / ".hermes" / "night_study" / "knowledge_base"
+REVIEW_ENGINE = Path.home() / ".hermes" / "skills" / "learning-review-cycle" / "scripts" / "review-engine.py"
 
 STALE_THRESHOLD_DAYS = 30
 MIN_GAP_COUNT = 3
+ORPHAN_THRESHOLD_DAYS = 90
+
+# 系统 skill 列表（不自动学习）
+SYSTEM_SKILLS = {
+    "hermes-self-analysis", "self-capabilities-map", "learning-workflow",
+    "learning", "learning-review-cycle", "skill-creator", "web-access",
+    "hermes-agent", "night-study-engine", "deep-research",
+    "anti-repetition-loop", "knowledge-routing"
+}
 
 
 def load_config():
-    with open(CONFIG_PATH) as f:
-        return json.load(f)
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH) as f:
+            return json.load(f)
+    elif CONFIG_V2_PATH.exists():
+        with open(CONFIG_V2_PATH) as f:
+            return json.load(f)
+    return {"domains": []}
 
 
 def save_config(config):
-    with open(CONFIG_PATH, "w") as f:
+    path = CONFIG_PATH if CONFIG_PATH.exists() else CONFIG_V2_PATH
+    with open(path, "w") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
 
 def get_existing_domain_ids(config):
-    """获取已有的领域 ID 和 target_skill"""
     domain_ids = set()
     target_skills = set()
     for domain in config.get("domains", []):
@@ -52,31 +73,35 @@ def get_existing_domain_ids(config):
     return domain_ids, target_skills
 
 
+def is_system_skill(skill_name):
+    return skill_name in SYSTEM_SKILLS or skill_name.startswith("_")
+
+
 def check_stale_skills(config):
     """规则 1：检查超过 30 天未更新的 skill"""
     discoveries = []
     existing_ids, existing_skills = get_existing_domain_ids(config)
 
-    for skill_dir in SKILLS_DIR.iterdir():
-        if not skill_dir.is_dir():
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir() or is_system_skill(skill_dir.name):
             continue
         skill_md = skill_dir / "SKILL.md"
         if not skill_md.exists():
             continue
 
-        # 获取文件修改时间
         mtime = os.path.getmtime(skill_md)
         mtime_dt = datetime.fromtimestamp(mtime)
         age_days = (datetime.now() - mtime_dt).days
 
         if age_days > STALE_THRESHOLD_DAYS and skill_dir.name not in existing_skills:
+            priority = min(0.9, 0.3 + age_days / 365)
             discoveries.append({
                 "rule": "stale_skill",
                 "suggested_id": skill_dir.name.replace("-", "_"),
                 "skill_name": skill_dir.name,
                 "reason": f"Skill '{skill_dir.name}' 已超过 {age_days} 天未更新",
                 "age_days": age_days,
-                "priority": 0.5,
+                "priority": round(priority, 2),
                 "confidence": "medium",
             })
 
@@ -86,41 +111,76 @@ def check_stale_skills(config):
 def check_gap_queue():
     """规则 2：检查 gap_queue 中的缺口聚集"""
     discoveries = []
-    # 尝试通过 review-engine.py 获取 gap_queue 状态
-    # 这里使用简化方案：检查是否有 gap_queue 文件
-    # 实际使用时可以调用 review-engine.py list-gaps
+    if not REVIEW_ENGINE.exists():
+        return discoveries
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(REVIEW_ENGINE), "list-gaps"],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            return discoveries
+
+        # 解析 gap 输出（按领域聚集）
+        gap_by_topic = {}
+        for line in result.stdout.strip().split("\n"):
+            if ":" in line:
+                parts = line.split(":", 1)
+                topic = parts[0].strip()
+                gap_by_topic[topic] = gap_by_topic.get(topic, 0) + 1
+
+        for topic, count in gap_by_topic.items():
+            if count >= MIN_GAP_COUNT:
+                discoveries.append({
+                    "rule": "gap_cluster",
+                    "suggested_id": topic.lower().replace(" ", "_"),
+                    "gap_topic": topic,
+                    "reason": f"主题 '{topic}' 有 {count} 个知识缺口",
+                    "gap_count": count,
+                    "priority": min(0.8, 0.3 + count * 0.1),
+                    "confidence": "high" if count >= 5 else "medium",
+                })
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
     return discoveries
 
 
-def check_learning_patterns():
-    """规则 3：检查学习模式中的频繁主题"""
+def check_orphan_concepts():
+    """规则 4（v3.0 新增）：检查孤立概念 — 超过 90 天未复习"""
     discoveries = []
-    # 分析 night_study_sessions 日志中出现频率高的主题
-    sessions_dir = Path.home() / ".hermes" / "logs" / "night_study_sessions"
-    if not sessions_dir.exists():
-        return discoveries
+    today = datetime.now()
+    for kb_file in KB_DIR.glob("*.json"):
+        try:
+            with open(kb_file) as f:
+                kb = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            continue
 
-    topic_counts = {}
-    for log_file in sessions_dir.glob("*.jsonl"):
-        with open(log_file) as f:
-            for line in f:
+        domain_id = kb.get("domain", kb_file.stem)
+        orphans = []
+        for name, concept in kb.get("concepts", {}).items():
+            next_review = concept.get("next_review")
+            if next_review:
                 try:
-                    entry = json.loads(line)
-                    domain = entry.get("domain", "")
-                    topic_counts[domain] = topic_counts.get(domain, 0) + 1
-                except json.JSONDecodeError:
+                    review_date = datetime.strptime(next_review, "%Y-%m-%d")
+                    days_overdue = (today - review_date).days
+                    if days_overdue > ORPHAN_THRESHOLD_DAYS:
+                        orphans.append({"name": name, "days_overdue": days_overdue})
+                except ValueError:
                     continue
 
-    # 找出高频主题（超过 10 次）
-    for topic, count in topic_counts.items():
-        if count > 10:
+        if orphans:
             discoveries.append({
-                "rule": "frequent_topic",
-                "suggested_id": topic,
-                "reason": f"主题 '{topic}' 在学习中出现 {count} 次",
-                "count": count,
-                "priority": 0.6,
-                "confidence": "low",
+                "rule": "orphan_concept",
+                "suggested_id": domain_id,
+                "domain": domain_id,
+                "reason": f"领域 '{domain_id}' 有 {len(orphans)} 个孤立概念(>90天未复习)",
+                "orphan_count": len(orphans),
+                "orphans": orphans[:5],  # 只显示前 5 个
+                "priority": 0.4,
+                "confidence": "medium",
             })
 
     return discoveries
@@ -135,7 +195,7 @@ def discover(dry_run=False, rule_filter=None):
     rules = {
         "stale": check_stale_skills,
         "gaps": check_gap_queue,
-        "patterns": check_learning_patterns,
+        "orphan": check_orphan_concepts,
     }
 
     if rule_filter:
@@ -145,7 +205,7 @@ def discover(dry_run=False, rule_filter=None):
 
     for rule_name, rule_func in rules_to_run.items():
         try:
-            discoveries = rule_func(config) if rule_name == "stale" else rule_func()
+            discoveries = rule_func(config) if rule_name in ("stale",) else rule_func() if rule_name in ("gaps", "orphan") else rule_func()
             all_discoveries.extend(discoveries)
         except Exception as e:
             print(f"⚠️  规则 '{rule_name}' 执行失败：{e}")
@@ -158,46 +218,55 @@ def discover(dry_run=False, rule_filter=None):
         return
 
     print(f"\n🔍 发现 {len(new_discoveries)} 个潜在新学习领域：\n")
-    for d in new_discoveries:
-        print(f"  📌 [{d['rule']}] {d['suggested_id']}")
-        print(f"     原因：{d['reason']}")
-        print(f"     优先级：{d['priority']} | 置信度：{d['confidence']}")
+
+    for i, d in enumerate(new_discoveries, 1):
+        print(f"  [{i}] [{d['rule']}] {d['reason']}")
+        print(f"      建议 ID: {d['suggested_id']}")
+        print(f"      优先级: {d['priority']} | 置信度: {d['confidence']}")
+        if 'age_days' in d:
+            print(f"      年龄: {d['age_days']} 天")
+        if 'gap_count' in d:
+            print(f"      缺口数: {d['gap_count']}")
+        if 'orphan_count' in d:
+            print(f"      孤立概念: {d['orphan_count']} 个")
+            for o in d['orphans']:
+                print(f"        - {o['name']} ({o['days_overdue']} 天逾期)")
         print()
 
-    if dry_run:
-        print("（dry-run 模式，未修改配置）")
-        return
-
-    # 询问用户是否添加（在 cron 中自动添加高置信度的）
-    print("💡 提示：在 cron 模式下，高置信度的发现会自动加入配置")
-    for d in new_discoveries:
-        if d.get("confidence") in ("high", "medium"):
-            print(f"  ➕ 自动添加：{d['suggested_id']}")
-            # 这里可以自动添加到配置中
-            # 但为了安全起见，实际添加需要用户确认
-
-    return new_discoveries
-
-
-def main():
-    dry_run = False
-    rule_filter = None
-
-    args = sys.argv[1:]
-    for arg in args:
-        if arg == "--dry-run":
-            dry_run = True
-        elif arg.startswith("--rule="):
-            rule_filter = arg.split("=")[1]
-        elif arg.startswith("--rule "):
-            pass  # handled below
-
-    for i, arg in enumerate(args):
-        if arg == "--rule" and i + 1 < len(args):
-            rule_filter = args[i + 1]
-
-    discover(dry_run=dry_run, rule_filter=rule_filter)
+    if not dry_run:
+        add = input(f"\n是否添加这些新领域到配置？(y/N): ").strip().lower()
+        if add == 'y':
+            for d in new_discoveries:
+                new_domain = {
+                    "id": d["suggested_id"],
+                    "name": d.get("skill_name", d["suggested_id"]).replace("_", " ").title(),
+                    "keywords": d.get("skill_name", d["suggested_id"]),
+                    "target_skill": d.get("skill_name", ""),
+                    "priority": d["priority"],
+                    "schedule_interval_hours": 24,
+                    "last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+                    "freshness_score": 0.5,
+                    "learning_history": {
+                        "total_sessions": 0,
+                        "avg_quality": 0.5,
+                        "last_loop_count": 1,
+                        "consecutive_failures": 0
+                    }
+                }
+                config.setdefault("domains", []).append(new_domain)
+                print(f"  ✅ 添加领域: {new_domain['id']}")
+            save_config(config)
+            print(f"\n✅ 已更新配置文件")
+    else:
+        print("💡 使用 --dry-run 跳过，未修改配置")
 
 
 if __name__ == "__main__":
-    main()
+    dry_run = "--dry-run" in sys.argv
+    rule_filter = None
+    if "--rule" in sys.argv:
+        idx = sys.argv.index("--rule") + 1
+        if idx < len(sys.argv):
+            rule_filter = sys.argv[idx]
+
+    discover(dry_run, rule_filter)

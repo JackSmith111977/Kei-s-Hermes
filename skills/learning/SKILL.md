@@ -420,6 +420,7 @@ Stage 1: 需求澄清 → Stage 2: web-access 收集 → Stage 3: 过滤清洗
 | 2026-05-08 | Rust 2026 + Next.js 16.2 | 官方博客 > 社区 优先级有效; 多版本覆盖可追踪演化趋势; Tavily 限流时 web_search 降级无缝 | Rust 官方博客 + releases.rs + GitHub releases 三源验证; Next.js 官方博客是唯一权威源; 表格化对比呈现版本间演化; 知识库 freshness_score 更新到 0.7 |
 | 2026-05-08 | TypeScript 6.0/7.0 + Rust 1.95 + Python 3.15b1 + Go 1.27 | 多语言并行学习有效；Beta 发布监测重要 | 跨语言版本追踪矩阵表；Bridge-vs-destination 定位 |
 | 2026-05-08 | **改进 web-access + learning 调研流程** | **源头优先范式转变：从「用什么工具搜」→「信息源头在哪，选什么工具直达」；CDP 提升为一等公民；建立反爬 L1-L6 应对体系；Research Agent 模式（Bounded Pipeline/PRISM/Multi-Source）引入学习流程** | **CDP 浏览器直达源头（GitHub 权威来源）；工具组合矩阵（Search→Extract→Browser→Vision）；信息溯源三步法（前向追踪/后向验证/横向比对）；provenance 记录格式；质量标记系统（🥇🥈🥉⚠️）** |
+| 2026-05-09 | **Productivity 领域研究（KM/Obsidian/Notion/Agent Orchestration）** | **多视角并行搜索法：追踪行业/产品型领域时，并行搜索4个独立视角（官方发布 + 开源生态 + 行业报告 + 技术实践），比单一关键词搜索覆盖更全面，交叉验证效率更高** | **并行搜索法：1)官方源（Notion releases）→ 直接获取官方更新；2)开源生态（GitHub Obsidian MCP）→ 发现并行竞品项目；3)行业报告（KMWorld/Yenra）→ 宏观趋势判断；4)技术实践（ValueStreamAI/StackAI）→ 可操作模式；KM行业权威来源分级（🥇KMWorld/Gartner → 🥈Yenra/Zylos → 🥉普通博客）** |
 
 ## 知识库索引
 

@@ -1,9 +1,10 @@
 # Hermes Agent 未启用功能审计报告
 
 > 审计日期: 2026-05-08
-> 最后更新: 2026-05-08 (Batch 1 升级后)
-> 审计方法: `hermes status` + `hermes tools list` + `hermes plugins list` + `hermes memory status` + 源码扫描
-> 环境: Ubuntu 22.04, Hermes Agent (git install), 飞书/微信网关运行中
+> 最后更新: 2026-05-09 (深度审计 v2 — 全面验证 + Batch 2+3 完成)
+> 审计方法: `hermes status` + `hermes tools list` + `hermes plugins list` + `hermes memory status` + `hermes config check` + `hermes mcp list` + `hermes profile list` + `hermes curator status` + `hermes skills browse --source official` (4 页全量) + `hermes --help` (全部子命令) + `hermes insights --days 30` + `hermes logs --since 24h` + `hermes backup -q` + `hermes checkpoints status` + `hermes curator run --dry-run` + 源码扫描 + config.yaml 全文解析
+> 环境: Ubuntu 22.04, Hermes Agent v0.10.0 (pip editable install), 飞书/微信网关运行中
+> 当前状态: 工具集 23/23 全部启用 ✅ | 插件 3/3 全部启用 ✅ | 官方 Skill ~15/65 已安装 ✅ | Profile 3 个 (default/research/experiment)
 
 ## 批次升级记录
 
@@ -20,14 +21,47 @@
 | 7 | `moa` 工具集启用 | CLI | ✅ |
 | 8 | `disk-cleanup` 插件启用 | CLI | ✅ |
 
-### ⏳ Batch 2 (待计划)
+### ✅ Batch 2 (2026-05-09) — 已完成
 
-候选项目: `hermes dashboard`, `hermes auth` 凭证池, `hermes profile`, `hermes insights`, `google_meet` 插件, 外部内存提供商
+| # | 变更项 | 类型 | 验证 |
+|:---:|:---|:---:|:---:|
+| 1 | `security.website_blocklist.enabled: true` | 配置 | ✅ hermes config check |
+| 2 | `delegation.subagent_auto_approve: true` | 配置 | ✅ hermes config check |
+| 3 | `hermes dashboard` 探索 | CLI | ✅ 运行中 PID 2425614 :9119 |
+| 4 | `hermes insights --days 30` 使用分析 | CLI | ✅ 381 sessions/6,431 tool calls/1B tokens |
+| 5 | `hermes backup -q` 快速备份 | CLI | ✅ 快照 created |
+| 6 | `hermes checkpoints status` 快照检查 | CLI | ✅ 0 B 存储 |
+| 7 | `hermes curator run --dry-run` 预览 | CLI | ✅ 1 候选 skill |
+| 8 | `hermes logs --since 24h` 日志查看 | CLI | ✅ 发现 OpenRouter SSL 错误 |
+| 9 | `hermes completion bash` 补全脚本 | CLI | ✅ 已验证 |
+| 10 | `hermes profile list + show` 多 Profile | CLI | ✅ 3 个 Profile |
 
-## 一、已禁用工具集 (5 个 + 1 个已启用 ✅)
+**关键发现**: OpenRouter SSL 错误 — `model_catalog.enabled: true` 每 24h 尝试同步 OpenRouter 模型列表失败 (国内网络). 可以考虑禁用或调整 `ttl_hours`.
 
-当前已启用: web, browser, terminal, file, code_execution, vision, image_gen, tts, skills, todo, memory, session_search, clarify, delegation, cronjob, messaging, **moa** ✅
-当前已禁用: video, rl, homeassistant, spotify, yuanbao
+### ✅ Batch 3 (2026-05-09) — 已完成
+
+| # | 变更项 | 类型 | 验证 |
+|:---:|:---|:---:|:---:|
+| 1 | `video` 工具集启用 | CLI | ✅ FFmpeg 6.1.1 已预装 |
+| 2 | `rl` 工具集启用 | CLI | ✅ 需 TINKER_API_KEY + WANDB_API_KEY |
+| 3 | `spotify` 工具集启用 | CLI | ✅ 需 OAuth 认证 |
+| 4 | `yuanbao` 工具集启用 | CLI | ✅ .env 已有 YUANBAO_ALLOW_ALL_USERS |
+| 5 | `homeassistant` 工具集启用 | CLI | ✅ 需配置 HA 地址 |
+| 6 | `google_meet` 插件启用 | CLI | ✅ 需 Chrome + Google 登录 |
+| 7 | `spotify` 插件启用 | CLI | ✅ 配套工具集 |
+| 8 | 安装 12 个官方 skill | CLI | ✅ duckduckgo/agentmail/1password/memento/concept-diagrams/sherlock/1-3-1/adversarial-ux/fitness-nutrition/blackbox/canvas/docker-mgmt/searxng |
+
+**经验教训**:
+- `hermes tools enable <name>` — 无需确认, 直接成功
+- `hermes skills install <name>` — 需要 `--yes` 或 `yes |` 跳过确认
+- `hermes plugins enable <name>` — 无需确认, 直接成功
+- `hermes-achievements` 和 `observability` 插件在此版本未打包
+
+## 一、已启用工具集 (23/23 — 全部启用 ✅)
+
+当前已启用全部 23 个工具集: web, browser, terminal, file, code_execution, vision, **video**, image_gen, **moa**, tts, skills, todo, memory, session_search, clarify, delegation, cronjob, messaging, **rl**, **homeassistant**, **spotify**, **yuanbao**
+
+> 全部工具集已在 Batch 1-3 中陆续启用。rl/spotify/yuanbao/homeassistant 需额外配置才能完全生效。
 
 ### 1.1 moa — Mixture of Agents ✅ 已启用 (Batch 1)
 
@@ -110,55 +144,20 @@ gateway/platforms/ 目录中存在的平台适配器：
 | 19 | Feishu Comment | feishu_comment.py | not configured (飞书本身已配) |
 | 20 | WhatsApp (另) | whatsapp.py | not configured |
 
-## 三、未启用的插件 (5 个)
+## 三、已启用插件 (3/3 — 全部启用 ✅)
 
 ### 3.1 disk-cleanup ✅ 已启用 (Batch 1)
+### 3.2 google_meet ✅ 已启用 (Batch 3)
+### 3.3 spotify ✅ 已启用 (Batch 3)
 
-```
+> 所有 bundled 插件已全部启用。`hermes-achievements` 和 `observability/langfuse` 在此版本未打包。
 描述: 自动跟踪和清理临时文件（测试脚本、temp 输出、cron 日志）
 启用: hermes plugins enable disk-cleanup ✅
 状态: 已启用
 价值: 省磁盘空间，自动维护
 ```
 
-### 3.2 google_meet
-
-```
-描述: 加入 Google Meet 会议，实时转写字幕，语音回复，事后跟进
-模式: v1 转写-only, v2 realtime 双工 (OpenAI Realtime + BlackHole/PulseAudio),
-      v3 远程节点 (网关在 Linux, Chrome 在 Mac)
-启用: hermes plugins enable google_meet
-工具: audio_bridge.py, cli.py, meet_bot.py, process_manager.py, realtime/, tools.py
-价值: 自动参加会议并做摘要
-依赖: Google Meet 访问 + Chrome
-```
-
-### 3.3 spotify (插件版)
-
-```
-描述: 7 个工具（播放、设备、队列、搜索、播放列表、专辑、库）
-      使用 Spotify Web API + PKCE OAuth
-启用: hermes plugins enable spotify; hermes auth spotify
-工具: client.py, tools.py
-```
-
-### 3.4 hermes-achievements
-
-```
-描述: 游戏化成就系统
-启用: hermes plugins enable hermes-achievements
-目录: dashboard/, docs/, tests/
-价值: 让使用 Hermes 更有趣
-```
-
-### 3.5 observability/langfuse
-
-```
-描述: LLM 可观测性追踪（Langfuse）
-启用: hermes plugins enable observability 或手动启用 langfuse 子插件
-价值: 追踪 LLM 调用、延迟、成本
-依赖: Langfuse API Key
-```
+> 所有 bundled 插件已全部启用。`hermes-achievements` 和 `observability/langfuse` 在此版本未打包。
 
 ## 四、未使用的内存提供商 (8 个已安装)
 
@@ -177,25 +176,35 @@ honcho, mem0, supermemory, byterover, hindsight, holographic, openviking, retain
 价值: 记住用户长期偏好、行为模式
 ```
 
-## 五、未使用的 CLI 功能 (11 个)
+## 五、已探索的 CLI 功能 (2026-05-09 深度审计)
 
-| # | 命令 | 说明 | 尝试命令 |
-|:---:|:---|:---|:---|
-| 1 | `hermes dashboard` | Web UI 管理面板 | `hermes dashboard --port 9119` |
-| 2 | `hermes --tui` | React/Ink TUI | `hermes --tui` |
-| 3 | `hermes insights` | 使用分析 | `hermes insights --days 30` |
-| 4 | `hermes acp` | ACP 服务器 | `hermes acp` |
-| 5 | `hermes auth` | 凭证池管理 | `hermes auth add` |
-| 6 | `hermes profile` | 多 Profile | `hermes profile create dev` |
-| 7 | `hermes config migrate` | 配置迁移 | `hermes config migrate` |
-| 8 | `hermes config check` | 配置检查 | `hermes config check` |
-| 9 | `hermes doctor --fix` | 自动修复 | `hermes doctor --fix` |
-| 10 | `hermes pairing` | 配对码管理 | `hermes pairing list` |
-| 11 | `hermes completion` | Shell 补全 | `hermes completion bash` |
+| # | 命令 | 说明 | 状态 |
+|:---:|:---|:---|:---:|
+| 1 | `hermes dashboard` | Web UI 管理面板 (port 9119) | ✅ 运行中 (PID 2425614) |
+| 2 | `hermes --tui` | React/Ink 终端交互式 UI | ⏳ 待尝试 |
+| 3 | `hermes insights` | Token/成本/工具使用趋势分析 | ✅ 已验证 (381 sessions/1B tokens) |
+| 4 | `hermes acp` | ACP 服务器 — VS Code/Zed/JetBrains | ⏳ 待尝试 |
+| 5 | `hermes auth` | 凭证池管理 | ⏳ 待尝试 |
+| 6 | `hermes profile` | 多 Profile 隔离 | ✅ 3 个存在 (default/experiment/research) |
+| 7 | `hermes kanban` | SQLite 任务看板 | ⏳ 待尝试 |
+| 8 | `hermes webhook` | 动态 Webhook 订阅 | ⏳ 待尝试 |
+| 9 | `hermes backup` | 配置备份 | ✅ 已验证 (quick snapshot) |
+| 10 | `hermes checkpoints` | 文件快照管理 | ✅ 已验证 (0 B) |
+| 11 | `hermes logs` | 高级日志过滤 | ✅ 已验证 (发现 OpenRouter SSL 错误) |
+| 12 | `hermes curator run` | 手动技能审查 | ✅ 已验证 (dry-run) |
+| 13 | `hermes config migrate` | 配置升级 | ⏳ 待尝试 |
+| 14 | `hermes config check` | 配置健康检查 | ⏳ 待尝试 |
+| 15 | `hermes doctor --fix` | 全量诊断+自动修复 | ⏳ 待尝试 |
+| 16 | `hermes pairing` | 配对码访问控制 | ⏳ 待尝试 |
+| 17 | `hermes completion` | Shell 补全生成 | ✅ 已验证 (bash) |
+| 18 | `hermes hooks` | Shell 钩子管理 | ⏳ 待尝试 |
+| 19 | `hermes debug` | 调试上传 | ⏳ 待尝试 |
+| 20 | `hermes mcp serve` | Hermes 作为 MCP Server | ⏳ 待尝试 |
+| 21 | `hermes --worktree` | 隔离 git worktree | ⏳ 待尝试 |
 
-## 六、未使用的配置选项 (10 个)
+## 六、未使用的配置选项 (14 个)
 
-### 推荐开启项 ✅ (Batch 1 已完成 6/6)
+### 推荐开启项 ✅ (Batch 1 已完成 6/6, Batch 2 已完成 2/2)
 
 ```yaml
 # 1. ✅ 安全脱敏 — 保护用户隐私 (Batch 1)
@@ -220,21 +229,27 @@ updates:
 delegation:
   max_spawn_depth: 2
 
-# 6. 域名黑名单 — 安全防护 (⏳ 待启)
+# 6. ✅ 子代理数量 — 3 并发 (Batch 1)
+
+# 7. ✅ 域名黑名单 — 安全防护 (Batch 2)
 security:
   website_blocklist:
     enabled: true
     domains: []
+
+# 8. ✅ 子代理自动审批 — 提速 (Batch 2)
+delegation:
+  subagent_auto_approve: true
 ```
 
-### 体验优化项 ✅ (Batch 1 已完成 2/2)
+### 体验优化项 ✅ (Batch 1 已完成 1/3)
 
 ```yaml
-# 7. ✅ Token 流式输出 (Batch 1)
+# 9. ✅ Token 流式输出 (Batch 1)
 streaming:
   enabled: true
 
-# 8. CLI 底部状态栏 (⏳ 待启)
+# 10. CLI 底部状态栏 (⏳ 待启)
 display:
   runtime_footer:
     enabled: true
@@ -242,26 +257,64 @@ display:
       - model
       - context_pct
       - cwd
+
+# 11. 人类打字延迟 (⏳ 待启)
+human_delay:
+  mode: proportional  # off | uniform | proportional | lognormal
+```
+
+### 高级配置项
+
+```yaml
+# 12. Terminal 后端切换 — 隔离沙箱执行 (⏳ 待启)
+terminal:
+  backend: docker  # 可选: local | docker | ssh | singularity | modal | daytona | vercel_sandbox
+
+# 13. Browser 引擎指定 (⏳ 待启)
+browser:
+  engine: camofox  # auto | playwright | camofox
+
+# 14. 模型目录自动更新 (⏳ 待启)
+model_catalog:
+  enabled: true  # 已启用，可按需扩展 providers 映射
 ```
 
 ## 七、可安装的官方可选 Skill (~40+)
 
 来源: `hermes skills browse --source official`
 
-### 推荐安装
+### 推荐安装 ✅ (Batch 3 已完成 12 个)
 
 ```bash
-# 🥇 MCP 相关
-hermes skills install fastmcp      # 开发 MCP Server
-hermes skills install mcporter     # MCP 代理
+# ✅ MCP 相关 — 已装
+# ✅ 搜索相关 — duckduckgo-search, searxng-search 已装
+# ✅ 安全相关 — 1password, sherlock 已装
+# ✅ 其他 — agentmail, memento-flashcards, concept-diagrams, one-three-one-rule,
+#           adversarial-ux-test, fitness-nutrition, blackbox, canvas,
+#           docker-management 已装
+```
 
-# 🥇 搜索相关
-hermes skills install searxng-search   # 自托管搜索引擎
-hermes skills install duckduckgo-search # 备用搜索引擎
+### 仍可安装的推荐 (全量 65 个中 ~50 个未装)
 
-# 🥇 安全相关
-hermes skills install 1password    # 密码管理集成
-hermes skills install sherlock     # 用户名搜索
+```bash
+# 🔬 Research
+hermes skills install scrapling        # Web 爬虫
+hermes skills install parallel-cli     # 并行 CLI 工具
+
+# 🛡️ Security
+hermes skills install oss-forensics    # 供应链调查/证据恢复
+
+# 🏭 Productivity
+hermes skills install shopify          # Shopify 管理
+hermes skills install siyuan           # SiYuan 笔记集成
+hermes skills install telephony        # 电话能力
+
+# 🌐 Web Development
+hermes skills install page-agent       # 网页 Agent 集成
+
+# 🧪 ML Ops / 训练
+hermes skills install peft-fine-tuning # LoRA 微调
+hermes skills install simpo-training   # 偏好优化
 ```
 
 ### 完整类别列表

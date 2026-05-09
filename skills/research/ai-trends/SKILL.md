@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.6.0
+version: 1.7.0
 triggers:
 - ai trends
 - ai前沿
@@ -40,6 +40,7 @@ metadata:
      - SWE-Bench Pro **58.6%**，Terminal-Bench 2.0 **66.7%**，MathVision **93.2%**
      - Partner 验证：Vercel >50% Next.js 提升，Factory.ai +15%，CodeBuddy +12% accuracy
      - Anthropic API 兼容，Apache 2.0 基础权重开源
+   - **Zyphra ZAYA1-8B**（2026.05.06）：8B MoE 语言模型，<1B active parameters，Apache 2.0 开源。在 AMD MI300X 集群（1024 GPU）上训练。匹配/超越 Nemotron-3-Nano-30B-A3B、Mistral-Small-4-119B，与 DeepSeek-R1-0528、Gemini-2.5-Pro 竞争。引入 Compressed Convolutional Attention (CCA) + MLP-based 专家路由器 + Markovian RSA 测试时计算方法（无限推理恒定内存成本）。体现"智能密度"趋势
 4. **Mistral 3**（2025.12）：采用 DeepSeek V3 架构
 5. **Llama 4 系列**（Meta，2025.10）：Llama 4 Scout（17B active/109B total，16 experts，10M token 上下文）、Llama 4 Maverick（17B active/400B total，128 experts，1M 上下文），单卡 H100 可跑 Scout。截至 2026.05 已被 Qwen3.6/DeepSeek-V4 部分超越
 
@@ -52,11 +53,16 @@ metadata:
     - 自我错误恢复能力：能在问题解决过程中发现并纠正自身错误
     - API 端点：`chat-latest`，替换 GPT-5.3 Instant 作为默认模型
   - GPT-5.5 Pro：$3000/M 输入价格，最大上下文 1.1M tokens，擅长代理编码（Terminal-Bench 82.7%）
+  - **GPT-5.5-Cyber**（2026.05.08）：安全专用变体。Trusted Access for Cyber 身份验证框架下有限预览。针对防御性安全任务更宽松的权限（授权红队、渗透测试、漏洞验证）。对 Anthropic Claude Mythos 的直接回应。不作为主要能力升级，而是"更愿意做安全任务"
+  - **GPT-Realtime-2**（2026.05.07）：首个 GPT-5-class 推理语音模型。上下文 128K（agent 工作流），可调节推理力度（minimal/xhigh），Big Bench Audio +15.2%。定价 $32/$64 per 1M audio tokens
+  - **GPT-Realtime-Translate**（2026.05.07）：实时翻译模型，70+ 输入语言→13 输出语言，$0.034/分钟
+  - **GPT-Realtime-Whisper**（2026.05.07）：流式语音转文字，$0.017/分钟。三大语音 AI 模式：Voice-to-action / Systems-to-voice / Voice-to-voice
   - OpenAI 还在探索基于 AI Agent 的手机概念（替代传统 App）
 - **OpenAI gpt-oss**：发布开放权重模型
 - **Google Gemini 3.1**（2026.02 发布，2026.05 企业集成）：
   - Gemini 3.1 Pro：ARC-AGI-2 达 **77.1%**（推理能力翻倍）
   - Gemini 3.1 Flash-Lite 等变体，最大上下文 2.1M tokens
+  - **Gemini 3.1 Flash-Lite GA**（2026.05.07）：Gemini 3 系列最快、最具成本效益模型。比同类 thinking-tier 模型低 ~60% 成本，p95 延迟 ~1.8s，~99.6% 可靠性。设计用于极低延迟、高吞吐量 agent 任务（工具调用、编排）。已集成 JetBrains IDE AI 助手、Gladly（数百万周呼叫）、OffDeal Archie Agent（投行实时研究）、Ramp 高吞吐量特性
   - **Gemini API File Search 多模态化**（5/5）：支持图像+文本，自定义元数据过滤，页级引用提高透明度
   - Gemini Robotics-ER 1.6：空间推理、多视图理解、成功检测，与 Boston Dynamics 合作
 - **Anthropic Claude Opus 4.7**（2026.04 发布）：
@@ -122,6 +128,7 @@ metadata:
 | **MCPRated 索引上线** | 2026.05 | 🟢 低 | Agent 可读的 MCP 服务器质量索引，每天更新，4 轴评分（可靠性/文档/信任/社区），Agent 可在运行时发现和筛选 MCP 服务器 |
 | **MCP v2 Beta (@ai-sdk/mcp)** | 2026.03.13 | 🟡 中 | Vercel AI SDK MCP v2：独立稳定包，OAuth 2.0 内置，Structured Output（outputSchema），Elicitation 支持，Resources/Prompts 原语 |
 | **Claude Mythos + Project Glasswing** | 2026.05 | 🔴 高 | Anthropic "超级黑客"模型仅限 40 家合作伙伴使用，Amazon/Google/Microsoft/NVIDIA/Cisco 组成的 Project Glasswing 联盟，$100M 安全 credits + $4M 捐赠开源安全组织 |
+| **Claude Managed Agents: Dreaming/Outcomes/Multiagent** | 2026.05.08 | 🔴 高 | Dreaming（研究预览）：计划性复盘+跨 session 记忆演化。Harvey 法律 AI 测试完成率提升 ~6x。Outcomes（公测）：定义成功标准+独立评分器，编码成功率 +10pts。Multiagent Orchestration（公测）：主 agent 拆解任务分派专业子 agent 并行。Netflix 已用于平台团队。Webhooks 同时发布 |
 
 **MCP 生态关键趋势**：
 - 81% 远程 MCP 服务器已使用 OAuth 2.1 PKCE
@@ -184,6 +191,7 @@ metadata:
 | **Drifting Models** | Kaiming He et al. | 一步生成范式，ImageNet FID 1.54，训练时演化 pushforward 分布 |
 | **DR-Venus-4B** | inclusionAI (2026.04) | 纯开源数据训练的 4B 深度研究 Agent，SFT + IGPO RL，超越 2-3x 更大模型。BrowseComp **29.1%**，arXiv:2604.19859 |
 | **OpenSeeker-v2** | 学术团队 (2026.05) | 开源搜索 Agent，BrowseComp **46.0%** SOTA，仅 **10.6K 数据点**纯 SFT 训练，30B 参数 |
+| **Zyphra ZAYA1-8B** | Zyphra (2026.05) | 开源 8B MoE 推理模型，<1B active params，Apache 2.0。CCA 注意力 + MLP 路由器 + Markovian RSA 测试时计算。AMD MI300X 1024 GPU 训练。匹配 Nemotron-3-Nano/Mistral-Small，与 DeepSeek-R1/Gemini-2.5-Pro 竞争 |
 | **Google DeepMind Gemma 4** | Google (2026.05) | Apache 2.0 开源。26B-A4B MoE 达 31B Dense 旗舰 **97% 质量**，8 倍少算力。4 种规格：E2B/E4B/26B-MoE/31B，支持多模态 + 音频输入 |
 
 ### 2026 趋势观察（2026.05 更新）
@@ -198,6 +206,9 @@ metadata:
 8. **开源深度研究 Agent 突破**：DR-Venus-4B（纯开源数据 4B，超 2-3x 更大模型）和 OpenSeeker-v2（46.0% BrowseComp SOTA，仅 10.6K 数据点 SFT）证明小模型+优质数据可超越大模型+海量数据
 9. **混合注意力推理成为新趋势**：MiniMax-M1 全球首个开源大规模混合注意力模型，SubQ 线性缩放注意力（~1,000× 计算减少）可能改变 RAG 范式
 10. **"智能每参数"成为新前沿**：GPT-5.5 Instant 不再追求参数规模，而是"高保真可靠性"（52.5% 幻觉减少）；Gemma 4 26B MoE 达 31B 旗舰 97% 质量仅需 1/8 算力
+11. **语音智能进入推理时代**（2026.05.07）：GPT-Realtime-2 为首次 GPT-5-class 推理语音模型。Voice-to-action/Systems-to-voice/Voice-to-voice 三大模式确立。音频上下文 128K，agent 工具调用成为语音交互标准
+12. **Agent 跨会话演化成为产品功能**（2026.05.08）：Claude Dreaming 让 agent 在会话间自我改进（Harvey 6x 提升）。独立评分器（Outcomes）替代 prompt 工程作为质量保证手段。多 Agent 编排从框架实验正式产品化
+13. **三大云厂商 MCP 基础设施全面产品化**（2026.04-05）：AWS Agent Toolkit + MCP Server GA（40+ skills）、Google 50+ 托管 MCP GA、Salesforce Hosted MCP GA、Azure MCP 2.0。MCP 从开发者工具升级为企业基础设施
 
 ---
 
@@ -294,3 +305,4 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-07: v1.4 更新 — LLM 2026 Flagship 详细对比表（DeepSeek R1/Claude 4.5/Gemini 2.5/GPT-4.1 等 12 模型）；新增 Shannon/MARSYS/REDEREF 框架；LLM 选型决策树；ICLR 2026 补充论文（LipNeXt/Newt/Cosmos Policy/VideoMind/Paper2Code）
 > - 2026-05-07: v1.5 更新 — GPT-5.5 Instant 完整规格（Memory Sources、自我错误恢复、API 端点）；Kimi K2.6 GA 详细规格（1T/32B MoE、12h 运行、300-agent 群、Partner 验证）；Nemotron 3 Nano Omni 扩展（部署路径、H Company 实测）；Gemini API File Search 多模态化；新增 ICLR 2026 论文（MoGA 长视频生成、GRAM 递归推理、Drifting Models 一步生成）
 > - 2026-05-08: **v1.6 更新** — 新增 Agent 基础设施发展（AWS Agent Toolkit GA、Google 50+ 托管 MCP 服务器、Microsoft AGT、Claude Mythos+Project Glasswing、MCP 2026 路线图、MCP v2 Beta）；Gemma 4 开源（26B MoE 旗舰 97% 质量）；MiniMax-M1 混合注意力推理模型；DR-Venus-4B / OpenSeeker-v2 开源深度研究 Agent；Grok 4.3、SubQ 次二次缩放注意力；Codex CLI Terminal-Bench 82.7%；openai-agents-python v0.16.0 默认模型切换；vLLM v0.20.1 DeepSeek V4 稳定化；Transformers v5.7.0 新模型；更新 2026 趋势观察（10 条）
+> - 2026-05-09: **v1.7 更新** — 新增 GPT-5.5-Cyber 安全变体（5/8）；GPT-Realtime-2/Translate/Whisper 语音三模型（5/7）及三大语音 AI 模式；Anthropic Claude Managed Agents Dreaming/Outcomes/Multiagent（5/8，Harvey 6x、Netflix）；Google Gemini 3.1 Flash-Lite GA（5/7，60% 成本降低、JetBrains/Gladly/Ramp 案例）；Zyphra ZAYA1-8B 开源推理模型（5/6，<1B active params，AMD 训练）；AWS Agent Toolkit GA（5/6，40+ skills）；Salesforce Hosted MCP GA（4/29）；Azure MCP Server 2.0（4/10）；OpenAI Agents SDK 沙箱/记忆/MCP 更新（4/15）；Hermes Agent v0.13.0 Tenacity；更新趋势观察至 13 条

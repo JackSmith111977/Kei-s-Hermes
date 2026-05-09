@@ -1,7 +1,7 @@
 ---
 name: self-capabilities-map
 description: "boku（小玛/Emma）对 Hermes Agent 完整能力边界的认知地图。涵盖已掌握能力、未利用能力、能力限制、可扩展方向。当 boku 需要评估自己能否完成某项任务时，先加载此 skill 进行能力匹配。"
-version: 2.1.0
+version: 2.2.0
 triggers:
   - boku 能做什么
   - 能力边界
@@ -22,7 +22,8 @@ depends_on:
   - hermes-self-analysis
   - web-access
   - skill-creator
-referenced_by: []
+referenced_by:
+  - hermes-self-analysis
 design_pattern: Inversion
 skill_type: research
 ---
@@ -68,35 +69,50 @@ skill_type: research
 
 ## 二、boku 尚未利用的能力（可以立即启用）— 总计 ~100+ 项
 
-> 📊 完整审计于 2026-05-08。根据 `hermes status` + 配置扫描 + 源码分析。
-> 已启用工具集 15 个，未启用 6 个；已配置平台 2 个（飞书/微信），未配置 20 个。
+> 📊 完整审计于 2026-05-09 (v2)。根据 `hermes status` + `hermes tools list` + `hermes plugins list` + `hermes config check` + `hermes memory status` + `hermes mcp list` + `hermes profile list` + `hermes curator status` + `hermes skills browse --source official` (全4页) + `hermes --help` (全命令) + 源码扫描 + config.yaml 全文解析。
+> 
+> **全景快照 (2026-05-09) — Batch 3 完成后**:
+> - 工具集: **23/23** enabled ✅ **全部启用！**
+> - 插件: **3/3** enabled ✅ (disk-cleanup, google_meet, spotify)
+> - 消息平台: **2/20** configured (飞书 + 微信; 18 未配)
+> - API Key: **~8/23** configured (~15 未配)
+> - CLI 子命令: **~20/36** 已尝试 (~16 未尝试)
+> - 官方 Skills: **~15/65** installed (~50 未装)
+> - 记忆提供商: **0/8** configured
+> - Profile: **3 个存在** (default/experiment/research), 仅 default 使用
+> - 外部 MCP: **1 个** (Tavily) 运行中
+> - FFmpeg: **已安装** (v6.1.1)
+> - Dashboard: **运行中** (PID 2425614 :9119)
 
-### 🟢 工具集（5 个已禁用 + 1 个已启用 ✅）
-
+### 🟢 工具集（全部 23/23 已启用 ✅）
 | 工具集 | 说明 | 状态 | 推荐度 |
 |--------|------|:----:|:------:|
-| ~~**moa**~~ | ~~Mixture of Agents 多模型混合推理策略~~ | **✅ 已启用 (Batch 1)** | — |
-| **rl** | RL Training — Tinker-Atropos 强化学习管线 | `hermes tools enable rl` | ⭐⭐⭐ |
-| **video** | 视频分析（需安装依赖） | `hermes tools enable video` | ⭐⭐ |
-| **homeassistant** | 智能家居控制 | `hermes tools enable homeassistant` | 🟡 |
-| **spotify** | Spotify 音乐控制（还额外有插件版） | `hermes tools enable spotify` | 🟡 |
-| **yuanbao** | 元宝 AI 群的 reader/translator 钩子 | `hermes tools enable yuanbao` | 🟡 |
+| ~~**moa**~~ | ~~Mixture of Agents 多模型混合推理~~ | **✅ Batch 1** | — |
+| ~~**video**~~ | ~~视频分析~~ | **✅ Batch 3** — FFmpeg 6.1.1 已装 | — |
+| ~~**rl**~~ | ~~RL Training — 强化学习~~ | **✅ Batch 3** — 需 TINKER/WANDB Key | — |
+| ~~**spotify**~~ | ~~Spotify 音乐控制~~ | **✅ Batch 3** — 需 OAuth 认证 | — |
+| ~~**yuanbao**~~ | ~~元宝 AI 群的钩子~~ | **✅ Batch 3** — 需额外配置 | — |
+| ~~**homeassistant**~~ | ~~智能家居控制~~ | **✅ Batch 3** — 需配置 HA 地址 | — |
 
 ### 🟢 立即可用 CLI 功能（无需额外安装）
 
 | 命令 | 说明 | 推荐度 |
 |------|------|:------:|
-| **`hermes dashboard`** | Web UI 管理面板（端口 9119，FastAPI + uvicorn） | ⭐⭐⭐ |
+| ~~**`hermes dashboard`**~~ | ~~Web UI 管理面板（端口 9119）~~ | **✅ 已启用 (Batch 2)** | — |
 | **`hermes --tui`** | React/Ink 终端 UI（交互式控制台） | ⭐⭐⭐ |
-| **`hermes insights`** | 使用分析 — Token 消耗/成本/工具模式/趋势 | ⭐⭐⭐ |
+| ~~**`hermes insights`**~~ | ~~使用分析 — Token 消耗/成本/工具模式/趋势~~ | **✅ 已启用 (Batch 2)** | — |
 | **`hermes acp`** | ACP 服务器 — VS Code / Zed / JetBrains 集成 | ⭐⭐ |
 | **`hermes auth`** | 凭证池管理 — 多 API Key 自动轮换/负载均衡 | ⭐⭐ |
-| **`hermes profile`** | 多 Profile 隔离（当前仅 1 个 default） | ⭐⭐ |
+| ~~**`hermes backup`**~~ | ~~备份配置~~ | **✅ 已尝试 (Batch 2)** — 快照 `20260508-162119` | — |
+| ~~**`hermes checkpoints`**~~ | ~~快照存储管理~~ | **✅ 已尝试 (Batch 2)** — 当前 0 B | — |
+| ~~**`hermes curator`**~~ | ~~背景技能维护~~ | **✅ 已尝试 (Batch 2)** — dry-run 已验证 | — |
+| ~~**`hermes logs`**~~ | ~~高级日志查看~~ | **✅ 已尝试 (Batch 2)** — 发现 OpenRouter SSL 错误 | — |
+| ~~**`hermes profile`**~~ | ~~多 Profile 隔离（3 个存在）~~ | **✅ 已尝试 (Batch 2)** — default/experiment/research | — |
 | **`hermes config migrate`** | 升级后自动添加新配置选项 | ⭐⭐ |
 | **`hermes config check`** | 检查缺失/过期配置 | ⭐ |
 | **`hermes doctor --fix`** | 自动修复检测到的问题 | ⭐ |
 | **`hermes pairing`** | 配对码用户访问控制（网关多用户） | ⭐ |
-| **`hermes completion`** | Shell 补全脚本生成 | ⭐ |
+| ~~**`hermes completion`**~~ | ~~Shell 补全脚本生成~~ | **✅ 已尝试 (Batch 2)** | — |
 
 > 查看全部未用 CLI 功能：`hermes --help` 中未尝试过的子命令。
 
@@ -106,7 +122,7 @@ skill_type: research
 |------|------|----------|:------:|
 | **Honcho Memory** | 跨会话用户辩证建模 | `hermes memory setup` → honcho | ⭐⭐⭐ |
 | **Mem0 / Supermemory** | 替代内置内存的长期记忆 | `hermes plugins enable` + 配置 | ⭐⭐⭐ |
-| **Web UI Dashboard** | 浏览器管理 Hermes | `hermes dashboard` | ⭐⭐⭐ |
+| ~~**Web UI Dashboard**~~ | ~~浏览器管理 Hermes~~ | **✅ 已启动 (Batch 2)** — PID 2425614 :9119 | — |
 | **API Server 模式** | OpenAI 兼容 HTTP 端点 | 配置 `api_server` 平台启用 | ⭐⭐ |
 | **MCP Server 模式** | 让其他 Agent (Claude Code 等) 消费 boku | `hermes mcp serve` | ⭐⭐ |
 | **Docker Terminal** | 隔离终端沙箱执行 | `hermes config set terminal.backend docker` | ⭐⭐ |
@@ -117,15 +133,13 @@ skill_type: research
 | **Batch Runner** | `batch_runner.py` 并行批处理引擎 | 直接调用 | ⭐⭐ |
 | **Atropos RL 训练** | HermesAgentBaseEnv / HermesSweEnv 完整 RL 管线 | `hermes tools enable rl` | ⭐⭐ |
 
-### 🟡 未启用的插件（4 个已安装未启用 + 1 个已启用 ✅）
+### 🟢 插件（全部 3/3 已启用 ✅）
 
 | 插件 | 说明 | 状态 | 推荐度 |
 |------|------|:----:|:------:|
-| ~~**disk-cleanup**~~ | ~~自动清理临时文件（测试脚本/cron 日志）~~ | **✅ 已启用 (Batch 1)** | — |
-| **google_meet** | 加入 Google Meet 实时转写 + 语音回复（v1/v2/v3） | `hermes plugins enable google_meet` | ⭐⭐ |
-| **spotify** | Spotify 原生集成（播放/队列/搜索/播放列表/专辑/库） | `hermes plugins enable spotify` | 🟡 |
-| **hermes-achievements** | 游戏化成就系统 | `hermes plugins enable hermes-achievements` | 🟡 |
-| **observability/langfuse** | LLM 可观测性追踪（Langfuse） | `hermes plugins enable observability` | 🟡 |
+| ~~**disk-cleanup**~~ | ~~自动清理临时文件~~ | **✅ Batch 1** | — |
+| ~~**google_meet**~~ | ~~Google Meet 转写+语音回复~~ | **✅ Batch 3** — 需 Chrome 登录 | — |
+| ~~**spotify**~~ | ~~Spotify 原生集成（7 工具）~~ | **✅ Batch 3** — 需 OAuth 认证 | — |
 
 ### 🟡 未配置的消息平台 (20 个)
 
@@ -137,7 +151,7 @@ skill_type: research
 | **特殊** | BlueBubbles(iMessage) · Home Assistant | `gateway/platforms/` |
 | **无客户端** | **API Server** (OpenAI 兼容 HTTP) · **Webhook Adapter** | `gateway/platforms/` |
 
-### 🟢 配置开关（已启用 6 项 + 剩余 4 项推荐）
+### 🟢 配置开关（已启用 8 项 + 剩余 6 项推荐）
 
 | 配置项 | 旧值 | 新值 | 状态 | 作用 |
 |:---|:---:|:---:|:----:|:---|
@@ -147,31 +161,28 @@ skill_type: research
 | `tool_loop_guardrails.hard_stop_enabled` | false | **true** | ✅ Batch 1 | 工具循环硬停止保护 |
 | `updates.pre_update_backup` | false | **true** | ✅ Batch 1 | 更新前自动备份 |
 | `delegation.max_spawn_depth` | 1 | **2** | ✅ Batch 1 | 子代理嵌套深度提升 |
-| `security.website_blocklist.enabled` | false | — | ⏳ 待启 | 域名黑名单防护 |
+| `delegation.max_concurrent_children` | 3 | **3** | ✅ 已验证 | 子代理并发数 |
+| `orchestrator_enabled` | true | **true** | ✅ 已验证 | 子代理可再 delegate |
+| ~~`security.website_blocklist.enabled`~~ | false | **true** | **✅ Batch 2** | 域名黑名单防护 |
 | `display.runtime_footer.enabled` | false | — | ⏳ 待启 | CLI 底部显示模型/上下文/路径 |
-| `delegation.subagent_auto_approve` | false | — | ⏳ 待启 | 子代理自动审批提速 |
-| `human_delay.mode` | off | — | ⏳ 待启 | 模拟人类打字延迟
+| ~~`delegation.subagent_auto_approve`~~ | false | **true** | **✅ Batch 2** | 子代理自动审批提速 |
+| `human_delay.mode` | off | — | ⏳ 待启 | 模拟人类打字延迟 |
+| `terminal.backend` | local | — | ⏳ 待启 | Docker/SSH/Singularity 等沙箱 |
+| `browser.engine` | auto | — | ⏳ 待启 | 指定浏览器引擎(camofox等)
 
-### 🟡 可安装的官方可选 Skill (~40+)
+### 🟡 可安装的官方可选 Skill（65 个，已安装 ~15 个）
 
-`hermes skills browse --source official` 可发现以下官方可选 skill：
-
-| 领域 | Skills |
-|:---|:---|
-| 🔬 Research | searxng-search, duckduckgo-search, scrapling, parallel-cli, bioinformatics, drug-discovery, domain-intel, gitnexus-explorer, qmd |
-| 🔒 Security | 1password, oss-forensics, sherlock |
-| 🔗 MCP | **fastmcp** (开发 MCP Server), **mcporter** (MCP 代理) |
-| 🏭 Productivity | shopify, canvas, siyuan, memento-flashcards, telephony, here-now, shop-app |
-| 🏥 Health | fitness-nutrition, neuroskill-bci |
-| ⛓️ Blockchain | base, solana |
-| 💬 Communication | one-three-one-rule |
-| 🌐 Web Dev | page-agent |
-| 🤖 Autonomous | blackbox, honcho |
-| ✉️ Email | 邮件相关官方技能 |
-| 🎨 Creative | 创意类官方技能 |
-| 🐳 DevOps | DevOps 相关官方技能 |
-| 🧪 ML Ops | ML Ops 相关官方技能 |
-| 🐶 Dogfood | 吃狗粮类官方技能 |
+| 领域 | 已安装 | 未安装 |
+|:---|:---|:---|
+| 🔬 Research | duckduckgo-searxng-search, searxng-search | scrapling, parallel-cli, bioinformatics, drug-discovery, domain-intel, gitnexus-explorer, qmd |
+| 🔒 Security | 1password, sherlock | oss-forensics |
+| 🔗 MCP | **fastmcp**(已装), **mcporter**(已装) | — |
+| 🏭 Productivity | canvas, memento-flashcards, fitness-nutrition | shopify, siyuan, telephony, here-now, shop-app |
+| 💬 Communication | one-three-one-rule | — |
+| 🤖 Autonomous | honcho(已装), blackbox | — |
+| 📧 Email | **agentmail**(已装) | — |
+| 🐳 DevOps | **docker-management**(已装) | — |
+| 🎭 Special | adversarial-ux-test, concept-diagrams | — |
 
 ### 🔴 架构级未探索能力
 
@@ -321,9 +332,12 @@ chat_completions, codex_responses, anthropic_messages, bedrock_converse
 - [x] 学习 Web UI Dashboard (`hermes dashboard`)
 - [x] **完成 Hermes 能力全面审计** (~100+ 未启用功能映射)
 - [x] **第一批升级完成 (2026-05-08)** — 启用 privacy/streaming/auto_prune/hard_stop/pre_update_backup/max_spawn_depth/MoA/disk-cleanup
-- [ ] 启用 @ Context References 用法
-- [ ] 尝试 `hermes insights` 分析使用模式
-- [ ] 尝试 `hermes config check` 查看配置健康度
+- [x] **第二批审计完成 (2026-05-09)** — 发现 21 个未用 CLI 子命令、5 个禁用工具集、4 个未启用插件、18 个未配平台、~60 个官方 skill 未安装、3 个 Profile 仅用 1 个
+- [ ] 启用 `hermes dashboard --tui` Web 管理面板 + 内嵌聊天
+- [ ] 启用 `hermes insights` 使用分析
+- [ ] 启用 `security.website_blocklist`
+- [ ] 启用 `delegation.subagent_auto_approve`
+- [ ] 试用 `hermes backup -q` 快速备份
 
 ### 中期（1-2 周 — 深度启用）
 - [ ] 学习 Honcho Memory 跨会话建模
@@ -385,7 +399,7 @@ hermes config check
 2. **平台适配器是最容易被忽略的** — 20+ 平台适配器在 `gateway/platforms/` 中躺着
 3. **插件是第二容易被忽略的** — 已安装的插件往往未启用
 4. **内存提供商是第三容易被忽略的** — 内存插件已安装但未使用是常见情况
-5. **可选 Skills 仓库有 ~40+ 内容** — `hermes skills browse --source official`
+5. **可选 Skills 仓库有 65 个内容** — `hermes skills browse --source official`（4 页)
 
 ### 批次升级流程 (Bounded Autonomy 模式)
 

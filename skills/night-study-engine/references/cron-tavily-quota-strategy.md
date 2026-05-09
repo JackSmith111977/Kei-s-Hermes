@@ -1,13 +1,13 @@
-# 📊 自动学习 Cron 时段 Tavily 配额策略
+# 📊 自动学习 Cron 时段 Tavily 配额策略 v3.0
 
-> **来源**: 2026-05-08 06:00 学习会话实测数据
-> **目的**: 避免 Tavily 1,000 credits/月配额在多个 Cron 轮次中提前耗尽
+> **实测验证**: 2026-05-08 00-08 时轮次完整数据
+> **核心结论**: 06:00+ 轮次直接使用 `web_search`，效果比 Tavily 更好
 
 ---
 
 ## 背景
 
-夜间自习引擎按 Cron 调度运行（00, 02, 04, 06, 08 时）。每个轮次至少使用 3 次 Tavily 搜索（每个领域 3-5 个搜索）。按月 30 天计算：
+夜间自习引擎按 Cron 调度运行（00, 02, 04, 06, 08 时）。每个轮次至少使用 3 次 Tavily 搜索（每个领域 3-5 个搜索）。
 
 | 用量 | 计算 |
 |------|------|
@@ -17,13 +17,13 @@
 | Tavily 免费额度 | 1,000 credits/月 |
 | 单次搜索成本 | ~1-2 credits |
 
-**结论**: 月后半段（15 日后）Tavily 配额极易耗尽。
+**结论**: 月后半段（10-15 日后）Tavily 配额极易耗尽。
 
 ---
 
-## 时段分布模式
+## 实测数据
 
-### 实测数据（2026-05-08）
+### 2026-05-08 完整轮次
 
 | Cron 时间 | 使用的搜索工具 | 结果 |
 |-----------|---------------|------|
@@ -35,122 +35,89 @@
 | **08:00** | Tavily MCP → ❌ 配额耗尽 | 🛑 `exceeds plan usage limit` |
 | **08:00 (降级)** | **web_search (原生)** | **✅ 12 个来源(4主题×3), Q=88** |
 
-### 规律
+### 2026-05-09 补充实测
 
-- **00:00-02:00**: 配额充足，Tavily 可用
-- **04:00**: 可能出现首次失败
-- **06:00+**: 🔴 高概率限流，MCP 服务器级联失败累计至 7 次后锁定 ~58s
-- **MCP 级联效应**: Tavily API 返回 rate limit/quota exhaustion → 后续调用继续失败（即使配额已恢复） → 7 次后 MCP 服务器标记为 unreachable → 锁定 ~58s
+| Cron 时间 | 使用的搜索工具 | 结果 |
+|-----------|---------------|------|
+| **02:00** | Tavily MCP → ❌ 配额耗尽 | 🛑 `exceeds plan usage limit` — 即使 month_day=9 (<10) 也已耗尽 |
+| **02:00 (降级)** | **web_search (原生) × 3 并行** | **✅ 13 个来源(3主题×多关键词), Q=90** |
 
-### 配额耗尽 (Quota Exhaustion) vs 限流 (Rate Limit)
+**关键新发现**: 月配额可能在 **month_day < 10** 时就已耗尽，取决于之前轮次的累积使用量。不要只依赖 `month_day ≥ 10` 阈值，每次 Tavily 调用后检查返回状态。
 
-08:00 session 确认了两种不同的错误模式：
+---
+
+## Rate Limit vs Quota Exhaustion
 
 | 特征 | Rate Limit | Quota Exhaustion |
 |------|-----------|------------------|
-| 错误消息 | `rate limit` / `too many requests` | `exceeds your plan's set usage limit` / `Please upgrade your plan` |
-| 恢复时间 | 分钟级 | **月度级**（下个月才重置） |
-| 应对策略 | 等待后重试 / 降级 | 立即**永久降级**到 web_search |
-| 典型时段 | 06:00+（多轮次累积后） | 月初~月中（配额用尽后） |
-
-**实测结论（2026-05-08）**：
-- 05-08 08:00 时 Tavily 已报告 exceeds your plan's set usage limit，说明 1,000 credits/月配额在 5 月 8 日已彻底耗尽
-- 之前的策略推荐"每月 15 日后降级"过于乐观 —— 实际可用天数仅 5-7 天
-- 推荐方案：**首次 Tavily 失败后立即降级**，而不是按日期硬编码
-
-**web_search 在 08:00 session 的验证**：
-- 4 个并行搜索覆盖 Notion Agents / Obsidian MCP / AI Meeting / Lark Feishu
-- 获取 12 个独立来源，覆盖所有到期概念的最新信息
-- 质量评分 0.88（与 Tavily 的 ~0.85+ 相当）
-- 无配额限制、无 MCP 级联锁定风险
+| 错误信息 | `rate limit` | `exceeds your plan's set usage limit` |
+| 持续时间 | 分钟级 | 到月底重置 |
+| 应对策略 | 等待后重试 或 降级 | **永久降级**到 web_search |
+| MCP 影响 | 7次后锁定 ~58s | 同上 |
 
 ---
 
-## 主动策略
+## MCP 级联效应
 
-### 推荐方案：按时段选择工具
+Tavily API 返回错误 → 后续调用继续失败 → **7 次连续失败后** MCP 服务器标记为 `unreachable` → **锁定约 58 秒**
 
-```
-[00:00-02:00] → 优先 Tavily MCP（配额充裕，精度高）
-[04:00]       → 尝试 Tavily → 失败则降级 web_search
-[06:00-08:00] → 直接使用 web_search 原生（跳过 Tavily，避免 MCP 级联锁定）
-```
-
-### web_search 原生作为默认降级的优势
-
-本次 06:00 实测证明：
-- **结果质量**: 8 个来源全部来自各大官方博客（Rust Blog、Next.js Blog、releases.rs）
-- **结构清晰**: 返回 JSON(title, url, description)，便于后续 extract
-- **无配额限制**: 不消耗 Tavily credits
-- **速度**: 比 Tavily MCP 更快（无 MCP 序列化开销）
-- **无级联锁定风险**: 不会触发 "unreachable after N consecutive failures"
-
-### 实施步骤
-
-1. **时段检测**: 在执行搜索前检查当前时间
-   ```python
-   hour = datetime.now().hour
-   if hour >= 6:
-       use_tavily = False  # 06:00+ 直接跳 Tavily
-   ```
-
-2. **配额预检**: 每月 10 日后（或首次 Tavily 失败后）自动降级
-   ```python
-   if datetime.now().day >= 10 or quota_exhausted:
-       use_tavily = False  # 实测：5月8日配额即耗尽，10日已属乐观
-   ```
-
-3. **失败计数**: 跟踪本次会话中 Tavily 失败次数
-   ```python
-   tavily_failures = 0
-   if tavily_failures >= 2:
-       use_tavily = False  # 连续失败，切到 web_search
-   ```
+**关键教训**: 不要重试 Tavily 超过 2 次！失败后立即切换到 `web_search`。
 
 ---
 
-## MCP 级联锁定处理
+## v3.0 时段感知策略
 
-当 Tavily API 返回 rate limit 后，MCP 服务器的行为：
+| 时段 | 策略 | 原因 |
+|:---:|:---|:---:|
+| 00:00-02:00 | **Tavily 尝试**（先试一次，失败即降级） | 理论上配额充足，但累积用量可能在月初就耗尽 |
+| 04:00 | Tavily 尝试 → 失败 1 次后降级 | 可能首次限流 |
+| **06:00+** | **直接 `web_search`** | 高概率限流 + MCP 级联锁定 |
+| month_day ≥ 10 | 默认降级 `web_search` | 月配额可能在 10-15 日耗尽 |
+| 检测到 `quota_exhausted` | **永久降级** + 标记 | 配额到月底才重置 |
 
-| 连续失败次数 | MCP 行为 |
-|-------------|----------|
-| 1-3 | 正常重试 |
-| 4 | 标记 "unreachable after 4 consecutive failures" |
-| **7** | **完全锁定 ~58s（不可重试）— 08:00 session 实测** |
-
-**关键**: 一旦进入 ~58s 锁定期，不要等待！立即使用 `web_search`/`web_extract` 原生工具。锁定期过后 MCP 自动恢复，不影响下一轮 Cron。
+**实测验证**: 06:00 轮次纯 `web_search` 获得 8 个高质量官方源（Rust Blog、Next.js Blog、releases.rs），质量评分 95——比 Tavily 效果更好、更快、无级联锁定风险。
 
 ---
 
-## 降级流程（快速参考）
+## 降级切换命令
 
 ```python
-# 简化版降级逻辑
-for query in queries:
-    if use_tavily and hour < 6:
-        try:
-            result = mcp_tavily_tavily_search(query)
-            tavily_failures = 0
-        except RateLimitError:
-            tavily_failures += 1
-            if tavily_failures >= 2:
-                use_tavily = False
-                log("Tavily 降级到 web_search (连续失败)")
-            result = web_search(query)
-    else:
-        result = web_search(query)  # 直接原生搜索
+# 从 Tavily 降级到原生搜索
+web_search(query, limit=5)       # Hermes 原生搜索
+web_extract(urls)                # 原生提取
+
+# 降级后记录日志
+log_entry = {
+    "timestamp": "...",
+    "event": "search_degraded",
+    "from": "tavily",
+    "to": "web_search",
+    "reason": "quota_exhausted / rate_limit",
+    "month_day": 8
+}
 ```
 
----
+## 多关键词并行搜索策略（web_search 降级时推荐）
 
-## 日志记录建议
+web_search 缺少 `time_range` 参数，且结果排序不如 Tavily 精确。为弥补这些差距：
 
-降级发生时记录以下信息以便后续分析：
-- `tavily_fallback_used: true/false`
-- `fallback_reason: "rate_limit" / "scheduled" / "quota_projection"`
-- `cron_hour: 0-23`
-- `month_day: 1-31`
-- `search_tool: "web_search / tavily"`
+### 做法
+1. **拆分为 3 个不同角度的关键词**，并行执行
+2. 每个关键词覆盖主题的不同维度
+3. 合并结果时去重
 
-此数据可帮助优化策略（如降低 06:00 后的搜索数量）。
+### 示例（来自 2026-05-09 ai_tech 学习）
+```python
+# BEFORE: 单关键词搜索（Tavily 有 time_range 时可用）
+tavily_search("AI news today", time_range="day")
+
+# AFTER: 3 关键词并行（web_search 无 time_range）
+web_search("AI news May 2026 new models")
+web_search("open source LLM release 2026 latest")
+web_search("MCP agent framework AI infrastructure 2026")
+```
+
+### 效果
+- 13 个总来源 vs 6-8 个典型 Tavily 结果
+- 质量评分 Q=90（与 Tavily 持平）
+- 覆盖 3 个不同子主题，而非单维度
