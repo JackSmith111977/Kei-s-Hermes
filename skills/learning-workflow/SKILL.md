@@ -38,7 +38,7 @@ skill_type: Workflow
 > **v5.0 重大更新**：循环真正落地 — 状态机三剑客 (regress/reject/loop-status) + 反射门禁 (reflection-gate.py R1/R2/R3/QG) + 子代理裁判
 >
 > **依赖脚本**：\n> - `scripts/learning-state.py` — 状态机管理（init/complete/reject/regress/loop-status/check/reset）\n> - `scripts/reflection-gate.py` — 反射门禁自动化评分（r1/r2/r3/quality）+ MIN_LOOPS 最小循环检查 + 递进等级惩罚\n>\n> **参考文件**：\n> - `references/cycle-troubleshooting.md` — 循环故障五层诊断指南（当门禁不触发时排查用）
-- `references/knowledge-base-patterns.md` — Hermes 知识库构建模式参考（Karpathy LLM Wiki + GBrain）\n> - `references/karpathy-bounded-autonomy.md` — Karpathy 约束理论在学习流程中的应用（v5.1）\n> - `references/experience-format.md` — 经验积累系统格式指南与提取流程（v5.2）
+- `references/knowledge-base-patterns.md` — Hermes 知识库构建模式参考（Karpathy LLM Wiki + GBrain）\n> - `references/karpathy-bounded-autonomy.md` — Karpathy 约束理论在学习流程中的应用（v5.1）\n> - `references/engineering-foundation-charter.md` — 工程化基础建设工作流—先分析建规约，再学习建规范，后开发（EFC 双阶段）\n> - `references/experience-format.md` — 经验积累系统格式指南与提取流程（v5.2）
 
 ---
 

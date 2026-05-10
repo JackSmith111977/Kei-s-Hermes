@@ -1,7 +1,7 @@
 ---
 name: analysis-workflow
 description: 大文件分析与数据处理工作流——boku 处理大型文档、数据文件、代码库时的标准分析框架。涵盖分块策略、Map-Reduce 模式、渐进式摘要、内存管理等核心模式。
-version: 1.0.0
+version: 1.1.0
 triggers:
 - 分析大文件
 - 处理大型文档
@@ -11,6 +11,13 @@ triggers:
 - 流式处理
 - 大文件分析
 - 文档提炼
+- 技术债
+- 代码审计
+- 代码质量分析
+- 代码库审计
+- tech debt
+- code review
+- 审计代码
 allowed-tools:
 - terminal
 - read_file
@@ -28,6 +35,8 @@ metadata:
     - map-reduce
     - streaming
     - memory-management
+    - code-audit
+    - tech-debt
     category: dogfood
     skill_type: methodology
     design_pattern: meta-workflow
@@ -36,7 +45,7 @@ metadata:
 # 大文件分析与数据处理工作流 🧩📊
 
 > **核心铁律：永远不要全量读取大文件到上下文中！分块、流式、渐进处理。**
-> **v2.0 新增：循环深度分析流水线 (Cyclic Deep Analysis Pipeline)**
+> **v1.1.0 新增：`references/codebase-tech-debt-audit.md` — 代码库技术债审计方法论**
 
 ---
 
@@ -131,7 +140,7 @@ while loop_count < max_loops and quality_score < 80:
 
 | 根因 | 来源 | 机制 |
 |------|------|------|
-| ① 模型认为对话已结束 | **Anthropic 官方文档** | 工具调用后模型收到 `tool_result`，判定「已完成任务」，返回 `stop_reason: "end_turn"`，不继续生成文本 |
+| ① 模型认为对话已结束 | **Anthropic 官方文档** | 工具调用后模型收到 `tool_result`，判定「已完成任务」，返回 `stop_reason: \"end_turn\"`，不继续生成文本 |
 | ② 上下文窗口压力 | **通用原理** | 多次工具调用的中间结果占用上下文空间，推理引擎的有效长度被压缩——对话越长越容易空响应 |
 | ③ 流式 finish_reason 丢失 | **WeKnora #819** | 流式实现未正确传递 `finish_reason`，空内容被当作有效响应 |
 
@@ -549,3 +558,4 @@ print("✅ 处理完成！共 9 章，生成 18 页 PDF")
 - [ ] 是否会把结果注入对话？→ 写入文件，只输出摘要
 - [ ] 是否需要并行处理？→ 考虑 `delegate_task`
 - [ ] 是否每步都汇报进度？→ 让主人知道进展
+- [ ] 如果是代码库分析 → 加载 `references/codebase-tech-debt-audit.md`

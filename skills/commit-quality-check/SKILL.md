@@ -157,7 +157,45 @@ git log -1 --pretty=format:"%s"
 - [ ] 如果是修复：修复了根因还是只修了表面？
 - [ ] 回滚方案：如果出问题，回滚是否有副作用？
 
-### Step 6: 完整性检查（🟢 P2）
+### Step 6b: 裸 except 扫描（🔴 P0 — 新增）
+
+**🚨 禁止提交包含 `except: pass` 的代码。所有异常必须区分类型并做适当处理。**
+
+```bash
+# 1. 扫描本次变更中的裸 except
+git diff --cached -U0 | grep -E '^\+.*except\s*:' | grep -v 'Exception\|Error\|OSError\|KeyError\|ValueError\|TypeError\|JSONDecode\|ProcessLookup\|FileNotFound\|BlockingIO\|StopIteration\|KeyboardInterrupt\|SystemExit' || echo "✅ 无裸 except"
+
+# 2. 如果发现裸 except，逐行检查是否满足以下任一条件：
+#    - 可以指定具体的异常类型（首选）
+#    - 必须用 logger 记录异常信息（至少 debug 级别）
+#    - 在 SUPPRESSED_EXCEPTIONS 白名单中（需有注释说明为什么允许静默）
+```
+
+**裸 except 处理规范：**
+
+| 原始代码 | 改进后 | 说明 |
+|----------|--------|------|
+| `except:` | `except OSError:` | 指定异常类型 |
+| `except:` | `except Exception as e: logger.warning("%s", e)` | 记录日志 |
+| `except:` | `except (FileNotFoundError, json.JSONDecodeError):` | 多类型捕获 |
+| `except:` | `except: logger.debug("expected")` | ❌ 仍不达标，需指定类型 |
+
+**排查方法（批量扫描项目）：**
+```bash
+# 全量扫描裸 except
+grep -rn "^\s*except\s*:\s*$" --include="*.py" . | grep -v __pycache__ | grep -v fixtures
+
+# 全量扫描 except: pass
+grep -rn "except:.*pass" --include="*.py" . | grep -v __pycache__ | grep -v fixtures
+
+# 验证无裸 except 残留
+if grep -rn "^\s*except\s*:\s*$" --include="*.py" . | grep -v __pycache__ | grep -q .; then
+    echo "❌ 发现裸 except，请修复后再提交"
+    exit 1
+fi
+```
+
+### Step 7: 完整性检查（🟢 P2）
 
 ```bash
 # 检查是否有未 add 的文件
@@ -380,8 +418,86 @@ grep "__version__" */__init__.py
 grep -rn '"version"' --include="*.py" . | grep -v __pycache__
 ```
 
-## 参考
+### 10. 🔥 实战案例：系统化消除 `except: pass` 的经验
 
-- [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
+**场景**：在 SRA 项目中发现了 16 处 `except: pass`，散布在 4 个模块中（daemon.py 10 处、indexer.py 2 处、memory.py 1 处、cli.py 1 处、sra-eval 脚本 2 处）。
+
+**系统化消除步骤**：
+
+```
+Step 1: 全量扫描定位
+    grep -rn "^\s*except\s*:\s*$" --include="*.py" . | grep -v __pycache__
+    
+Step 2: 分类处理策略（按严重程度）
+    🔴 关键路径（YAML 解析、配置加载、状态写入）→ 改为特定异常 + logger.warning + 向上传播
+    🟡 良性路径（socket close、文件清理）→ 改为 OSError + logger.debug
+    🟢 回退路径（JSON 解析失败 → 返回空 dict）→ 改为 json.JSONDecodeError + logger.debug
+    
+Step 3: 逐处修复
+    16 处平均 2 分钟/处 = 约 30 分钟总工作量
+    
+Step 4: 验证
+    - 正则扫描确认无残留：grep -rn "^\s*except\s*:\s*$" ...
+    - 全量测试确认无回归
+```
+
+**经验总结**：
+- 不要在修复阶段做「顺便优化」——每处只改 except 行，不改其他逻辑
+- 裸 except 的「罪魁祸首」通常是懒编程，根源是「不想想这个异常会是什么」
+- 修复时反问自己：这行代码可能抛什么异常？然后精确捕获它
+- `except: pass` 是最危险的 Python 反模式之一，因为它让程序在错误状态下继续执行
+
+### 11. 🔥 实战案例：即使 skill 有警示，还是会忘——关键是把检查嵌入项目流程文档
+
+**场景**：在 SRA 项目中完成了 SRA-003-13（HTTP 架构重构+异常处理），测试全绿后直接 git commit + push + 向主人汇报。主人反问「你又忘了一致性检查了？」。
+
+**根因分析**：
+
+```
+表面原因：boku 忘了加载 commit-quality-check
+  ↓
+深层原因：开发流程中没有把质量检查作为「不可跳过的步骤」
+  ↓
+根本原因：流程只存在于 skill 文档中，没有被写进项目架构文档作为强制铁律
+```
+
+**教训**：
+1. **靠「记得」是 unreliable 的** — 即使 skill 有 §9 的警示，任务密集时仍然会忘
+2. **必须把质量检查嵌入项目开发流程文档** — 在 `ARCHITECTURE.md` 或 `CONTRIBUTING.md` 中明确定义开发步骤的顺序
+3. **步骤必须不可跳过、不可重排** — 用编号①→②→③... 的形式，让每一步依赖前一步完成
+
+**对抗措施**（已在 SRA 项目中实施）：
+
+在项目 `docs/ARCHITECTURE.md` 中新增 §8.1 开发流程铁律：
+
+```
+① 实现代码 + 测试
+    ↓
+② pytest tests/ -v 全量验证
+    ↓
+③ 🔴 加载 commit-quality-check → 完整质量检查  ← 这一步在 git commit 之前！
+    ↓
+④ 修复发现的问题
+    ↓
+⑤ 再次全量测试
+    ↓
+⑥ git commit + push
+    ↓
+⑦ 向主人汇报（含检查报告）
+```
+
+**关键区别**：
+- 旧方案：质量检查是「建议步骤」，存在于 skill 文档中
+- 新方案：质量检查是「强制步骤」，存在于项目架构文档中，与其他步骤**线性排列**
+
+**AI Agent 的 self-fix 清单**（当用户指出「你又忘了一致性检查」时）：
+1. ✅ 立即补跑质量检查（确认当前 commit 是否干净）
+2. ✅ 更新项目架构文档（`ARCHITECTURE.md`），加入开发流程铁律
+3. ✅ 更新 `CONTRIBUTING.md` 的 PR 自查清单
+4. ✅ 将教训写入长期 memory
+5. ✅ 更新 `commit-quality-check` skill 的本节内容
+6. ✅ 提交流程修复（带着质量检查报告一起提交）
+
+## 参考
 - [GitHub PR Best Practices](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/best-practices-for-pull-requests)
 - [SemVer](https://semver.org/)

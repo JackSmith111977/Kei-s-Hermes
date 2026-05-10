@@ -381,6 +381,10 @@ Phase 4: Implementation
 
 ## 🚩 注意事项（避坑指南）
 
+- ❌ **项目没有 _bmad 基础设施就尝试走完整 BMad 流程** → bmad-create-story / bmad-dev-story 依赖 `_bmad/scripts/` 和 `sprint-status.yaml`
+  - ✅ **BMad 适配模式**：项目无 `_bmad/` 目录时，走**简化 BMad**：直接按 Epic/Story 文档的验收标准，用 `todo` 工具分解任务，逐个实施 + 测试，完成后用 `commit-quality-check` 做一致性检测。结构化流程的精神比基础设施更重要。
+- ❌ **跳过 PRD 直接写代码**
+
 - ❌ **跳过 PRD 直接写代码** → 需求不稳就开干
   - ✅ 先打地基：至少走 PRD → Architecture → Epic
 - ❌ **跳过 Implementation Readiness 检查**
@@ -458,6 +462,7 @@ Phase 4: Implementation
 ## 📚 参考资料
 
 - `references/sprint-iteration-workflow.md` — Sprint 迭代规划与 Git 分支工作流（启动新迭代时的标准流程）
+- `references/bmad-adaptation-pattern.md` — 无 _bmad 基础设施项目使用简化 BMad 的适配模式
 
 ---
 
