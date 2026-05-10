@@ -1,7 +1,7 @@
 ---
 name: architecture-trilemma
 description: "运行时(Runtime) vs 技能(Skill) vs 工具(Tool) — 三种Agent扩展机制的架构决策模式。当你需要在系统中设计一个新的组件时，先判断它属于三者中的哪一种，再决定它的集成方式、文档格式和安装流程。"
-version: 1.0.0
+version: 1.1.0
 triggers:
 - 运行时
 - runtime
@@ -137,7 +137,7 @@ metadata:
 
 **已踩坑案例**：给 SRA 创建 SKILL.md，期望 Agent 把它当技能使用
 
-**修正方案**：运行时以独立 docs/ 存在，不放在 skills/ 目录下。
+**修正方案**：运行时以独立项目存在，不放在 skills/ 目录下。源码统一存放于 `~/projects/<name>/`。
 
 ### 反模式 2：照抄另一个模式的设计哲学
 
@@ -186,3 +186,31 @@ metadata:
 ## 六、一句话原则
 
 > **技能告诉 Agent "怎么做"，运行时告诉 Agent "去哪问"，工具替 Agent "直接做"。**
+
+---
+
+## 七、存放位置规范
+
+决定了一个组件属于哪种模式后，源码应该放在哪里？
+
+| 模式 | 存放位置 | 原因 |
+|:-----|:---------|:------|
+| 🏃 **运行时 (Runtime)** | `~/projects/<name>/` | 独立项目，有自己 Git 仓库和生命周期。通过 editable pip install 关联到 Hermes venv。运行时数据放在 `~/.<name>/`（如 `~/.sra/`）。 |
+| 📜 **技能 (Skill)** | `~/.hermes/skills/<category>/<name>/` | 技能是 Hermes 内部的知识单元，放在 SKILL.md + references/ 结构内。 |
+| 🔧 **工具 (Tool)** | Hermes Agent 内置 | 工具是 Hermes Agent 代码库的一部分，由工具注册机制管理。 |
+
+### 运行时项目目录示例
+
+```
+~/projects/
+├── sra/            # SRA 运行时（editable 安装）
+└── ...             # 未来的独立运行时项目
+~/.sra/             # SRA 运行时数据（配置、日志、PID）
+```
+
+### ⚠️ 原则
+
+- ❌ **不要放 `/tmp/`** — 临时目录，重启可能被清
+- ❌ **不要放 `~/.hermes/`** — 那是 Hermes Agent 自身领地
+- ❌ **不要放 `~/`** — 家目录会变杂乱
+- ✅ **统一放 `~/projects/`** — 标准、持久、可维护

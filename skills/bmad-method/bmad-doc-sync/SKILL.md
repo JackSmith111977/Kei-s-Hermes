@@ -141,6 +141,10 @@ patch --dry-run -p1 < /path/to/patch.patch
 # → "Hunk #1 FAILED" ❌（需要重新生成）
 ```
 
+## 扩展阅读
+
+- [`references/operational-reliability-story-pattern.md`](references/operational-reliability-story-pattern.md) — 从运行时观察发现可靠性问题后，编写 BMAD Story 并追加到 Epic 的完整模式。包含模板、案例（SRA-003-12）和与需求驱动 Story 的差异对比。
+
 ## 检查清单
 
 提交前最后确认：

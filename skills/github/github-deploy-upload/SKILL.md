@@ -1,7 +1,7 @@
 ---
 name: github-deploy-upload
 description: 安全地将本地部署目录通过定时 cron 推送到 GitHub 仓库。涵盖认证令牌安全存储（独立文件 600 权限）、git remote 内容自动清理、远程分支适配等实践。
-version: 1.2.0
+version: 1.3.0
 triggers:
 - deploy upload
 - deploy-upload
@@ -130,11 +130,14 @@ git remote set-url origin "$REMOTE_BASE"
 # 1. 检查 git 配置文件干净
 grep -c '@' /tmp/hermes-catgirl-deploy/.git/config | grep -q '0' && echo "安全通过"
 
-# 2. 检查 remote URL 未被 '***' 污染（常见于捕获 git 脱敏输出后恢复）
-if git -C /tmp/hermes-catgirl-deploy remote get-url origin 2>/dev/null | grep -q '\*\*\*'; then
-    echo "WARNING: remote URL 含有 literal '***'，认证凭证已损坏！需从 .deploy_token 重新构造 URL"
+# 2. 检查 remote URL 是否含有 literal '***' 污染
+#    ⚠️ 注意：不要用 git remote get-url origin 来检查！
+#       git 的输出会自动脱敏显示为 ***（即使 .git/config 里是干净的 URL），
+#       会导致假阳性。必须直接检查配置文件。
+if grep -q '\*\*\*' /tmp/hermes-catgirl-deploy/.git/config 2>/dev/null; then
+    echo "⚠️ WARNING: .git/config 含有 literal '***'，认证凭证已损坏！需从 .deploy_token 重新构造 URL"
 else
-    echo "remote URL 无 '***' 污染"
+    echo "✅ remote URL 无 '***' 污染（确认方式：直接检查 .git/config）"
 fi
 
 # 3. 检查令牌文件权限
@@ -143,6 +146,14 @@ ls -la ~/.hermes/.deploy_token
 # 4. 验证远程仓库更新
 git -C /tmp/hermes-catgirl-deploy log --oneline -1
 ```
+
+**验证 remote URL 最佳实践：**
+
+| 你想要做什么 | 正确的命令 | 不要用的方式 |
+|:---|:---|:---:|
+| 查看实际存储的 URL | `grep url /tmp/hermes-catgirl-deploy/.git/config` | ❌ `git remote -v`（脱敏显示 `***`） |
+| 检查有无 token 泄露 | `grep '@github' .git/config` | ❌ `git remote get-url`（脱敏显示 `***`） |
+| 确认推送目标 | 读 `.git/config` 中的 remote 段 | ❌ 依赖 git 命令输出 |
 
 ## 部署目录 .gitignore 维护
 

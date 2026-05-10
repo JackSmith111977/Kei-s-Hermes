@@ -254,18 +254,32 @@ def score_skill_v2(query, skill_data, idf_cache):
     
     # 2. 触发词匹配 (Weight 80 per trigger)
     for trigger in triggers:
-        trigger_lower = trigger.lower()
-        # 完整短语匹配
-        if trigger_lower in query_lower:
-            score += 80
-        # 触发词包含查询词
-        elif query_lower in trigger_lower:
-            score += 60
-        # 部分关键词匹配
-        else:
-            for word in query_words:
-                if len(word) > 1 and word in trigger_lower:
-                    score += 20
+        if isinstance(trigger, dict):
+            # Some skills have triggers as dict objects; flatten
+            for v in trigger.values():
+                if isinstance(v, str):
+                    trigger_lower = v.lower()
+                    if trigger_lower in query_lower:
+                        score += 80
+                    elif query_lower in trigger_lower:
+                        score += 60
+                    else:
+                        for word in query_words:
+                            if len(word) > 1 and word in trigger_lower:
+                                score += 20
+        elif isinstance(trigger, str):
+            trigger_lower = trigger.lower()
+            # 完整短语匹配
+            if trigger_lower in query_lower:
+                score += 80
+            # 触发词包含查询词
+            elif query_lower in trigger_lower:
+                score += 60
+            # 部分关键词匹配
+            else:
+                for word in query_words:
+                    if len(word) > 1 and word in trigger_lower:
+                        score += 20
     
     # 3. TF-IDF 风格正文匹配
     for word in query_words:

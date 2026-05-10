@@ -44,6 +44,15 @@
 
 **关键新发现**: 月配额可能在 **month_day < 10** 时就已耗尽，取决于之前轮次的累积使用量。不要只依赖 `month_day ≥ 10` 阈值，每次 Tavily 调用后检查返回状态。
 
+### 2026-05-10 永久降级确认
+
+| Cron 时间 | 使用的搜索工具 | 结果 |
+|-----------|---------------|------|
+| **02:00** | Tavily MCP → ❌ 配额耗尽（第5次连续失败） | 🛑 MCP 服务器 unreachable, ~58s 锁定 |
+| **02:00 (降级)** | **web_search (原生) × 2 并行** | **✅ 18+ 来源(含 Anthropic/OpenAI/CNBC/Bloomberg 等官方), Q=90** |
+
+**最终确认**: Tavily 配额本月已永久耗尽且无恢复可能。后续所有轮次应直接使用 `web_search`，无需再尝试 Tavily。`web_search` 配合多关键词并行策略可稳定获得高质量结果。
+
 ---
 
 ## Rate Limit vs Quota Exhaustion

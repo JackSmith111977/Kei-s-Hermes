@@ -1,7 +1,7 @@
 ---
 name: night-study-engine
 description: "🌙 夜间自习引擎 v3.0 — 自驱动学习系统。融合 learning-workflow v5.x 迭代循环架构 + learning v2.8 经验提取。涵盖三层迭代循环、递进质量评分、概念关系图谱、自适应调度、子代理仲裁、经验提取管线。"
-version: 3.0.0
+version: 3.2.0
 triggers:
   - 夜间学习
   - night study
@@ -445,17 +445,14 @@ next_review: 2026-05-16
 | Skill 更新失败 | 写入 gap_queue，下次重试 |
 | 经验提取失败 | 跳过，不影响主流程 |
 
-### Tavily 主动配额管理（时段感知）
+### Tavily 主动配额管理（时段感知 — v3.1 更新：永久降级）
 
 | 时段 | 策略 | 原因 |
 |:---:|:---|:---:|
-| 00:00-02:00 | **Tavily 尝试**（先试一次，失败即降级） | 理论上配额充足，但累积用量可能在月初就耗尽 |
-| 04:00 | Tavily 尝试 → 失败降级 | 可能限流 |
-| 06:00+ | **直接 `web_search`** | 高概率限流 + MCP 级联锁定 |
-| month_day ≥ 10 | 默认降级 `web_search` | 月配额可能在 10-15 日耗尽 |
-| 任何时段检测到 `quota_exhausted` | **永久降级** web_search | 配额到月底才重置 |
+| 所有时段 | **仅使用 `web_search`** | Tavily 配额已永久耗尽。5/7-5/9 连续轮次验证：web_search 配合多关键词并行可稳定获得 8-18+ 来源, Q=85-95 |
+| 检测到 MCP 恢复 | 先测试一次，成功则恢复 Tavily | 配额可能在下月（6/1）重置 |
 
-MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 quota_exhausted 后立即永久降级。
+MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 quota_exhausted 后立即永久降级 **且不再重试**。
 
 ---
 
@@ -505,6 +502,77 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 
 ## 九、Red Flags & 实践教训
 
+### 间隔复习（L1/L2/L3）执行注意事项 — v3.1 补充
+
+下面是 cron-driven 间隔复习与完整学习会话不同的执行模式：
+
+#### 9.1 L1 复习执行流程（cron `0 8 * * *`）
+
+L1 复习是**轻量级检查**，不是完整学习会话（不进三层迭代循环）：
+
+```text
+STEP 0: 运行 `select_domain.py --review` 获取到期域
+  ↓
+STEP 1: 读取域 KB JSON (`~/.hermes/night_study/knowledge_base/{domain}.json`)
+  ↓
+STEP 2: 检查 `review_schedule.l1/l2/l3` 是否到期
+        (select_domain 返回域级到期, 但个别概念的 `next_review` 需独立检查)
+  ↓
+STEP 3: 对 **每个** 到期概念:
+  │  3a. 搜索最新资讯（web_search / Tavily）
+  │  3b. 对比 KB 已有内容，判断是否有新信息
+  │  3c. 有新信息 → 更新概念的 `key_points`/`notes` + 来源 URL
+  │  3d. 无新信息 → 跳过，只更新复习日期
+  ↓
+STEP 4: 运行 `update_knowledge_base.py --domain {domain} --update-review`
+        (此脚本只更新 `next_review <= today` 的概念的复习日期)
+  ↓
+STEP 5: **手动** 更新域级的 `review_schedule`:
+  │  - l1 ← 当前 l2 值
+  │  - l2 ← 当前 l3 值  
+  │  - l3 ← l3 + 30 天 (或合理间隔)
+  │  (--update-review 不处理域级日程，必须手动在 JSON 中调整)
+  ↓
+STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
+```
+
+#### 9.2 知识库格式注意事项
+
+**重要：字段命名差异**
+
+| 位置 | 字段名 | 说明 |
+|:---:|:---|:---|
+| `update_knowledge_base.py` 脚本 | `notes` | `add_or_update_concept()` 函数写入此字段 |
+| KB JSON 文件现有格式 | `key_points` | 现有概念使用 `key_points` 而非 `notes` |
+| **建议** | 直接操作 JSON | 使用 `key_points` 保持与现有格式一致 |
+
+**⚠️ 如果你用 `--notes` 参数新增概念，写入的是 `notes` 字段，但所有已有概念都用 `key_points`。** 建议用 Python 直接操作 JSON 而非通过脚本参数。
+
+#### 9.3 域级日程更新
+
+`update_knowledge_base.py --update-review` **只更新** 概念级别的 `next_review`，不处理 `review_schedule` 中的 L1/L2/L3 日期。L1 检查完成后必须手动将域级日程推进：
+
+```python
+kb["review_schedule"]["l1"] = kb["review_schedule"]["l2"]  # 旧 L2 成为新 L1
+kb["review_schedule"]["l2"] = kb["review_schedule"]["l3"]  # 旧 L3 成为新 L2
+# L3 再向后推 30 天
+from datetime import datetime, timedelta
+old_l3 = datetime.strptime(kb["review_schedule"]["l3"], "%Y-%m-%d")
+kb["review_schedule"]["l3"] = (old_l3 + timedelta(days=30)).strftime("%Y-%m-%d")
+```
+
+#### 9.4 搜索降级优先级（实测有效）
+
+| 服务 | 优先级 | 适用场景 |
+|:---|:---:|:---|
+| `web_search` | 1（首选） | Tavily 配额耗尽后的稳定替代；无 MCP 级联锁定问题 |
+| `mcp_tavily_tavily_search` | 2（备选） | 仅在确认 Tavily 配额未耗尽时使用 |
+| `mcp_tavily_tavily_extract` | 3（备选） | 需要精确提取某页面内容时 |
+
+**Tavily 失败策略**：Tavily 失败 8 次后 MCP 服务器锁死 ~58s。检测到 `quota_exhausted` 后永久降级 `web_search`，不再重试 Tavily。`web_search` 使用 DuckDuckGo 或 SearXNG 聚合搜索，结果数量和质量足以满足 KB 更新需求。
+
+---
+
 ### 新增 v3.0 Red Flags
 
 1. ❌ **忽略递进循环** — 第 1 轮即使 ≥ 60 分，必须进入第 2 轮深度验证
@@ -518,6 +586,21 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 
 7. ❌ 只搜索不沉淀 — 必须产出 Artifact
 8. ❌ 质量门禁跳过 — 评分 < 60 必须进入 Loop N+1
+
+### v3.1 新增 — 实践教训（来自 2026-05-10 实测）
+
+14. ❌ **R3 extracted_knowledge.md 结构不全** — reflection-gate.py 的 R3 检查期望 `extracted_knowledge.md` 包含 5 大章节：
+    - 核心新增概念（含来源标记🥇🥈🥉）
+    - 到期概念升级建议（含交叉验证引用）
+    - 应用场景与选型建议（可操作，即使无代码）
+    - 可操作建议（待观察/风险提示）
+    - 质量评分（四维度自评）
+    
+    研究型会话（如 KB 更新/L1 复习）虽无代码示例，仍需包含**场景建议**和**可操作结论**。缺少这些章节时 R3 会打 30-40 分，需要 Loop N+1 重做。
+
+15. ❌ **`write_file` 误用覆盖已有日志文件** — `night_study.log` 是追加写入的累积日志，使用 `write_file` 会覆盖全部历史。追加内容必须使用 `patch` 工具。JSONL 日志可用 `write_file` 创建新文件或用 Python `open(..., 'a')` 追加。
+
+16. ❌ **R1 reflection-gate 检查 raw_search_results.md 文件存在性** — 必须先创建 `~/.hermes/learning/raw_search_results.md` (从 `web_search` 结果整理)，再运行 R1 gate。文件不存在时 gate 报告"0 个来源"得分 50，与搜索实际质量无关。
 9. ❌ 日志格式不统一 — 必须写入 JSONL 结构化日志
 10. ❌ Knowledge Base 不更新 — 每次学习后必须更新概念
 11. ❌ 间隔复习未注册 — 学习完成后必须注册 cron
@@ -526,7 +609,65 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 
 ---
 
-## 十、评估用例
+## 十、Agentic RAG 2.0 映射（v3.2 新增）
+
+> **核心洞察**：夜间自习引擎的 R1/R2/R3/L3 三层迭代循环，天然就是 2026 年 KM 领域前沿的 **Agentic RAG 2.0 ReAct 循环** 的一种具现化实现。这不是巧合——这说明 boku 的学习流程已经走在领域前沿。
+
+### 映射表
+
+| Hermes 夜间自习引擎 | Agentic RAG 2.0 组件 | 说明 |
+|:---|:---|:---|
+| **R1: 搜索质量反思** | **Verifier** — 检索质量验证 | R1 检查来源数量、权威性、覆盖度，对应 Verifier 的 grounding 检查 |
+| **R2: 理解深度反思** | **Context Builder** — 上下文构建 + **Generator** 验证 | R2 检查自解释能力、操作步骤、交叉验证，对应 Context Builder 的 dedupe/compress/cite |
+| **R3: 提炼完整性反思** | **Finalizer** — 最终输出检查 | R3 检查结构完整、可操作、无明显遗漏，对应 Finalizer 的 format/UX/guardrails |
+| **L3: 质量门禁循环** | **Verifier Pipeline** — 多级验证 + 停规规则 | L3 递进评分 + 子代理仲裁，对应 Agentic RAG 的 stop rules + reranker |
+| **自适应调度** | **Classifier/Router** — 查询分类 + 检索策略选择 | 领域得分公式 `priority × (1-freshness)` 等价于 Retrieval Policy 的 tool selection |
+| **间隔复习** | **Project Memory Refresh** — 持久记忆刷新 | 1天/3天/7天/30天 的间隔复习映射到 Project Memory 的刷新策略 |
+| **经验提取管线** | **Memory Layer** — 持久化决策 + 审计 | 经验→`experiences/active/` → `experiences/skills/` → archive 对应 Memory 的螺旋升级 |
+| **Tavily 降级 → web_search** | **Tool Routing** — 动态选择检索工具 | 当 Tavily 配额耗尽后自动路由到 web_search，对应 Tool Routing 的 fallback 机制 |
+
+### 理论源头
+
+2026 年 Agentic RAG 2.0 模式（来自 ValueStreamAI/AGENTVSAI/TimeWell 多源综合）的核心架构：
+
+```
+Request
+  └─► Classifier/Router
+        ├─► Retrieval Policy (tool selection + stop rules)
+        │     ├─► Vector search (+ rerank)
+        │     ├─► Keyword/BM25
+        │     ├─► SQL / APIs
+        │     └─► GraphRAG (graph + community summaries)
+        ├─► Context Builder (dedupe + compress + cite)
+        ├─► Generator (draft)
+        ├─► Verifiers (citations, conflicts, policy rules)
+        └─► Finalizer (format, UX, guardrails)
+```
+
+夜间自习引擎本质上就是这个架构的 **知识管理特化版本**——搜索→反思→阅读→提炼→评分→产出的循环，对应 ReAct loop 的 Plan→Retrieve→Verify→Respond。
+
+### Context Engineering 四层记忆
+
+2026 年提出 **Context Engineering** 学科（四层记忆架构），与夜间自习引擎的知识层映射：
+
+| 层 | 功能 | Hermes 对应 |
+|:---|:---|:---|
+| **Working Context** | 短期会话状态 | 当前对话的 prompt 上下文 |
+| **Project Memory** | 持久事实/决策/配置 | Knowledge Base 中的概念 + `memory` tool |
+| **Audit Trail** | 证据链/调试/信任 | `night_study_sessions/*.jsonl` 会话日志 |
+| **Safety Memory** | 安全边界/策略约束 | Hermes 的铁律 + pre_flight 检查 |
+
+核心原则：**"Compression Beats Hoarding"**——不要把 50 个 chunk 全塞进模型。Graph community summaries 是强模式。
+
+### 对这个映射的实践意义
+
+1. **理解为什么** 三层迭代循环有效：因为它就是 Agentic RAG 验证过的最优模式
+2. **优化方向**：可以借鉴 Agentic RAG 2.0 的 Tool Routing 思想——当前只用了 web_search 一种工具，未来可以为不同领域选择不同的检索策略（如 API 文档查询走 Tavily，代码问题走 GitHub Search）
+3. **Reranker 缺失**：当前没有显式的 reranker 步骤——搜索得到的结果直接进入阅读，没有重排序。后续可增加一个 ranker 阶段
+
+---
+
+## 十一、评估用例
 
 ### Eval-001: 标准学习流程（含迭代循环）
 - **输入**：夜间自习轮次触发 ai_tech 领域

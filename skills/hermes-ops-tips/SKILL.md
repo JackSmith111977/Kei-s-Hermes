@@ -1,7 +1,7 @@
 ---
 name: hermes-ops-tips
-description: "Hermes 运维与工具流最佳实践。包含 Hermes 手动升级流程、SRA Proxy 修复、高清架构图生成 (SVG + cairosvg)、Memory 降级策略。"
-triggers: [高清截图, cairosvg, sra proxy bug, 架构图, memory full, hermes运维, 升级hermes, hermes升级, sra升级, sra安装, sra重装, sra从源码安装, sra卸载, sra uninstall, sra upgrade, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复, browser vision, vision provider, 视觉模型, 截图卡住, 国内视觉api, openrouter vision, qwen vl]
+description: "Hermes 运维与工具流最佳实践。包含 Hermes 手动升级流程、SRA 迁移与独立工具管理、高清架构图生成 (SVG + cairosvg)、Memory 降级策略。"
+triggers: [高清截图, cairosvg, sra迁移, sra管理, sra安装, 架构图, memory full, hermes运维, 升级hermes, hermes升级, sra升级, sra安装, sra重装, sra从源码安装, sra卸载, sra uninstall, sra upgrade, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复, browser vision, vision provider, 视觉模型, 截图卡住, 国内视觉api, openrouter vision, qwen vl]
 ---
 
 # Hermes Ops & Workflow Tips
@@ -14,11 +14,30 @@ triggers: [高清截图, cairosvg, sra proxy bug, 架构图, memory full, hermes
     *   命令: `cairosvg input.svg -o output.png --output-width 3600`
     *   环境依赖: `sudo apt install libcairo2-dev` + `pip install cairosvg`.
 
-## 2. SRA Proxy Bug 修复记录
-**现象**: `sra start` 输出显示端口 8532，但实际服务在 8536。
-**原因**: `daemon.py` 中 `cmd_start` 和 `cmd_status` 硬编码了 8532。
-**修复**: 修改 `daemon.py` 读取 `load_config()` 获取 `http_port`。
-**仓库**: `https://github.com/JackSmith111977/Hermes-Skill-View.git`
+## 2. SRA — 从 Hermes 集成 → 独立工具迁移记录
+
+SRA 原本通过代码注入集成到 Hermes 核心循环（每次用户消息自动调 SRA Proxy → 注入 `[SRA]` 前缀）。2026-05-10 已完全剥离：
+
+**剥离内容**：
+- `run_agent.py`：删除 `_query_sra_context()` 函数（~60行）和 `run_conversation()` 中的注入点（4行）
+- `agent/prompt_builder.py`：删除 `build_sra_context_prompt()` 函数（~60行）
+- 删除所有 SRA 相关 skill 目录（`sra-agent/`, `skill-advisor/`, `hermes-message-injection/`）
+- 删除 SRA 运行时数据（`~/.sra/`）和旧源码（`/tmp/sra-latest/`）
+- 清理 Memory 中的 SRA 集成引用
+
+**当前状态**：SRA 作为独立工具运行，不侵入 Hermes 核心代码。
+
+**项目存放位置**（独立项目统一规范）：
+- 所有独立项目源码统一放在 `~/projects/` 下
+- SRA 源码：`~/projects/sra/`（从 GitHub 克隆）
+- 其他独立项目（如有）同样放在 `~/projects/<project-name>/`
+
+**当前安装**：
+- 源码：`~/projects/sra/`（editable 安装）
+- 版本：v1.2.1（端口 8536）
+- 安装方式：`pip install --no-build-isolation -e .`
+- 仓库：`https://github.com/JackSmith111977/Hermes-Skill-View.git`
+- 运行时数据：`~/.sra/`（配置、日志、PID、socket）
 
 ## 3. Memory 溢出降级策略
 当 Memory 达到上限 (约 2200 chars) 无法写入时：
@@ -106,9 +125,7 @@ grep -n "statusline" gateway/run.py | grep -v "^.*\.py:" | head -10
 
 1. 🐱 **飞书卡片 🐱小玛**：恢复 `_build_markdown_card_payload()`、`_build_text_card_payload()` 函数，修改 `_build_outbound_payload()` 返回 interactive card，添加发送/编辑的卡片失败降级逻辑
 
-2. 🔄 **SRA 技能推荐**：在 `run_agent.py` 添加 `_query_sra_context()` 函数 + 注入逻辑，在 `agent/prompt_builder.py` 添加 `build_sra_context_prompt()` 函数
-
-3. 📊 **状态栏脚注 (`gateway/statusline.py`)**：文件保留但集成丢失，需要以下两步恢复：
+2. 📊 **状态栏脚注 (`gateway/statusline.py`)**：文件保留但集成丢失，需要以下两步恢复：
    ```python
    # 步骤 A: 在 gateway/run.py 顶部添加导入（与已有 gateway import 放在一起）
    from gateway.statusline import build_statusline
@@ -182,29 +199,29 @@ sra uninstall --all            # 完全卸载（含配置和索引数据）
 4. 📁 `--all` 时删除 `~/.sra/`，否则提示保留
 5. ⚠️ 系统级 systemd 服务（需 sudo）仅打印提示，不强行删除
 
-### 8.2 备选—手动升级流程（非标准环境降级方案）
+### 8.2 备选—手动升级/全新安装流程（非标准环境降级方案）
 
 **场景：** 内置 `sra upgrade` 不可用（网络受限、需要使用特定 venv、或环境特殊时）。
 
 ```bash
-# 1. 停止旧版 SRA Daemon
+# 1. 停止旧版 SRA Daemon（如有）
 ~/.hermes/hermes-agent/venv/bin/sra stop
 
-# 2. 从 Hermes venv 卸载旧版
+# 2. 从 Hermes venv 卸载旧版（如有）
 ~/.hermes/hermes-agent/venv/bin/python3 -m pip uninstall sra-agent -y
 
 # 3. 从 GitHub 克隆最新源码（需要代理）
 export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
-git clone https://github.com/JackSmith111977/Hermes-Skill-View.git /tmp/sra-latest
+git clone https://github.com/JackSmith111977/Hermes-Skill-View.git ~/projects/sra
 
 # 4. 安装到 Hermes venv
 # ⚠️ 坑1: Hermes venv 的 pip 可能较旧，找不到 setuptools>=61.0（腾讯镜像无此版本）
 #     → 使用 --no-build-isolation 跳过构建隔离，直接用 venv 已有的 setuptools
-cd /tmp/sra-latest
+cd ~/projects/sra
 ~/.hermes/hermes-agent/venv/bin/python3 -m pip install --no-build-isolation -e .
 
 # 5. 启动新版 SRA Daemon
-~/.hermes/hermes-agent/venv/bin/srad
+~/.hermes/hermes-agent/venv/bin/sra start
 
 # 6. 测试新版（注意代理干扰！）
 # ⚠️ 坑2: 如果 http_proxy 环境变量设置了 127.0.0.1:7890，
@@ -227,7 +244,7 @@ curl -s --noproxy '*' -X POST http://127.0.0.1:8536/recommend \
 
 ### 注意：使用 editable 安装后修改代码自动生效
 
-`pip install -e .` 以 editable 模式安装，修改 `/tmp/sra-latest/` 下的源码后重启 srad 即可生效，无需重新安装。
+`pip install -e .` 以 editable 模式安装，修改 `~/projects/sra/` 下的源码后重启 srad 即可生效，无需重新安装。
 
 ## 9. Statusline 运行状态诊断（集成后验证）
 

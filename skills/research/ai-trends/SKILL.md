@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.7.0
+version: 1.9.0
 triggers:
 - ai trends
 - ai前沿
@@ -72,12 +72,22 @@ metadata:
   - 定价不变：$5/M 输入，$25/M 输出
 - **MiniMax M2.7**：角色一致性与情感深度增强，开源 OpenRoom（基于 Web 的实时视觉反馈环境）
 - **xAI Grok 4.3**（2026.05.06）：xAI 最新发布，延续 Grok 系列推理能力
-- **MiniMax-M1**（2026.05）：**全球首个开源大规模混合注意力推理模型**，1M token 上下文窗口（与 Gemini 2.5 Pro 并列行业领先），80K 推理 token 输出
+| **MiniMax-M1**（2026.05）：**全球首个开源大规模混合注意力推理模型**，1M token 上下文窗口（与 Gemini 2.5 Pro 并列行业领先），80K 推理 token 输出
   - 专有 Lightning Attention 机制，80K 深度推理仅需约 DeepSeek R1 30% 算力
   - SWE-bench 验证集 56.0%（接近 DeepSeek-R1-0528 57.6%，大幅超越其他开源模型）
   - 长上下文理解超 OpenAI o3 和 Claude 4 Opus，全球第二仅次于 Gemini 2.5 Pro
   - Agent 工具使用（TAU-bench）领先所有开源模型，超 Gemini-2.5 Pro
   - 开源权重 + 技术报告已发布
+| **SubQ 1M-Preview / SSA**（Subquadratic, 2026.05.05）：**首个全次二次架构LLM**（计算量 O(n) 线性缩放而非 O(n²)）
+  - **SSA（Subquadratic Sparse Attention）**: content-dependent selection — 非计算所有 pair，仅基于内容选择实际相关位置
+  - 速度对比（vs FlashAttention on B200s）：128K=7.2×, 256K=13.2×, 512K=23.0×, **1M=52.2×**
+  - 62.5× FLOP 减少 @1M vs 标准 attention，12M token 研究时 ~1,000× 减少
+  - 基准测试：RULER @128K **95.0%**（vs Opus 4.6 94.8%）、SWE-Bench **81.8%**、MRCR v2 @1M **65.9%**
+  - 三阶段训练管线：预训练→SFT→RL（RL 惩罚\"局部正确\"答案，训练远距路由）
+  - 产品线：SubQ API（OpenAI 兼容）、SubQ Code（兼容 Claude Code/Codex/Cursor）、SubQ Search
+  - 公司：$29M seed, CEO Justin Dangel, CTO Alex Whedon（前Meta）, 11 PhD 来自 Meta/Google/Oxford 等
+  - **⚠️ 技术报告未公开**，无法确认是否真正的 O(n) end-to-end；52× 为 attention-only 加速，系统级可能被稀释
+  - Atlas Peak Research 分析：可能是混合架构时代开始，而非纯次二次替代（2026.05 评估）
 
 ### 架构趋势
 
@@ -193,6 +203,7 @@ metadata:
 | **OpenSeeker-v2** | 学术团队 (2026.05) | 开源搜索 Agent，BrowseComp **46.0%** SOTA，仅 **10.6K 数据点**纯 SFT 训练，30B 参数 |
 | **Zyphra ZAYA1-8B** | Zyphra (2026.05) | 开源 8B MoE 推理模型，<1B active params，Apache 2.0。CCA 注意力 + MLP 路由器 + Markovian RSA 测试时计算。AMD MI300X 1024 GPU 训练。匹配 Nemotron-3-Nano/Mistral-Small，与 DeepSeek-R1/Gemini-2.5-Pro 竞争 |
 | **Google DeepMind Gemma 4** | Google (2026.05) | Apache 2.0 开源。26B-A4B MoE 达 31B Dense 旗舰 **97% 质量**，8 倍少算力。4 种规格：E2B/E4B/26B-MoE/31B，支持多模态 + 音频输入 |
+| **EMO (EMergent mOdularity MoE)** | AI2 (2026.05.08) | 14B总/1B活跃 MoE（128专家/8活跃/1T tokens训练）。文档边界弱监督强制专家按语义域组织。12.5%专家≈全模型性能(-3%)；标准MoE同设定急剧下降。1个few-shot即可选专家子集。Apache 2.0开源。训练代码+基线已发布 |
 
 ### 2026 趋势观察（2026.05 更新）
 
@@ -306,3 +317,5 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-07: v1.5 更新 — GPT-5.5 Instant 完整规格（Memory Sources、自我错误恢复、API 端点）；Kimi K2.6 GA 详细规格（1T/32B MoE、12h 运行、300-agent 群、Partner 验证）；Nemotron 3 Nano Omni 扩展（部署路径、H Company 实测）；Gemini API File Search 多模态化；新增 ICLR 2026 论文（MoGA 长视频生成、GRAM 递归推理、Drifting Models 一步生成）
 > - 2026-05-08: **v1.6 更新** — 新增 Agent 基础设施发展（AWS Agent Toolkit GA、Google 50+ 托管 MCP 服务器、Microsoft AGT、Claude Mythos+Project Glasswing、MCP 2026 路线图、MCP v2 Beta）；Gemma 4 开源（26B MoE 旗舰 97% 质量）；MiniMax-M1 混合注意力推理模型；DR-Venus-4B / OpenSeeker-v2 开源深度研究 Agent；Grok 4.3、SubQ 次二次缩放注意力；Codex CLI Terminal-Bench 82.7%；openai-agents-python v0.16.0 默认模型切换；vLLM v0.20.1 DeepSeek V4 稳定化；Transformers v5.7.0 新模型；更新 2026 趋势观察（10 条）
 > - 2026-05-09: **v1.7 更新** — 新增 GPT-5.5-Cyber 安全变体（5/8）；GPT-Realtime-2/Translate/Whisper 语音三模型（5/7）及三大语音 AI 模式；Anthropic Claude Managed Agents Dreaming/Outcomes/Multiagent（5/8，Harvey 6x、Netflix）；Google Gemini 3.1 Flash-Lite GA（5/7，60% 成本降低、JetBrains/Gladly/Ramp 案例）；Zyphra ZAYA1-8B 开源推理模型（5/6，<1B active params，AMD 训练）；AWS Agent Toolkit GA（5/6，40+ skills）；Salesforce Hosted MCP GA（4/29）；Azure MCP Server 2.0（4/10）；OpenAI Agents SDK 沙箱/记忆/MCP 更新（4/15）；Hermes Agent v0.13.0 Tenacity；更新趋势观察至 13 条
+> - 2026-05-10: **v1.8 更新** — SubQ SSA 次二次架构深潜（52×加速 @1M、content-dependent selection、⚠️ 待技术报告）；EMO 模块性 MoE（AI2, 12.5%专家≈全模型, Apache 2.0）；升级 Drifting Models 完整分析（Kaiming He 一步生成, FID 1.54）；升级 GRAM 隐空间递归推理（ICLR 2026 Workshop）；更新趋势观察（效率革命三方向、生成范式转变、模块化趋势）
+> - 2026-05-10: **v1.9 更新** — DeepSeek 图像识别模式 (Thinking with Visual Primitives, ~90 tokens/图像)；Transformers v5.8.0 新模型支持 (DeepSeek-V4/Gemma 4 Assistant/EXAONE-4.5/Granite)；OrcaRouter Lite MIT 开源LLM路由；NIST CAISI 前沿AI预部署测试协议 (MS/Google/xAI签署)；MCP 2026路线图深度展开 (MCP Apps/97M月下载/10K+服务器)；MCP基础设施全面产品化 (AWS MCP Server GA/Red Hat MCP Gateway TP/Retool/MCP Toolbox v1.0)；Airbnb 60%代码AI生成；llama.cpp b9045 Granite Speech支持

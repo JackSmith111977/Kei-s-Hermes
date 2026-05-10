@@ -51,8 +51,14 @@ def score_skill(query, meta):
     # 3. Check Triggers (Weight 50 - Highest Priority)
     triggers = meta.get('triggers', [])
     for trigger in triggers:
-        if trigger.lower() in query_lower or query_lower in trigger.lower():
-            score += 50
+        if isinstance(trigger, dict):
+            # Some skills have triggers as dict objects; skip or extract
+            for v in trigger.values():
+                if isinstance(v, str) and (v.lower() in query_lower or query_lower in v.lower()):
+                    score += 50
+        elif isinstance(trigger, str):
+            if trigger.lower() in query_lower or query_lower in trigger.lower():
+                score += 50
             
     return score
 

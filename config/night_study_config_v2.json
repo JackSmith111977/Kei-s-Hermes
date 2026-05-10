@@ -8,8 +8,8 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-09T02:00:00",
-      "freshness_score": 0.92,
+      "last_updated": "2026-05-10T02:00:00",
+      "freshness_score": 0.70,
       "review_schedule": {
         "l1": "2026-05-12",
         "l2": "2026-05-15",
@@ -87,22 +87,25 @@
     {
       "id": "productivity",
       "name": "效率与工作方法论",
-      "keywords": "productivity apps, knowledge management, remote work, AI tools, Notion Obsidian",
+      "keywords": "productivity apps, knowledge management, remote work, AI tools, Notion Obsidian, multi-agent governance, freshness SLA, agentic KM",
       "target_skill": "memory-management",
       "priority": 0.6,
       "schedule_interval_hours": 6,
-      "last_updated": "2026-05-06T08:10:26",
-      "freshness_score": 0.95,
+      "last_updated": "2026-05-10T00:01:00",
+      "freshness_score": 0.70,
       "review_schedule": {
-        "l1": "2026-05-07",
-        "l2": "2026-05-13",
-        "l3": "2026-06-06"
+        "l1": "2026-05-11",
+        "l2": "2026-05-17",
+        "l3": "2026-06-10"
       },
       "knowledge_gaps_filled": [
         "Notion Custom Agents 3.4",
         "Obsidian Claude Code MCP",
         "Power Trio Stack 2026",
-        "AI Meeting Intelligence patterns"
+        "AI Meeting Intelligence patterns",
+        "Multi-Agent Governance Six Primitives (Knowlee)",
+        "Freshness SLA Framework (Wrodium/AgentForge/Atlan)",
+        "Agentic KM 2026 Architecture Update"
       ]
     }
   ],

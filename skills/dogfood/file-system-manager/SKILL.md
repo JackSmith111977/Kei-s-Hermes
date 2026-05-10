@@ -21,6 +21,11 @@ triggers:
   - space
   - cache cleanup
   - disk-cleanup
+  - 项目存放
+  - 项目管理
+  - 项目目录
+  - projects
+  - 独立项目
 depends_on:
   - delete-safety
   - linux-ops-guide
@@ -183,3 +188,45 @@ cronjob create --name "monthly-cache-cleanup" --schedule "0 3 1 * *" \
 - 只清理 `$HERMES_HOME` 和 `/tmp/hermes-*`
 - 拒绝对外部路径的操作
 - 所有脚本都有 `dry-run` 模式
+
+---
+
+## 九、独立项目存放规范
+
+> `file-system-manager` 管理的是 **$HERMES_HOME 内部** 的文件。独立项目不应放在 `~/.hermes/` 或 `/tmp/` 下。
+
+### 标准项目目录
+
+```
+~/projects/              ← 所有独立项目（Runtime/常驻服务）的家
+├── sra/                 ← SRA (Skill Runtime Advisor)
+└── ...                  ← 未来的独立项目
+```
+
+### 三类文件的分界
+
+| 类型 | 存放位置 | 管理方式 | 示例 |
+|:-----|:---------|:---------|:-----|
+| 🏠 **Hermes 内部** | `~/.hermes/` | file-system-manager 管理 | skills, config, sessions, cache |
+| 📦 **独立项目** | `~/projects/<name>/` | 项目自身管理 | SRA 源码 |
+| 🕊️ **临时文件** | `/tmp/` | 预期可丢失 | 编译产物、下载缓存 |
+
+### 为什么独立项目不放 `~/.hermes/`？
+
+- `~/.hermes/` 是 Hermes Agent 的领地，混入外部项目会污染目录结构
+- 独立项目有自己的生命周期（git 仓库、pip install、systemd 服务），和 Hermes 的配置/日志/缓存完全不同
+- 清理脚本（disk-cleanup）如果误伤项目文件会造成严重后果
+
+### 为什么不放 `/tmp/`？
+
+- `/tmp/` 重启可能被系统清理
+- 缺乏持久性保证
+- 项目源码应该有稳定的存放位置
+
+### 独立项目的典型安装方式
+
+```bash
+cd ~/projects/<project-name>
+# editable 安装到 Hermes venv，修改源码后立即生效
+~/.hermes/hermes-agent/venv/bin/python3 -m pip install --no-build-isolation -e .
+```
