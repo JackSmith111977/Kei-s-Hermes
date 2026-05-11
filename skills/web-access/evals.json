@@ -1,0 +1,24 @@
+{
+  "skill_name": "web-access",
+  "version": "5.0.0-hermes",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "帮我搜索最新 AI 新闻",
+      "expected_output": "使用 Tavily 搜索返回最新 AI 新闻摘要和来源链接",
+      "grader": "检查是否优先使用了 mcp_tavily_tavily_search 而非浏览器"
+    },
+    {
+      "id": "eval-002",
+      "prompt": "帮我抓取这个网页的内容 https://example.com",
+      "expected_output": "返回网页的标题、正文和关键信息",
+      "grader": "检查是否使用了 CDP 浏览器或 tavily_extract 工具"
+    },
+    {
+      "id": "eval-003",
+      "prompt": "帮我登录一个需要账号的网站",
+      "expected_output": "通过 CDP 浏览器完成登录流程",
+      "grader": "检查是否正确使用了 web-access 的浏览器自动化流程"
+    }
+  ]
+}
