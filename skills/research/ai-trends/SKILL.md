@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.9.0
+version: 1.10.0
 triggers:
 - ai trends
 - ai前沿
@@ -137,7 +137,7 @@ metadata:
 | **MCP 2026 路线图发布** | 2026.03 | 🟡 中 | 四大方向：Streamable HTTP 无状态传输（6 月规范周期）、Agent-to-Agent 通信、企业认证（OAuth 2.1 PKCE）+ 审计合规、MCP Apps（工具返回交互式 HTML）、SSE 即将废弃 |
 | **MCPRated 索引上线** | 2026.05 | 🟢 低 | Agent 可读的 MCP 服务器质量索引，每天更新，4 轴评分（可靠性/文档/信任/社区），Agent 可在运行时发现和筛选 MCP 服务器 |
 | **MCP v2 Beta (@ai-sdk/mcp)** | 2026.03.13 | 🟡 中 | Vercel AI SDK MCP v2：独立稳定包，OAuth 2.0 内置，Structured Output（outputSchema），Elicitation 支持，Resources/Prompts 原语 |
-| **Claude Mythos + Project Glasswing** | 2026.05 | 🔴 高 | Anthropic "超级黑客"模型仅限 40 家合作伙伴使用，Amazon/Google/Microsoft/NVIDIA/Cisco 组成的 Project Glasswing 联盟，$100M 安全 credits + $4M 捐赠开源安全组织 |
+|| **Claude Mythos + Project Glasswing** | 2026.05 | 🔴 高 | Anthropic "超级黑客"模型。Mozilla合作: 发现271个Firefox漏洞(180 sec-high)，几乎无假阳性。Agent Harness设计模式(指令+工具+循环→验证)。仅限40家合作伙伴使用(Amazon/Google/MS/NVIDIA/Cisco)的Project Glasswing联盟，$100M 安全 credits + $4M 捐赠开源安全组织 |
 | **Claude Managed Agents: Dreaming/Outcomes/Multiagent** | 2026.05.08 | 🔴 高 | Dreaming（研究预览）：计划性复盘+跨 session 记忆演化。Harvey 法律 AI 测试完成率提升 ~6x。Outcomes（公测）：定义成功标准+独立评分器，编码成功率 +10pts。Multiagent Orchestration（公测）：主 agent 拆解任务分派专业子 agent 并行。Netflix 已用于平台团队。Webhooks 同时发布 |
 
 **MCP 生态关键趋势**：
@@ -203,7 +203,9 @@ metadata:
 | **OpenSeeker-v2** | 学术团队 (2026.05) | 开源搜索 Agent，BrowseComp **46.0%** SOTA，仅 **10.6K 数据点**纯 SFT 训练，30B 参数 |
 | **Zyphra ZAYA1-8B** | Zyphra (2026.05) | 开源 8B MoE 推理模型，<1B active params，Apache 2.0。CCA 注意力 + MLP 路由器 + Markovian RSA 测试时计算。AMD MI300X 1024 GPU 训练。匹配 Nemotron-3-Nano/Mistral-Small，与 DeepSeek-R1/Gemini-2.5-Pro 竞争 |
 | **Google DeepMind Gemma 4** | Google (2026.05) | Apache 2.0 开源。26B-A4B MoE 达 31B Dense 旗舰 **97% 质量**，8 倍少算力。4 种规格：E2B/E4B/26B-MoE/31B，支持多模态 + 音频输入 |
-| **EMO (EMergent mOdularity MoE)** | AI2 (2026.05.08) | 14B总/1B活跃 MoE（128专家/8活跃/1T tokens训练）。文档边界弱监督强制专家按语义域组织。12.5%专家≈全模型性能(-3%)；标准MoE同设定急剧下降。1个few-shot即可选专家子集。Apache 2.0开源。训练代码+基线已发布 |
+|| **EMO (EMergent mOdularity MoE)** | AI2 (2026.05.08) | 14B总/1B活跃 MoE（128专家/8活跃/1T tokens训练）。文档边界弱监督强制专家按语义域组织。12.5%专家≈全模型性能(-3%)；标准MoE同设定急剧下降。1个few-shot即可选专家子集。Apache 2.0开源。训练代码+基线已发布 |
+|| **NVIDIA Star Elastic** | NVIDIA (2026.05.09) | **单检查点多嵌套模型**: 30B/23B/12B 从一次后训练(~160B tokens)提取。360× token减少, 23B→30B预算控制 +16% 准确率 1.9× 低延迟。NVFP4 18.7GB, 12B可在RTX 5080运行。宽度压缩(98.1%)优于深度(95.2%) |
+|| **ATOM Report** | Interconnects AI (arxiv 2604.07190) | **开源LLM生态全景**: 20.4亿累计下载(6× YoY)。中国1.15B vs 美国723M。Qwen ~942M最受欢迎, DeepSeek 75.6%推理token份额(OpenRouter)。RAM指标量化动量 |
 
 ### 2026 趋势观察（2026.05 更新）
 
@@ -220,6 +222,8 @@ metadata:
 11. **语音智能进入推理时代**（2026.05.07）：GPT-Realtime-2 为首次 GPT-5-class 推理语音模型。Voice-to-action/Systems-to-voice/Voice-to-voice 三大模式确立。音频上下文 128K，agent 工具调用成为语音交互标准
 12. **Agent 跨会话演化成为产品功能**（2026.05.08）：Claude Dreaming 让 agent 在会话间自我改进（Harvey 6x 提升）。独立评分器（Outcomes）替代 prompt 工程作为质量保证手段。多 Agent 编排从框架实验正式产品化
 13. **三大云厂商 MCP 基础设施全面产品化**（2026.04-05）：AWS Agent Toolkit + MCP Server GA（40+ skills）、Google 50+ 托管 MCP GA、Salesforce Hosted MCP GA、Azure MCP 2.0。MCP 从开发者工具升级为企业基础设施
+14. **单检查点多模型部署兴起**（2026.05.09）：NVIDIA Star Elastic 释放 360× token 节省和 53% 存储减少。标志AI部署从"多checkpoint"向"弹性嵌套"范式转变，消费级GPU可运行12B模型
+15. **开源模型生态格局固化**（ATOM Report）：Qwen 69%衍生份额 vs Llama 11%，中国1.15B下载(11.9× YoY) vs 美国723M(4.1×)。开源社区已形成 Qwen(生态) + DeepSeek(推理) 双极格局，新入者突破难度激增
 
 ---
 
@@ -319,3 +323,4 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-09: **v1.7 更新** — 新增 GPT-5.5-Cyber 安全变体（5/8）；GPT-Realtime-2/Translate/Whisper 语音三模型（5/7）及三大语音 AI 模式；Anthropic Claude Managed Agents Dreaming/Outcomes/Multiagent（5/8，Harvey 6x、Netflix）；Google Gemini 3.1 Flash-Lite GA（5/7，60% 成本降低、JetBrains/Gladly/Ramp 案例）；Zyphra ZAYA1-8B 开源推理模型（5/6，<1B active params，AMD 训练）；AWS Agent Toolkit GA（5/6，40+ skills）；Salesforce Hosted MCP GA（4/29）；Azure MCP Server 2.0（4/10）；OpenAI Agents SDK 沙箱/记忆/MCP 更新（4/15）；Hermes Agent v0.13.0 Tenacity；更新趋势观察至 13 条
 > - 2026-05-10: **v1.8 更新** — SubQ SSA 次二次架构深潜（52×加速 @1M、content-dependent selection、⚠️ 待技术报告）；EMO 模块性 MoE（AI2, 12.5%专家≈全模型, Apache 2.0）；升级 Drifting Models 完整分析（Kaiming He 一步生成, FID 1.54）；升级 GRAM 隐空间递归推理（ICLR 2026 Workshop）；更新趋势观察（效率革命三方向、生成范式转变、模块化趋势）
 > - 2026-05-10: **v1.9 更新** — DeepSeek 图像识别模式 (Thinking with Visual Primitives, ~90 tokens/图像)；Transformers v5.8.0 新模型支持 (DeepSeek-V4/Gemma 4 Assistant/EXAONE-4.5/Granite)；OrcaRouter Lite MIT 开源LLM路由；NIST CAISI 前沿AI预部署测试协议 (MS/Google/xAI签署)；MCP 2026路线图深度展开 (MCP Apps/97M月下载/10K+服务器)；MCP基础设施全面产品化 (AWS MCP Server GA/Red Hat MCP Gateway TP/Retool/MCP Toolbox v1.0)；Airbnb 60%代码AI生成；llama.cpp b9045 Granite Speech支持
+> - 2026-05-11: **v1.10 更新** — NVIDIA Star Elastic 单检查点多模型嵌套(360× token/53%存储)；Mozilla×Mythos 271漏洞实战数据(180 sec-high, 几乎无假阳性)；ATOM Report 开源模型生态全景(中国1.15B, Qwen 69%衍生份额)；Mythos 条目更新 Firefox 实战数据；趋势观察 #14-#15 新增

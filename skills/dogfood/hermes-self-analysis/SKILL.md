@@ -256,4 +256,5 @@ Skill 数量: 300+
 
 **📎 参考文件**：
 - `references/hermes-architecture.md` — Hermes Agent 完整架构参考（深度学习产出）
+- `references/plugin-hooks-and-streaming-pipeline.md` — 插件钩子系统(VALID_HOOKS) + 流式输出管线 + 钩子 gap 分析（2026-05-11 源码审计）
 - `references/batch-upgrade-workflow.md` — 批次升级工作流（基于 Batch 1-3 实战经验）

@@ -682,16 +682,14 @@ git checkout master
 git merge release-v<version>
 git tag v<version> && git push origin v<version>
 
-# 用 gh CLI 创建 Release（含二进制附件）
+# 用 gh CLI 创建 Release（标题只留版本号！）
 gh release create v<version> \
-  -t "Project Name v<version>" \
-  -F CHANGELOG.md \
-  dist/*.whl dist/*.tar.gz
+  -t "v<version>" \
+  -F CHANGELOG.md
 
-# 或用 API
-curl -X POST https://api.github.com/repos/OWNER/REPO/releases \
-  -H "Authorization: token YOUR_TOKEN" \
-  -d '{"tag_name": "v<version>", "name": "Project Name v<version>", "body": "See CHANGELOG.md"}'
+# ⚠️ 用户偏好：Release 标题只保留版本号（如 "v1.2.1"），不加描述性文字
+# ❌ 错误：gh release create v<version> -t "Project Name v<version> - 新增功能"
+# ✅ 正确：gh release create v<version> -t "v<version>"
 ```
 
 ### 9.9 Daemon 感知的发布流程（适用于带后台进程的项目）

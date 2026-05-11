@@ -8,8 +8,8 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-10T02:00:00",
-      "freshness_score": 0.70,
+      "last_updated": "2026-05-11T02:00:00",
+      "freshness_score": 0.88,
       "review_schedule": {
         "l1": "2026-05-12",
         "l2": "2026-05-15",
@@ -23,8 +23,17 @@
         "GPT-Realtime 语音三模型 + 三大语音 AI 模式",
         "Claude Managed Agents Dreaming/Outcomes/Multiagent",
         "Gemini 3.1 Flash-Lite GA",
-        "Zyphra ZAYA1-8B 开源推理模型"
-      ]
+        "Zyphra ZAYA1-8B 开源推理模型",
+        "NVIDIA Star Elastic 单检查点多嵌套模型",
+        "ATOM Report 开源LLM生态全景",
+        "Mozilla×Mythos Agent Harness 漏洞挖掘模式"
+      ],
+      "learning_history": {
+        "total_sessions": 1,
+        "avg_quality": 0.91,
+        "last_loop_count": 2,
+        "consecutive_failures": 0
+      }
     },
     {
       "id": "dev_tools",
@@ -33,12 +42,12 @@
       "target_skill": "linux-ops-guide",
       "priority": 0.7,
       "schedule_interval_hours": 4,
-      "last_updated": "2026-05-09T06:00:00",
-      "freshness_score": 0.85,
+      "last_updated": "2026-05-11T00:10:00",
+      "freshness_score": 0.75,
       "review_schedule": {
-        "l1": "2026-05-09",
-        "l2": "2026-05-15",
-        "l3": "2026-06-07"
+        "l1": "2026-05-14",
+        "l2": "2026-05-18",
+        "l3": "2026-06-11"
       },
       "knowledge_gaps_filled": [
         "Go 1.24 Swiss Tables / weak pointer / tool directive",
@@ -92,7 +101,7 @@
       "priority": 0.6,
       "schedule_interval_hours": 6,
       "last_updated": "2026-05-10T00:01:00",
-      "freshness_score": 0.70,
+      "freshness_score": 0.7,
       "review_schedule": {
         "l1": "2026-05-11",
         "l2": "2026-05-17",
