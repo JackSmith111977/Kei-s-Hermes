@@ -7,6 +7,10 @@ triggers:
 - rebase
 - stash
 - 冲突
+- RPC failed
+- GnuTLS
+- 推送失败
+- proxy push
 allowed-tools:
 - terminal
 - read_file
@@ -134,7 +138,42 @@ git stash apply stash@{1}
 git stash drop stash@{0}
 ```
 
-## 三、Force Push（强制推送）
+## 三、代理环境下的 Push 陷阱
+
+### 陷阱：`RPC failed; GnuTLS recv error` — 推送未必真失败
+
+**现象**：
+```bash
+$ git push origin feature
+error: RPC failed; curl 56 GnuTLS recv error (-110): The TLS connection was non-properly terminated.
+send-pack: unexpected disconnect while reading sideband packet
+fatal: the remote end hung up unexpectedly
+```
+
+**关键洞察**：这个错误 **不代表推送一定失败**。HTTP 层面的 TLS 断开发生在响应回传阶段，但 Git 的推送数据可能已经到达服务器端并被处理。典型表现：
+- 第一次尝试报错
+- 第二次尝试显示 `Everything up-to-date` — 说明第一次实际上成功了
+
+**建议的应对流程**：
+```bash
+# 第一步：不要立即惊慌重试
+# 第二步：验证远端是否已接收提交
+git ls-remote origin feature
+
+# 第三步：确认远端 commit hash 是否匹配本地
+LOCAL_HASH=$(git rev-parse HEAD)
+REMOTE_HASH=$(git ls-remote origin feature | cut -f1)
+if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
+  echo "✅ 推送已成功，无需重试"
+else
+  echo "❌ 推送未成功，需要重试"
+  git push origin feature
+fi
+```
+
+**根因**：通过 mihomo/Clash 代理推送时，代理偶尔会在响应传输中提前关闭 TLS 连接（非 Git 问题）。推送数据本身已在关闭前完成传输。
+
+## 四、Force Push（强制推送）
 
 ```bash
 # 安全强制推送（推荐）
@@ -146,7 +185,7 @@ git push --force origin feature
 
 > `--force-with-lease` 比 `--force` 安全：如果有人先推送了，它会失败而不是覆盖
 
-## 四、Reflog（后悔药）
+## 五、Reflog（后悔药）
 
 ```bash
 # 查看所有操作历史
@@ -161,7 +200,7 @@ git cherry-pick <lost-commit-hash>
 
 所有操作（包括 rebase、reset）都可以通过 reflog 恢复。
 
-## 五、冲突解决
+## 六、冲突解决
 
 ```bash
 # 查看冲突文件
@@ -178,7 +217,7 @@ git checkout --theirs file.txt
 git add file.txt
 ```
 
-## 六、Submodule（子模块）
+## 七、Submodule（子模块）
 
 ```bash
 # 添加子模块
@@ -194,7 +233,7 @@ git submodule update --remote
 git submodule update --init --recursive
 ```
 
-## 七、Cherry-pick（精选提交）
+## 八、Cherry-pick（精选提交）
 
 ```bash
 # 从其他分支挑一个 commit
@@ -207,7 +246,7 @@ git cherry-pick abc1234 def5678
 git cherry-pick -n abc1234
 ```
 
-## 八、快速参考
+## 九、快速参考
 
 ```bash
 # 日志美化

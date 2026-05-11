@@ -1,9 +1,9 @@
 # SRA 项目文档漂移检测实战
 
-> 来自 Sprint 2 完成后文档对齐的实操经验
-> 日期: 2026-05-10
+> 来自 Sprint 2 + Sprint 3 文档对齐的实操经验
+> 日期: 2026-05-11
 
-## 检测到的漂移
+## 检测到的漂移（Sprint 2）
 
 Sprint 2 完成后，API-REFERENCE.md 缺失以下内容：
 
@@ -74,3 +74,49 @@ Step 4: 跨文档验证
 Step 5: 单次提交
   → git add docs/ PROJECT-PANORAMA.html && git commit
 ```
+
+---
+
+## 检测到的漂移（Sprint 3 — 2026-05-11）
+
+### 模式 1：CLI 命令名漂移
+
+**现象**：文档中写 `sra list-adapters`，实际代码中命令名是 `sra adapters`（`cli.py` 的 COMMANDS dict 中注册的是 `"adapters": cmd_adapters`）。
+
+**根因**：早期设计命名 `list-adapters`，重构为 `adapters` 后 API-REFERENCE.md 未同步。
+
+**漂移检测命令**：
+```bash
+# 对比 API-REFERENCE.md 中的 CLI 命令与 cli.py 的 COMMANDS dict
+echo "=== CLI 实际命令 ==="
+grep '"' skill_advisor/cli.py | grep -E '": (cmd_|lambda)' | sed 's/"//g' | awk '{print $1}'
+echo "=== CLI 文档命令 ==="
+grep -oE '`sra [a-z-]+`' docs/API-REFERENCE.md | sed 's/`//g' | sed 's/sra //'
+```
+
+### 模式 2：raw.githubusercontent.com URL 分支漂移
+
+**现象**：README 中写 `raw.githubusercontent.com/.../main/...`，但仓库默认分支是 `master`（非 `main`），URL 返回 404。
+
+**检测命令**：
+```bash
+# 检测仓库默认分支
+git symbolic-ref refs/remotes/origin/HEAD | sed 's@.*/@@'
+# 检测所有 raw URL 是否使用正确的分支名
+grep -rn "raw.githubusercontent.com" . --include="*.md" | grep -v ".git/"
+```
+
+### 模式 3：README 安装步骤与实际情况漂移
+
+**现象**：`pip install sra-agent` 不提 venv → 用户找不到 `sra` 命令。`curl .../main/install.sh` → 404。不提 GFW → 中国用户超时。
+
+**检测方法**：在全新环境中按 README 逐步骤执行安装说明。grep 只能发现表面问题，唯一可靠的是实际执行测试。
+
+## 预防清单
+
+| 检查项 | 执行频率 | 命令 |
+|:-------|:--------|:-----|
+| CLI 命令名一致性 | 每次新增/重命名命令 | 对比 `COMMANDS dict` vs `API-REFERENCE.md §3` |
+| raw URL 分支正确性 | 仓库默认分支变更时 | `grep 'raw.*main/'` vs `git branch -r \| grep origin/HEAD` |
+| README 安装步骤可执行 | 每次发布前 | 在全新环境中逐步骤执行安装说明 |
+| HTTP 端点完整性 | 每次新增端点 | `grep -c 新端点 docs/API-REFERENCE.md` |

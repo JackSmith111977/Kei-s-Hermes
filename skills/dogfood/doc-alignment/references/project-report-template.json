@@ -1,0 +1,64 @@
+{
+  "project": {
+    "icon": "🚀",
+    "name": "Your Project Name",
+    "package": "your-package-name",
+    "version": "0.1.0",
+    "description": "一句话描述你的项目",
+    "long_description": "详细描述你的项目是做什么的...",
+    "author": "Your Name",
+    "repo": "github.com/your-org/your-repo",
+    "license": "MIT",
+    "python": "≥ 3.8",
+    "dependencies": [],
+    "entry_cli": "",
+    "daemon_port": "",
+    "overview_cards": [
+      {"label": "名称", "value": "Project", "sub": "package-name"},
+      {"label": "版本", "value": "0.1.0", "sub": "MIT License"},
+      {"label": "Python", "value": "≥ 3.8", "sub": ""}
+    ],
+    "info_table": [
+      {"attr": "作者", "value": "Your Name"},
+      {"attr": "仓库", "value": "<code>github.com/your-org/your-repo</code>"},
+      {"attr": "入口", "value": ""},
+      {"attr": "端口", "value": ""}
+    ]
+  },
+  "architecture": {
+    "layers": [
+      {
+        "name": "Layer 3 — 接口层 Interface",
+        "modules": [],
+        "direction": "delegate"
+      },
+      {
+        "name": "Layer 2 — 业务逻辑层 Service",
+        "modules": [],
+        "direction": "read-write"
+      },
+      {
+        "name": "Layer 1 — 数据层 Data",
+        "modules": [],
+        "direction": null
+      }
+    ],
+    "module_table": []
+  },
+  "api_endpoints": {
+    "http_port": 0,
+    "http": [],
+    "socket_actions": []
+  },
+  "cli_commands": [],
+  "epics": [],
+  "tests": {
+    "passing": 0,
+    "total": 0,
+    "duration_seconds": 0,
+    "coverage_pct": null,
+    "files": []
+  },
+  "sprint_history": [],
+  "footer": "由 generate-project-report.py 数据驱动自动生成"
+}

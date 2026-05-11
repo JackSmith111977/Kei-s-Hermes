@@ -1,7 +1,7 @@
 ---
 name: hermes-message-injection
 description: "向 Hermes Agent 的消息管道注入外部服务上下文（如 SRA 技能推荐）。每次用户消息自动拦截 → 调外部服务 → 将结果作为 [前缀] 注入到消息前。涵盖 run_agent.py 的 run_conversation() 注入点、module-level 缓存、降级策略。"
-version: 2.0.0
+version: 2.2.0
 triggers:
   - hermes 注入
   - hermes 消息拦截
@@ -94,9 +94,9 @@ SRA 注入代码依赖外部的 SRA Daemon 服务。需要单独启动。
 
 | 路径 | 说明 |
 |------|------|
-| `/tmp/sra-latest/venv/bin/sra` | CLI 命令（支持子命令: start/stop/attach/status/recommend 等） |
-| `/tmp/sra-latest/venv/bin/srad` | 旧版启动命令（仅调用 cmd_start，建议用 sra 替代） |
-| `/tmp/sra-latest/skill_advisor/` | SRA 源码目录 |
+| `~/projects/sra/venv/bin/sra` | CLI 命令（支持子命令: start/stop/attach/status/recommend 等） |
+| `~/projects/sra/venv/bin/srad` | 旧版启动命令（仅调用 cmd_start，建议用 sra 替代） |
+| `~/projects/sra/skill_advisor/` | SRA 源码目录 |
 | `~/.sra/srad.sock` | Unix Socket |
 | `~/.sra/srad.log` | 日志文件 |
 | `~/.sra/config.json` | 用户配置 |
@@ -113,19 +113,18 @@ SRA 注入代码依赖外部的 SRA Daemon 服务。需要单独启动。
 # 1. 确保代理已启动（国内服务器必需）
 mihomo -f /etc/mihomo/config.yml -d /etc/mihomo
 
-# 2. 设置代理环境变量后 git clone
+# 2. 设置代理环境变量后 git clone（国内服务器必需）
 export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
-cd /tmp
-git clone https://github.com/JackSmith111977/Hermes-Skill-View.git sra-latest
+git clone --depth 1 https://github.com/JackSmith111977/Hermes-Skill-View.git ~/projects/sra
 
-# 3. 安装到 SRA 自带的 venv（⚠️ 必须用 --no-build-isolation，venv 中 setuptools 较旧）
-cd /tmp/sra-latest
-python3.11 -m venv venv
+# 3. 创建 venv 并安装（⚠️ 必须用 --no-build-isolation，venv 中 setuptools 较旧）
+cd ~/projects/sra
+python3 -m venv venv
 source venv/bin/activate
 pip install --no-build-isolation -e .
 
-# 4. 或者直接使用已有的 venv（如果已安装）
-/tmp/sra-latest/venv/bin/python3 -m pip install --no-build-isolation -e /tmp/sra-latest
+# 4. 或者直接升级已有的 venv（如果已安装）
+~/projects/sra/venv/bin/python3 -m pip install --no-build-isolation -e ~/projects/sra
 ```
 
 ### 🏆 推荐：systemd 用户级服务自启动
@@ -142,7 +141,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/tmp/sra-latest/venv/bin/sra attach  # 前台运行模式
+ExecStart=$HOME/projects/sra/venv/bin/sra attach  # 前台运行模式，$HOME 需替换为实际路径
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -158,11 +157,14 @@ WantedBy=default.target
 **`~/.config/systemd/user/hermes-gateway.service.d/sra-dep.conf`**：
 ```ini
 [Unit]
-Requires=srad.service
+Wants=srad.service
 After=srad.service
 ```
 
 作用：确保 Gateway 启动时 SRA 已就绪，且 SRA 故障不会影响 Gateway。
+- Hermes 的 `_query_sra_context()` 已有 2s 超时 + try/except 全 catch 降级机制，SRA 不可用时自动跳过消息注入，不阻塞 Gateway
+
+> ⚠️ **孤儿依赖陷阱**：SRA 迁移/卸载后，`sra-dep.conf` 成为孤儿文件。它仍然声明 `Wants=srad.service`，但因为 `Wants=` 是软依赖，Gateway 仍可正常启动（唯 SRA 注入不可用）。但如果误用了 `Requires=`，则 Gateway 崩溃。**SRA 卸载流程必须同步清理此 drop-in 文件**。
 
 #### 启用并启动
 
@@ -192,15 +194,15 @@ journalctl --user -u srad -f              # 跟踪日志
 # ⚠️ 必须用 SRA venv 中的命令（系统 Python 找不到 skill_advisor 模块）
 
 # sra 命令支持子命令：
-/tmp/sra-latest/venv/bin/sra attach    # 前台运行（Type=simple 模式，Ctrl+C 停止）
-/tmp/sra-latest/venv/bin/sra start     # 后台守护进程（fork 模式）
-/tmp/sra-latest/venv/bin/sra stop      # 停止
-/tmp/sra-latest/venv/bin/sra status    # 查看状态
-/tmp/sra-latest/venv/bin/sra restart   # 重启
-/tmp/sra-latest/venv/bin/sra recommend <查询>  # 手动测试推荐
+$HOME/projects/sra/venv/bin/sra attach    # 前台运行（Type=simple 模式，Ctrl+C 停止）
+$HOME/projects/sra/venv/bin/sra start     # 后台守护进程（fork 模式）
+$HOME/projects/sra/venv/bin/sra stop      # 停止
+$HOME/projects/sra/venv/bin/sra status    # 查看状态
+$HOME/projects/sra/venv/bin/sra restart   # 重启
+$HOME/projects/sra/venv/bin/sra recommend <查询>  # 手动测试推荐
 
 # srad = cmd_start() 的快捷方式（仅启动，无子命令）
-/tmp/sra-latest/venv/bin/srad
+$HOME/projects/sra/venv/bin/srad
 ```
 
 ### 验证
@@ -223,7 +225,7 @@ HTTP API: `8536`（通过 `~/.sra/config.json` 的 `http_port` 配置）
 ### 查看版本
 
 ```bash
-/tmp/sra-latest/venv/bin/python3 -c "import skill_advisor; print(skill_advisor.__version__)"
+$HOME/projects/sra/venv/bin/python3 -c "import skill_advisor; print(skill_advisor.__version__)"
 ```
 
 ## 与 Hook 系统的关系

@@ -1,13 +1,16 @@
 ---
 name: linux-ops-guide
 description: Hermes 服务器（Ubuntu）日常运维指南。涵盖 systemd 服务管理、日志分析、端口排查、磁盘监控、进程管理、快速排查流程。
-version: 1.0.0
+version: 1.0.2
 triggers:
 - linux
 - 运维
 - systemd
 - 命令
 - ops
+- dep-check
+- drop-in
+- 孤儿配置
 allowed-tools:
 - terminal
 - read_file
@@ -60,6 +63,45 @@ systemctl cat hermes-agent
 sudo systemctl start/stop/restart hermes-agent
 sudo systemctl enable/disable hermes-agent
 ```
+
+### 2.1 依赖管理 — Requires= vs Wants=
+
+**核心原则**：`Requires=` 是硬依赖（目标不存在则启动失败），`Wants=` 是软依赖（目标不存在则忽略）。
+
+```bash
+# 查看单元的依赖链
+systemctl show <service> -p Requires,Wants,After,BindsTo
+
+# SRA 场景快速诊断
+sra dep-check
+```
+
+| 指令 | 依赖不存在时 | 适用场景 |
+|:----|:------------|:---------|
+| **`Requires=`** | ❌ 单元启动失败 (exit 5) | 强依赖：A 失去 B 就无法工作 |
+| **`Wants=`** | ✅ 单元正常启动 | 软依赖：B 是 A 的可选增强 |
+
+**致命陷阱 — 服务迁移后的孤儿 drop-in**：
+
+```
+hermes-gateway.service.d/
+├── 10-env.conf              ← 正常
+└── sra-dep.conf             ← ← 危险区域
+    [Unit]
+    Requires=srad.service    ← 若 srad.service 被删除，
+    After=srad.service         Gateway 将无法启动！
+```
+
+**场景**：服务 B（如 SRA）从旧路径迁移到新路径后，其 systemd 单元 `srad.service` 被删除，但服务 A（如 Hermes Gateway）的 drop-in `sra-dep.conf` 仍声明 `Requires=srad.service`。此时 `systemctl start hermes-gateway` 报 `Unit srad.service not found` 终止。
+
+**规则**：
+1. **可选服务用 `Wants=`** — `Requires=` 只应留给真正不可或缺的依赖
+2. **Drop-in 文件需要「所有者意识」** — 每个 drop-in 必须有明确的属主。源服务卸载时必须清理自身的 drop-in
+3. **卸载流程三件套**：停服务 → 删 service 文件 → **删所有相关 drop-in 文件**
+4. **健康检查脚本**应检测残留的 `Requires=` 声明并报警
+5. **快速诊断命令**：`sra dep-check`（SRA 场景）或 `systemctl --user show <目标服务> -p Requires,Wants,After,BindsTo`（通用）
+
+> 📖 详见 [references/systemd-dropin-orphan.md](references/systemd-dropin-orphan.md) — 含 Hermes CLI 完整 traceback、systemd 诊断流程、修复步骤、Requires= vs Wants= 决策矩阵、卸载三件套，以及 SRA 恢复全流程示例。
 
 ## 三、日志分析
 
