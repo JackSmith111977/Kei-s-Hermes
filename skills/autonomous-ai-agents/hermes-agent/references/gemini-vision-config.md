@@ -38,6 +38,42 @@ grep -A 10 "vision:" ~/.hermes/config.yaml
 #     model: gemini-3-flash-preview
 ```
 
+## 验证命令（代理环境）
+
+国内服务器上 Google API 被墙，必须通过代理访问：
+
+```bash
+# 1. 测试文本 API（走代理）
+source ~/.hermes/.env
+curl -s --proxy http://127.0.0.1:7890 --max-time 15 \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"parts":[{"text":"say hi"}]}]}' \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GOOGLE_API_KEY}"
+
+# 2. 测试 Vision（File API 方式——必读！见下方「已知问题」）
+# 先上传图片
+curl -s --proxy http://127.0.0.1:7890 --max-time 15 \
+  -X POST \
+  -H "x-goog-api-key: ${GOOGLE_API_KEY}" \
+  -F "file=@/path/to/image.png" \
+  "https://generativelanguage.googleapis.com/upload/v1beta/files"
+
+# 再引用 file_uri 进行识图
+curl -s --proxy http://127.0.0.1:7890 --max-time 30 \
+  -X POST \
+  -H "x-goog-api-key: ${GOOGLE_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contents": [{
+      "parts": [
+        {"text": "描述这张图片"},
+        {"file_data": {"mime_type": "image/png", "file_uri": "<上一步返回的uri>"}}
+      ]
+    }]
+  }' \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
+```
+
 ## 注意事项
 1. **需要 /reset（新会话）** 后才能生效——工具的 provider 变更不能实时切换
 2. `Gemini 3 Pro Preview`（`gemini-3-pro-preview`）已于 2026年3月9日 关停，自动指向 `gemini-3.1-pro-preview`
@@ -48,19 +84,67 @@ grep -A 10 "vision:" ~/.hermes/config.yaml
 
 ### 1. browser_vision 卡死/长时间无响应
 
-**根因**：GeminiNativeClient 的默认 HTTP read timeout 为 **600秒（10分钟）**（位于 `gemini_native_adapter.py:834`）：
+**根因**：GeminiNativeClient 的默认 HTTP read timeout 为 **120秒**（位于 `gemini_native_adapter.py:834`）：
 ```python
 self._http = httpx.Client(
-    timeout=timeout or httpx.Timeout(connect=15.0, read=600.0, write=30.0, pool=30.0)
+    timeout=timeout or httpx.Timeout(connect=15.0, read=120.0, write=30.0, pool=30.0)
 )
 ```
-当代理连接慢或 Gemini API 从国内访问不稳定时，请求可能挂 10 分钟而不触发超时。
+当代理连接慢或 Gemini API 从国内访问不稳定时，请求可能挂 2 分钟而不触发超时。config.yaml 中的 `auxiliary.vision.timeout: 120` 与此一致。
 
 **修复**：
 - 降低 `auxiliary.vision.timeout`（config.yaml）为 60s 或更低
-- 同时修改 `gemini_native_adapter.py` 中的默认 read timeout 为 `read=120.0`
+- 也可以直接修改 `gemini_native_adapter.py` 中的默认 read timeout
 
-### 2. Gemini 从中国国内不可用
+### 2. `inline_data` 方式返回 403（代理环境）
+
+**症状**：通过代理调用 Gemini Vision API 时，`inline_data` 方式（直接在请求体嵌入 base64 图片数据）报错：
+```
+403 Method doesn't allow unregistered callers (callers without established identity).
+Please use API Key or other form of API consumer identity to call this API.
+```
+但文本 API 请求正常。无论用 `?key=` 查询参数还是 `x-goog-api-key` 请求头都报同样的错。
+
+**根因**：
+- 该 API Key 被 Google 识别为"未注册调用者"——内联图片数据需要更高的认证级别
+- 这不是模型版本问题（`gemini-2.5-flash`、`gemini-3-flash-preview`、`gemini-1.5-flash` 均报同样错误）
+- 也不是请求格式问题（`image/png`、`image/jpeg` 均失败）
+
+**解决方案：使用 File API 代替 inline_data**
+
+Google Gemini 的 **File API** 在代理环境下正常工作。流程：
+
+```bash
+# Step 1: 上传图片到 File API
+UPLOAD_RESP=$(curl -s --proxy http://127.0.0.1:7890 --max-time 15 \
+  -X POST \
+  -H "x-goog-api-key: ${GOOGLE_API_KEY}" \
+  -F "file=@/tmp/image.png" \
+  "https://generativelanguage.googleapis.com/upload/v1beta/files")
+
+FILE_URI=$(echo "$UPLOAD_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['file']['uri'])")
+
+# Step 2: 用 file_data 引用上传的文件
+curl -s --proxy http://127.0.0.1:7890 --max-time 30 \
+  -X POST \
+  -H "x-goog-api-key: ${GOOGLE_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"contents\": [{
+      \"parts\": [
+        {\"text\": \"描述这张图片\"},
+        {\"file_data\": {\"mime_type\": \"image/png\", \"file_uri\": \"$FILE_URI\"}}
+      ]
+    }]
+  }" \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
+```
+
+**工作原理**：Hermes 的 `GeminiNativeClient`（`gemini_native_adapter.py`）在发送请求时，会自动将 OpenAI 格式的 `image_url` 转换为 Gemini 的 `inline_data`。因为 403 错误，导致了 `browser_vision` 工具长时间卡死。
+
+**临时替代方案**：切换 vision provider 到 OpenRouter + Qwen-VL（见下方替代方案章节）
+
+### 3. Gemini 从中国国内不可用
 
 Google Gemini API 对中国 IP 返回 `"User location is not supported for the API use"`（HTTP 403），即使通过代理也可能被检测。
 
@@ -125,7 +209,8 @@ curl -s --noproxy '*' --max-time 30 -X POST "https://openrouter.ai/api/v1/chat/c
 1. 检查 `~/.hermes/logs/agent.log` 中 `Auxiliary vision: using` 日志的时间戳
 2. 用 curl 直接测试 vision provider（见上方验证命令）
 3. 检查 config.yaml 中 `auxiliary.vision.timeout` 是否设置合理
-4. 检查 `gemini_native_adapter.py` 中默认 read timeout 是否已从 600s 降低
+4. 检查 `gemini_native_adapter.py` 中默认 read timeout（当前为 `read=120.0`）
+5. 如果使用 Gemini 并报 403，尝试切换 provider 到 OpenRouter（见上方第 2 条已知问题）
 
 **`call_llm` 抛出连接错误：**
 - Gemini：从国内 IP 访问会被拒绝，考虑更换为 OpenRouter + Qwen-VL

@@ -15,6 +15,9 @@ triggers:
   - 功能实现
   - implement
   - coding
+  - html对齐
+  - 报告对齐
+  - 文档对齐
 author: Emma (小玛)
 license: MIT
 metadata:
@@ -194,18 +197,24 @@ python -m pytest tests/ -q --tb=short -o "addopts="
 
 ### Step 7: 提交与对齐
 
-**做什么**: 代码 + 文档同一次提交。
+**做什么**: 代码 + 文档 + HTML 报告同一次提交。
 
 ```bash
 # 7.1 文档对齐（如果有 doc-alignment）
 skill_view(name="doc-alignment")
 # 执行 5 步对齐协议
 
-# 7.2 提交前检查
+# 7.2 🌐 HTML 报告对齐（如果项目有生命周期 HTML 报告）
+#     检查 reports/lifecycle.html 或 PROJECT-PANORAMA.html
+#     是否反映最新的文档状态（状态表、徽章、AC 进度）
+#     如有 project-report.json → generate-project-report.py 自动同步
+#     如手动维护 → grep/搜索 HTML 中的状态信息对比文档
+
+# 7.3 提交前检查
 skill_view(name="commit-quality-check")
 # 执行安全检查 + 一致性检查
 
-# 7.3 Git 提交
+# 7.4 Git 提交
 git add -A
 git commit -m "type(scope): description"
 ```

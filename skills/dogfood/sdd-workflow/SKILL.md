@@ -1,7 +1,7 @@
 ---
 name: sdd-workflow
 description: "Spec-Driven Development 完整工作流 — 从 Spec 创建到代码实现的自动化生命周期管理。含状态机(spec-state.py)、门禁检查(spec-gate.py)、模板库。任何涉及 SDD/规范驱动/Story 开发的任务自动触发。"
-version: 1.0.0
+version: 1.1.0
 triggers:
   - sdd
   - spec-driven
@@ -17,6 +17,16 @@ triggers:
   - spec 检查
   - story 模板
   - epic 模板
+  - 质量检查
+  - 文档质量
+  - qa-gate
+  - 需求澄清
+  - clarify
+  - 技术调研
+  - 需求确认
+  - html对齐
+  - 报告对齐
+  - 生命周期报告
 author: Emma (小玛)
 license: MIT
 depends_on:
@@ -37,7 +47,7 @@ metadata:
     design_pattern: state-machine
 ---
 
-# 🧭 SDD Workflow v1.0 — Spec-Driven Development 生命周期管理
+# 🧭 SDD Workflow v1.1 — Spec-Driven Development 生命周期管理
 
 > **核心理念**: 没有批准的 Spec 就不写代码。
 > **设计模式**: 状态机 + 门禁 + 模板 三位一体
@@ -199,7 +209,15 @@ fi
     ↓
 6. 🏗️ 开发（TDD + writing-plans）
     ↓
-7. ✅ 验证（pytest + doc-alignment + commit-quality-check）
+7. ✅ 验证
+   ├── pytest（代码测试）
+   ├── doc-alignment（文档漂移检测）
+   ├── commit-quality-check（提交前检查）
+   └── 🌐 HTML 报告对齐 ← 新增：检查 HTML 生命周期报告是否与文档状态一致
+       ├── 如果项目有 `reports/lifecycle.html` 或 `PROJECT-PANORAMA.html`
+       ├── 使用 `grep` 对比 HTML 中的状态信息与最新文档状态
+       ├── 如有 project-report.json → 运行 `generate-project-report.py` 自动同步
+       └── 如无 → 手动更新 HTML 中的状态表格和徽章
     ↓
 8. 📋 AC 审计 ← 🔴 新增！确保 Epic AC 与代码同步
    ├── python3 scripts/ac-audit.py check docs/EPIC-*.md
@@ -224,6 +242,45 @@ fi
 
 ---
 
+## 六、已知缺口与改进路线图
+
+> **来源**: SDD 工作流深度审计 (2026-05-12)，基于飞书卡片交互能力 + 文档质量框架 + 学习工作流研究
+
+### 6.1 当前识别的流程缺口
+
+| 缺口 | 阶段 | 问题描述 | 影响程度 |
+|:-----|:-----|:---------|:--------:|
+| **Gap A** | CREATE 之前 | 缺乏需求澄清阶段 → boku 直接按理解假设需求，可能方向跑偏 | 🔴 高 |
+| **Gap B** | CREATE 之前 | 缺乏技术调研/深度学习 → 文档质量依赖已有知识，可能遗漏关键信息 | 🟡 中 |
+| **Gap C** | CREATE 之后 | 缺乏质量检查/文档对齐 → 文档错误/遗漏可能无人发现 | 🟡 中 |
+
+### 6.2 改进路线图
+
+```text
+v1.1 (短期) — 质量门禁先行
+  ├── 新增 qa-gate.py：P0→P1→P2 三层文档质量检查
+  ├── 新增 CLARIFY 阶段：用 clarify 工具做需求确认
+  └── 更新 spec-state.py：新增 clarify/research/qa_review 状态
+
+v1.2 (中期) — 需求澄清强化
+  ├── 新增 RESEARCH 阶段：自动触发 learning-workflow
+  └── 需求澄清模板 + 检查清单
+
+v2.0 (长期) — 飞书交互卡片
+  ├── 改造 feishu.py 支持交互卡片（按钮+选择器+输入框）
+  └── 需求澄清通过交互卡片完成
+```
+
+### 6.3 详细设计方案
+
+完整的研究文档见 `references/sdd-known-gaps-and-roadmap.md`，包含：
+- 飞书卡片交互能力完全矩阵（button/selectMenu/input/form 的回调机制）
+- 文档质量检查 9×1 模型（一致性×逻辑性×完整性 × 结构×内容×体系）
+- 改进后 9 状态状态机设计（CLARIFY → RESEARCH → CREATE → QA_GATE → REVIEW → APPROVED → IN_PROGRESS → COMPLETED → ARCHIVED）
+- Phase 1-4 实施路径
+
+---
+
 ## 🗂️ 文件结构
 
 ```
@@ -238,7 +295,8 @@ fi
 └── references/
     ├── sdd-research.md              ← SDD 深度研究（框架对比 + 数据 + 关键洞察）
     ├── sdd-lifecycle.md             ← 六阶段生命周期指南
-    └── real-world-usage-sra-004-01.md ← 真实项目 SDD 完整走通记录
+    ├── real-world-usage-sra-004-01.md ← 真实项目 SDD 完整走通记录
+    └── sdd-known-gaps-and-roadmap.md ← 已知缺口与改进路线图（2026-05-12 新增）
 ```
 
 ## 📚 参考深度阅读
@@ -246,29 +304,39 @@ fi
 - **`references/sdd-research.md`** — SDD 三大框架（BMAD/Superpowers/GSD）核心对比、成熟度模型、关键数据
 - **`references/sdd-lifecycle.md`** — 六阶段完整生命周期指南（CREATE→ARCHIVE 每个阶段的详细操作）
 - **`references/real-world-usage-sra-004-01.md`** — 在 SRA 项目中完整走通 SDD 全流程的实战记录
+- **`references/sdd-known-gaps-and-roadmap.md`** — 当前流程审计、飞书卡片交互研究、质量检查框架、v2.0 设计草案
 
 ## 🚀 使用示例
 
-### 场景 1：新功能开发
+### 场景 1：新功能开发（含 v2.0 流程）
 
-```bash
-# 1. 创建 Story Spec
-python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py create "SRA-004-01" "实现批量推荐接口"
-# 2. 用模板填充内容 → 复制 docs/STORY-TEMPLATE.md
-# 3. 提交审阅
-python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py submit "SRA-004-01"
-# 4. 主人批准后
-python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py approve "SRA-004-01"
-# 5. 开始开发
-python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py start "SRA-004-01"
-# 6. 实现 + 测试 + doc-alignment
-# 7. AC 审计 — 同步 Epic 文档
-python3 scripts/ac-audit.py check docs/EPIC-*.md        # 检查漂移
-python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply  # 同步 AC 勾选
-# 8. 完成
-python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py complete "SRA-004-01"
-python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py archive "SRA-004-01"
+当使用改进后的 SDD v2.0 流程（参见 §六 已知缺口）时，加入 CLARIFY → RESEARCH → QA_GATE 三个阶段：
+
+```text
+# Step 0: CLARIFY — 需求澄清
+# boku 输出需求理解 → 主人确认方向正确
+# 产出: docs/req_clarification/{task_id}.md
+# 方式: clarify 工具或飞书交互卡片
+
+# Step 1: RESEARCH — 技术调研（如需）
+# 对不确定的领域走 learning-workflow
+# python3 learning-state.py init "调研领域"
+# 产出: 调研笔记
+
+# Step 2: CREATE — 创建 Story Spec
+python3 spec-state.py create "SRA-005-01" "批量推荐接口"
+# 用模板 docs/STORY-TEMPLATE.md 填充内容
+
+# Step 3: QA_GATE — 质量门禁
+python3 scripts/spec-gate.py verify "SRA-005-01"   # P0 结构检查
+# P1 内容自查 → 加载 self-review 检查准确性
+# P2 体系检查 → python3 doc-alignment --verify
+
+# Step 4: REVIEW — 提交审阅
+python3 spec-state.py submit "SRA-005-01"
 ```
+
+⚠️ **常见陷阱**: 跳过 CLARIFY 直接写文档是 SDD v2.0 最常见的违规行为。主人纠正过「文档阶段之前缺乏需求澄清阶段，需要准确了解我的需求」。即使任务看起来简单，也必须先做 CLARIFY——方向跑偏的返工成本远高于几分钟的确认时间。
 
 ### 场景 2：SDD 门禁检查（日常开发前）
 
@@ -295,4 +363,47 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 | 3 | **Spec 和代码必须在同一次提交中** | 版本历史无法追溯 |
 | 4 | **每个 AC 必须可验证（自动化测试优先）** | 无法判断是否真的完成 |
 | 5 | **Spec 过期时间不得超过 7 天** | 代码已变但 Spec 未更新 → 漂移 |
-| 6 | **Story 完成时自动同步 Epic AC** ← 🔴 新增 | Story Spec 完成 → 运行 ac-audit sync 更新 Epic 文档中对应 AC |
+| 6 | **Story 完成时自动同步 Epic AC** | Story Spec 完成 → 运行 ac-audit sync 更新 Epic 文档中对应 AC |
+
+---
+
+## 八、文档质量检查框架（质量门禁原型）
+
+> 在正式实现 `qa-gate.py` 之前，本节定义了文档质量的检查维度和标准。
+
+### 8.1 三层质量门禁
+
+改编自 9×1 校验模型（一致性×逻辑性×完整性 × 结构×内容×体系）：
+
+| 层级 | 优先级 | 检查项 | 自动化程度 |
+|:-----|:------:|:-------|:----------:|
+| **结构层** | 🟢 P0 | 必需字段齐全（story_id/title/AC/out_of_scope）、Markdown 格式规范、文件命名规范 | 🤖 全自动 |
+| **内容层** | 🟡 P1 | 技术描述准确性、术语一致性、信息覆盖完整性 | 🧑‍🤝‍🧑 AI辅助 |
+| **体系层** | 🔵 P2 | 跨文档引用链完整、与 Epic/已有 Spec 不矛盾、价值评估 | 🧑 人工决策+自动 |
+
+### 8.2 使用方式
+
+当需要手动检查文档质量时，按以下顺序执行：
+
+```bash
+# P0: 结构检查 — 自动
+python3 scripts/spec-gate.py verify "<story_id>"
+
+# P1: 内容检查 — 加载 skill 后 AI 自查
+# 加载 self-review skill 进行内容审查
+skill_view(name="self-review")
+
+# P2: 体系检查 — 文档对齐
+python3 doc-alignment --verify
+```
+
+### 8.3 未来自动化的 qa-gate.py
+
+设计中的 `scripts/qa-gate.py` 将实现一键三检：
+
+```bash
+python3 scripts/qa-gate.py check "<story_id>"
+# 输出：P0 ✅ | P1 ⚠️ (2 issues) | P2 ✅ → 门禁: PASS/FAIL
+```
+
+详见 `references/sdd-known-gaps-and-roadmap.md`。

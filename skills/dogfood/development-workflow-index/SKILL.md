@@ -227,6 +227,9 @@ depends_on:
 
 [Phase 4] 提交与对齐 ← generic-dev-workflow Step 7
     ├── doc-alignment → 5 步对齐协议
+    ├── 🌐 HTML 报告对齐 — 检查生命周期报告是否反映最新文档状态
+    │   ├── 如有 project-report.json → generate-project-report.py 自动同步
+    │   └── 如手动维护 → grep 对比 HTML 状态与文档实际状态
     ├── commit-quality-check → P0 全通过
     ├── 经验沉淀 → knowledge-ingest
     └── git commit（代码+文档同次提交）
@@ -506,6 +509,16 @@ depends_on:
 | Story 模板 | `templates/story-template.md`（sdd-workflow） | 标准 Story Spec 格式 |
 | Epic 模板 | `templates/epic-template.md`（sdd-workflow） | Epic 级 Spec 格式 |
 | SDD 生命周期 | `references/sdd-lifecycle.md`（sdd-workflow） | 六阶段完整指南 |
+| SDD 已知缺口与路线图 | `references/sdd-known-gaps-and-roadmap.md`（sdd-workflow） | ⚠️ 当前流程审计 + 改进方案（需求澄清/技术调研/质量检查） |
+
+### 已知局限
+
+当前 SDD 流程（v1.0）存在以下已识别的缺口，参见 `sdd-workflow` §六：
+1. **Gap A**: CREATE 前缺乏需求澄清阶段
+2. **Gap B**: CREATE 前缺乏技术调研阶段
+3. **Gap C**: CREATE 后缺乏质量检查阶段
+
+改进路线图已在 `sdd-workflow` 中记录，待主人确认后实施。
 
 ### 铁律
 - 🔴 P0 铁律 #11: 复杂任务没有获批 Spec 就写代码 = Vibe Coding

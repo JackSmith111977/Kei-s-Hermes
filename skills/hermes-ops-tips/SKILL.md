@@ -385,7 +385,51 @@ journalctl --user -u hermes-gateway --since "10 sec ago" --no-pager | grep -i "s
 
 > 详细诊断要点见 `references/statusline-runtime-diagnostics.md`
 
-## 10. Vision Provider 配置与故障排查（国内服务器）
+## 11. 飞书网关优雅重启（替代硬重启）
+
+### 场景
+
+修改 `gateway/platforms/feishu.py` 后需要重启网关生效，但 `systemctl --user restart` 是硬重启（不 drain 正在运行的任务）。优雅重启可以等待当前 Agent 完成后再退出。
+
+### 三种重启方式对比
+
+| 方式 | 命令 | Drain? | 安全等级 | 适用场景 |
+|:-----|:-----|:------:|:--------:|:---------|
+| **硬重启** | `systemctl --user restart hermes-gateway` | ❌ | 🟡 | 紧急修复/无活跃任务 |
+| **CLI 优雅重启** | `hermes gateway restart` | ✅ | 🟢 | 日常重启（推荐） |
+| **SIGUSR1 发送** | `kill -USR1 $(systemctl --user show hermes-gateway -p MainPID --value)` | ✅ | 🟢 | 脚本化/自动化重启 |
+
+### 优雅重启机制
+
+```text
+SIGUSR1/kill → gateway/run.py → request_restart(via_service=True)
+    → 等待活跃 Agent 完成（drain 超时可配置）
+    → exit(75)（systemd 的 RestartForceExitStatus=75 触发自动重启）
+    → systemd 拉起新进程
+    → 新进程启动 → 发送「♻ Gateway restarted successfully」到发起者
+```
+
+### 发送重启通知
+
+重启后新进程自动发送通知，前提是提前保存 `.restart_notify.json`：
+
+```bash
+# 保存通知目标
+cat > ~/.hermes/.restart_notify.json << 'EOF'
+{"platform": "feishu", "chat_id": "oc_xxx"}
+EOF
+
+# 然后触发优雅重启
+kill -USR1 $(systemctl --user show hermes-gateway -p MainPID --value)
+```
+
+新进程启动时（`run.py` 第 3116 行附近）自动读取此文件，通过 `_send_restart_notification()` 向指定 chat_id 发送重启成功消息。
+
+### 禁止做的事
+
+- ❌ 不要用 `sudo systemctl restart hermes-gateway` — 用户级服务不能用 sudo
+- ❌ 不要在 Agent 处理消息时重启 — 等待空闲窗口
+- ❌ 不要连续发送多个 SIGUSR1 — 重启去重保护（`.restart_last_processed.json`）防止循环
 
 ### 场景
 国内服务器需要 `browser_vision` （截图分析）正常工作。默认 Gemini 从国内无法直接访问。

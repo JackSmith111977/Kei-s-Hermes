@@ -53,6 +53,9 @@ skill_type: research
 - `process` — 后台进程管理（list/poll/wait/log/kill/write）
 
 ### 已有 Skill 生态
+
+> ⚠️ 以下分类是**示例性**的，不是穷举列表。完整覆盖需执行 `find ~/.hermes/skills -name "SKILL.md" -maxdepth 3 | wc -l` 获取总数 + 逐项归类。真实能力覆盖约 **185 个技能 / 18 个领域**（详见 `capability-pack-design`）。
+
 | 领域 | Skills |
 |------|--------|
 | 学习体系 | learning-workflow, learning, skill-creator, knowledge-routing |
@@ -431,3 +434,35 @@ hermes config check
 - 遇到"不能做"的事情，先查此 map 确认是硬限制还是软限制
 - 发现新能力时，及时更新此 map 和 hermes-self-analysis
 - 能力审计结果会随 Hermes 版本升级而变化 — 每次大版本升级后应重新审计
+
+**🚨 已知陷阱 — 能力审计不完整（2026-05-12 新增）**：
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| **仅依赖 `self-capabilities-map` 的领域列表** | 遗漏整个能力类别（如知识库/元认知/质量保障） | 必须同时执行 `find ~/.hermes/skills -name SKILL.md \| wc -l` 获取完整技能数 & 逐项手动归类 |
+| **按「工具/平台」而非「领域」分类** | 分类碎片化，飞书/微信被归入「工具」而非「消息平台」能力域 | 按「解决什么问题」分类，而非「用什么工具」 |
+| **忽略隐性知识体系** | Skills 列表看不到 L1/L2/L3 三层知识库 | 除了扫 SKILL.md，还要检查 `~/.hermes/experiences/` 和 `~/.hermes/brain/` 的存在性 |
+| **只计已安装技能，忽略「能力域」完整性** | 声称某模块包含某个技能但该技能未安装 | 审计时注"已安装/可用"状态，非空列表 |
+
+**正确的能力审计流程（v2.0 已验证）**：
+
+```bash
+# Step 1: 穷举所有技能
+find ~/.hermes/skills -name "SKILL.md" -maxdepth 3 | wc -l
+
+# Step 2: 逐项读取 name + tags + description
+for f in $(find ~/.hermes/skills -name "SKILL.md" -maxdepth 3); do
+  dir=$(dirname "$f")
+  cat "$f" | head -5 | grep -E "^name:|^description:|tags:" | sed 's/name: //'
+  echo "  └─ $dir"
+done
+
+# Step 3: 按领域归类（参考 capability-pack-design 中的 18 模块分类框架）
+# 不要预设分类，让技能自己告诉你它属于哪
+
+# Step 4: 检查隐性知识体系
+ls ~/.hermes/experiences/active/ 2>/dev/null | head -5
+ls ~/.hermes/brain/wiki/ 2>/dev/null | head -5
+```
+
+> 💡 这个陷阱的直接教训来自 2026-05-12 的能力模块化项目：初始版本只列出了 8 个模块（基于 `self-capabilities-map` 的领域列表），被主人指出遗漏了知识库、元认知、质量保障等 10 个完整领域后，重新做穷举扫描 + 手动归类才发现实际有 185 个技能可归为 18 个模块。

@@ -92,6 +92,7 @@ Header: Authorization: Bearer {tenant_access_token}
 - ❌ [错误码速查](references/error-codes.md) — 常见错误码及解决方案
 - 🛠️ [Hermes 飞书工具](references/hermes-feishu-tools.md) — 内置工具能力详解
 - 🃏 [消息卡片配置](references/card-config.md) — Interactive Card 自动包装机制与维护指南
+- 🎮 [交互卡片能力速查](references/feishu-interactive-card-capabilities.md) — 交互组件、回调机制、自定义卡片类型（含 choice 卡片模式）
 - 📐 [结构化文档创作最佳实践](references/document-creation-best-practices.md) — convert+descendant 的正确用法、表格处理、Review 机制、所有权转移
 
 ## 权限要求概览
@@ -133,6 +134,6 @@ Header: Authorization: Bearer {tenant_access_token}
    - 🔄 **流式编辑支持**（v2.1 新增，v2.2 修复跨段卡片，v3.0 进度合并）：`SUPPORTS_MESSAGE_EDITING = True`，结合 `GatewayStreamConsumer` 实现渐进式消息更新（需 `streaming.enabled: true`）。v2.2 新增 `preserve_message_on_break` 修复工具调用间 segment break 导致多卡片问题。v3.0 将工具进度消息喂入流消费者（`send_progress_messages()` → `GatewayStreamConsumer.on_delta()`），进度消息与 LLM 回复**合并到同一张卡片**，不再发送独立进度卡片。详见 `references/card-config.md`
    - 🎨 **12 色智能头部**：按内容语义自动选色（error→红, warning→橙, success→绿, code→蓝等）
    - 🔗 **URL 自动按钮**：检测链接自动生成可点击按钮
-   - 🎯 **卡片类型前缀**：`<!-- card:dashboard -->` 或 `<!-- card:progress -->` 触发专用卡片格式
-   - ⚠️ **修改 feishu.py 后必须重启网关**：`systemctl --user restart hermes-gateway`
+   - 🎯 **卡片类型前缀**：`<!-- card:dashboard -->`、`<!-- card:progress -->`、`<!-- card:choice -->` 触发专用卡片格式
+   - ⚠️ **修改 feishu.py 后必须重启网关**：需主人手动执行 `systemctl --user restart hermes-gateway`（boku 不能自动重启）
    - 📐 **大小限制**：卡片 JSON ≤ 30KB；`MAX_MESSAGE_LENGTH = 8000`
