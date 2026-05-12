@@ -1,7 +1,7 @@
 ---
 name: doc-alignment
 description: "文档对齐协议 v3.0 — 数据驱动 HTML 报告完整生命周期管理。包含 project-report.json 标准格式定义、generate-project-report.py 生成器使用、5 步对齐协议。每个项目必须用此工作流管理文档一致性。"
-version: 3.1.0
+version: 3.2.0
 triggers:
   - 文档对齐
   - 文档一致性
@@ -90,6 +90,36 @@ python3 ~/.hermes/scripts/generate-project-report.py --data docs/project-report.
 
 参见 `development-workflow-index` §11 Reality Check — 分析前对齐协议。
 SRA Sprint 3 因跳过此步骤导致分析误差。
+
+### 深度审计 — Epic Story AC 验证
+
+当文档声称完成度与代码实际差距巨大时（如 EPIC-003 声称 ~40% 但实际 ~95%），  
+需要从「5 步快速检查」升级为「逐 Story AC 深度审计」：
+
+```bash
+# 0. 🔴 先运行 AC 审计脚本（如果项目有）
+python3 scripts/ac-audit.py check docs/EPIC-*.md
+# 自动检测代码已实现但文档未勾选的 AC，输出漂移数
+
+# 1. 扫描代码全景
+find . -type f -name "*.py" | sort
+
+# 2. 逐 Story AC 核查（文件存在性 + 关键实现检查 + 项目级 grep）
+#    详细方法论见:
+#    - references/ac-audit-methodology.md（AC 审计通用方法）
+#    - references/epic-ac-verification.md（Epic 级验证）
+
+# 3. 运行测试验证
+python -m pytest tests/ -x --tb=short -q
+
+# 4. 批量同步 AC（用 ac-audit sync 替代手工勾选）
+python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply
+# 或使用 execute_code + hermes_tools.patch 避免换行符转义问题
+```
+
+详见:
+- `references/ac-audit-methodology.md` — 五层根因模型 + 三重加固工作流 + AC 可验证信号速查
+- `references/epic-ac-verification.md` — Epic AC 逐项验证方法论
 
 ---
 
@@ -240,12 +270,21 @@ grep -c "sra force" docs/API-REFERENCE.md
 ### 2.2 版本号一致性检查
 
 ```bash
-# project-report.json vs __init__.py
+# project-report.json vs __init__.py (静态包)
 JSON_VER=$(python3 -c "import json; print(json.load(open('docs/project-report.json'))['project']['version'])")
-INIT_VER=$(grep "__version__" skill_advisor/__init__.py | grep -oP '"\K[^"]+')
+INIT_VER=$(grep "__version__" skill_advisor/__init__.py | grep -oP '"\\K[^"]+')
 if [ "$JSON_VER" != "$INIT_VER" ]; then
   echo "❌ 版本号不一致: $JSON_VER vs $INIT_VER"
 fi
+
+# ⚠️ 对于 setuptools-scm 动态版本的项目（如 SRA），__init__.py 中无静态版本号，
+#    --verify 会误报版本号漂移。这是已知限制——setuptools-scm 在构建时从 git tag
+#    推导版本，__init__.py 只有多级动态 fallback（_version.py → importlib → git describe）。
+#    
+#    判断方法：如果 git describe 能正确解析出版本号，说明动态版本正常工作：
+#    git describe --tags --long  # 示例输出: v2.0.2-2-gfd5a6b6
+#    
+#    在这种情况下，以 git tag 为准，忽略 --verify 的版本号误报。
 ```
 
 ### 2.3 测试数量验证
@@ -332,6 +371,8 @@ python3 ~/.hermes/scripts/generate-project-report.py \
 | `references/sra-drift-detection.md` | Sprint 2 实测漂移检测命令、根因分析、修复流程 | SRA 项目文档对齐 |
 | `references/project-report-template.json` | 项目报告 JSON 模板 | 新项目初始化报告 |
 | `references/system-redesign-case-study.md` | 系统性改造实战案例（构建→验证→通用化） | 改造类任务的参考方法论 |
+| `references/epic-ac-verification.md` | Epic Story AC 深度审计方法论—文档对标代码的逐项验证 | 接手文档过时的 Epic 时使用 |
+| `references/ac-audit-methodology.md` | AC 审计方法论—五层根因模型 + 三重加固工作流 + 可验证信号速查 | 理解文档漂移根因 + 实施 AC 自动审计 |
 
 ## 实战案例
 

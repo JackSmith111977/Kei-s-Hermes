@@ -23,6 +23,11 @@ triggers:
   - research
   - explore
   - review
+  - 失败分析
+  - 根因分析
+  - ci 失败
+  - 故障分析
+  - 复盘
 depends_on:
   - skill-creator
   - web-access

@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.10.0
+version: 1.11.0
 triggers:
 - ai trends
 - ai前沿
@@ -132,6 +132,7 @@ metadata:
 | 事件 | 日期 | 重要性 | 详情 |
 |------|------|--------|------|
 | **AWS Agent Toolkit + MCP Server GA** | 2026.05.06 | 🔴 高 | AWS 推出生产级 Agent 工具包，含 40+ agent skills、全托管 MCP 服务器（IAM 护栏 + CloudWatch/CloudTrail 可观测性 + 沙箱代码执行），三个开箱即用 Agent 插件（Core/Data Analytics/Agents） |
+| **Amazon SageMaker AI Agent Experience** | 2026.05.04 | 🔴 高 | Agentic 模型定制体验：用自然语言与编码 Agent 对话，将模型定制从月缩短到天/小时。支持 Amazon Nova/Llama/Qwen/GPT-OSS |
 | **Google 50+ 托管 MCP 服务器 GA** | 2026.04.28 | 🔴 高 | Google Cloud 推出 50+ 全托管 MCP 服务器，覆盖 Spanner/AlloyDB/BigQuery/Cloud Storage/Workspace/Gmail/Pay/Wallet 等，原生 IAM Deny 策略 + Agent Registry + Model Armor（防注入攻击），支持 Gemini CLI/Claude/ChatGPT/VS Code/LangChain/CrewAI |
 | **Microsoft Agent Governance Toolkit (AGT)** | 2026.04 | 🟡 中 | 开源 MCP 安全治理层，Ed25519 + 量子安全 ML-DSA-65 身份体系，覆盖 OWASP MCP Top 10 中 7/10，支持 LangChain/AutoGen/CrewAI/Semantic Kernel/OpenAI Agents SDK/Google ADK 等 20+ 框架，Python/TS/.NET/Rust/Go SDK |
 | **MCP 2026 路线图发布** | 2026.03 | 🟡 中 | 四大方向：Streamable HTTP 无状态传输（6 月规范周期）、Agent-to-Agent 通信、企业认证（OAuth 2.1 PKCE）+ 审计合规、MCP Apps（工具返回交互式 HTML）、SSE 即将废弃 |
@@ -139,13 +140,18 @@ metadata:
 | **MCP v2 Beta (@ai-sdk/mcp)** | 2026.03.13 | 🟡 中 | Vercel AI SDK MCP v2：独立稳定包，OAuth 2.0 内置，Structured Output（outputSchema），Elicitation 支持，Resources/Prompts 原语 |
 || **Claude Mythos + Project Glasswing** | 2026.05 | 🔴 高 | Anthropic "超级黑客"模型。Mozilla合作: 发现271个Firefox漏洞(180 sec-high)，几乎无假阳性。Agent Harness设计模式(指令+工具+循环→验证)。仅限40家合作伙伴使用(Amazon/Google/MS/NVIDIA/Cisco)的Project Glasswing联盟，$100M 安全 credits + $4M 捐赠开源安全组织 |
 | **Claude Managed Agents: Dreaming/Outcomes/Multiagent** | 2026.05.08 | 🔴 高 | Dreaming（研究预览）：计划性复盘+跨 session 记忆演化。Harvey 法律 AI 测试完成率提升 ~6x。Outcomes（公测）：定义成功标准+独立评分器，编码成功率 +10pts。Multiagent Orchestration（公测）：主 agent 拆解任务分派专业子 agent 并行。Netflix 已用于平台团队。Webhooks 同时发布 |
+| **IBM Think 2026** | 2026.05.05 | 🔴 高 | CEO Arvind Krishna 提出企业 AI 运营模型四支柱(Agents/Data/Automation/Hybrid)。watsonx Orchestrate(agentic control plane), IBM Concert(运维平台), IBM Sovereign Core GA(策略级治理). Nestlé PoC: 83%成本节省, 30x性能提升 |
+| **Twilio Agent Connect GA** | 2026.05.06 | 🟡 中 | Model-Agnostic、自托管的 AI Agent 音视频/消息编排平台。架构四支柱: Connect/Orchestrate/Remember/Handoff。70+ 语言翻译、跨 Voice/SMS/WhatsApp 统一上下文 |
 
 **MCP 生态关键趋势**：
 - 81% 远程 MCP 服务器已使用 OAuth 2.1 PKCE
-- MCP 注册中心 9,400+ 条目（2025.09 以来增长 407%）
-- Streamable HTTP 取代 SSE 成为主要传输协议 
+- MCP 公开服务器 **13K+**（增长 407%+），月 SDK 下载 **97M+** (2026.03)
+- Streamable HTTP 取代 SSE 成为主要远程传输协议（70% Streamable HTTP / 30% stdio 生产分布）
 - MCP Apps（2026.01.26）首次扩展协议，工具可返回交互式 HTML UI（沙箱 iframe），已在 Claude/ChatGPT/Goose/VS Code 中支持
 - Microsoft Fabric MCP（Local GA + Remote Preview）将数据平台变为 AI 原生操作系统
+- **MCP Gateway 云厂商对比**: AWS AgentCore(冷启动8-12s, 适合Lambda团队) / Azure(AKS原生会话路由, 0s冷启动) / GCP Cloud Run(最便宜但需自组装IAP兼容)
+- **Gartner 预测**: 75% API Gateway 厂商将在 2026年底前支持 MCP（Traefik/Cloudflare 已原生支持）
+- **MCP 增长**: 2M(2024.11)→22M(2025.04 OpenAI采纳)→45M(2025.07 MS)→68M(2025.11 AWS)→97M(2026.03)，16个月达成 React 3年增长
 
 ### Multi-Agent Orchestrator 框架（2026.05 新增）
 
@@ -224,6 +230,7 @@ metadata:
 13. **三大云厂商 MCP 基础设施全面产品化**（2026.04-05）：AWS Agent Toolkit + MCP Server GA（40+ skills）、Google 50+ 托管 MCP GA、Salesforce Hosted MCP GA、Azure MCP 2.0。MCP 从开发者工具升级为企业基础设施
 14. **单检查点多模型部署兴起**（2026.05.09）：NVIDIA Star Elastic 释放 360× token 节省和 53% 存储减少。标志AI部署从"多checkpoint"向"弹性嵌套"范式转变，消费级GPU可运行12B模型
 15. **开源模型生态格局固化**（ATOM Report）：Qwen 69%衍生份额 vs Llama 11%，中国1.15B下载(11.9× YoY) vs 美国723M(4.1×)。开源社区已形成 Qwen(生态) + DeepSeek(推理) 双极格局，新入者突破难度激增
+16. **企业 Agent 基础设施三强争霸**（2026.05）：AWS(SageMaker Agent + MCP Server GA)、IBM(watsonx Orchestrate + Concert + Sovereign Core)、Twilio(Agent Connect GA) 三家企业几乎同时发布 Agent 基础设施产品。MCP 从开发者协议升级为企业级基础设施架构标准。Gartner 预测 75% API Gateway 厂商年底前支持 MCP
 
 ---
 
@@ -302,6 +309,34 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 | **VideoMind** | Video Reasoning | Chain-of-LoRA agent，时序定位视频理解 |
 | **Paper2Code** | ML Automation | 多 Agent LLM 从论文生成代码仓库 |
 
+### GPT-5.5 API 详细规格（2026.05 新增）
+
+| 规格 | 值 |
+|:---|:---|
+| **API 定价 Input** | $5.00 / 1M tokens ($2.50 Batch/Flex; >272K时2x) |
+| **API 定价 Output** | $30.00 / 1M tokens ($15 Batch/Flex; >272K时1.5x) |
+| **GPT-5.5 Pro Input** | $30.00 / 1M tokens |
+| **GPT-5.5 Pro Output** | $180.00 / 1M tokens |
+| **上下文窗口** | 1,050,000 tokens |
+| **最大输出** | 128,000 tokens |
+| **Reasoning Effort** | none / low / medium(默认) / high / xhigh |
+| **最新快照** | gpt-5.5-2026-04-23 |
+| **知识截止** | 2025-12-01 |
+
+**支持工具**: Web search / File search / Image generation / Code interpreter / Hosted shell / Apply patch / Skills / Computer use / MCP / Tool search
+
+**Rate Limits (标准)**: Tier 1(500 RPM/200K TPM) → Tier 5(15K RPM/40M TPM)
+
+**关键定位**: 相比 Claude 4 Opus ($15/$75) 性价比更高编码旗舰；DeepSeek V4 仍为成本敏感推理首选 ($0.30/$1.20)
+
+### CLI Coding Agents Stars 更新（2026.05 更新）
+
+- **OpenCode** ~117K ⭐ → Go 编写，支持 75+ 模型，维持最高星数
+- **Gemini CLI** ~102K ⭐ → 免费(1000 req/day)，Multi-agent orchestration
+- **Claude Code** ~71K ⭐ → SWE-bench 87.6%，1M context，Agent Teams
+- **Codex CLI** ~65K ⭐ → Rust 编写，v0.131.0-alpha.6 (2026-05-11)
+- **Codex-Spark** → GPT-5.3 变体，>1000 tok/s，128K context，仅 ChatGPT Pro
+
 ### 推理引擎与工具链更新（2026.05 新增）
 
 | 项目 | 版本 | 日期 | 亮点 |
@@ -324,3 +359,4 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-10: **v1.8 更新** — SubQ SSA 次二次架构深潜（52×加速 @1M、content-dependent selection、⚠️ 待技术报告）；EMO 模块性 MoE（AI2, 12.5%专家≈全模型, Apache 2.0）；升级 Drifting Models 完整分析（Kaiming He 一步生成, FID 1.54）；升级 GRAM 隐空间递归推理（ICLR 2026 Workshop）；更新趋势观察（效率革命三方向、生成范式转变、模块化趋势）
 > - 2026-05-10: **v1.9 更新** — DeepSeek 图像识别模式 (Thinking with Visual Primitives, ~90 tokens/图像)；Transformers v5.8.0 新模型支持 (DeepSeek-V4/Gemma 4 Assistant/EXAONE-4.5/Granite)；OrcaRouter Lite MIT 开源LLM路由；NIST CAISI 前沿AI预部署测试协议 (MS/Google/xAI签署)；MCP 2026路线图深度展开 (MCP Apps/97M月下载/10K+服务器)；MCP基础设施全面产品化 (AWS MCP Server GA/Red Hat MCP Gateway TP/Retool/MCP Toolbox v1.0)；Airbnb 60%代码AI生成；llama.cpp b9045 Granite Speech支持
 > - 2026-05-11: **v1.10 更新** — NVIDIA Star Elastic 单检查点多模型嵌套(360× token/53%存储)；Mozilla×Mythos 271漏洞实战数据(180 sec-high, 几乎无假阳性)；ATOM Report 开源模型生态全景(中国1.15B, Qwen 69%衍生份额)；Mythos 条目更新 Firefox 实战数据；趋势观察 #14-#15 新增
+> - 2026-05-12: **v1.11 更新** — Amazon SageMaker AI Agent Experience(5/4, Agentic模型定制)；Twilio Agent Connect GA(5/6, 自托管音视频编排)；IBM Think 2026(5/5, watsonx/Concert/Sovereign Core四支柱)；MCP生态数据更新(13K+服务器/97M+月下载/Streamable HTTP标准/云厂商Gateway对比)；GPT-5.5 API完整规格(1,050K上下文/$5-$30定价/Rate Limits)；趋势观察 #16(企业Agent基础设施三强争霸)

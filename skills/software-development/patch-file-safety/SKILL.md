@@ -1,7 +1,7 @@
 ---
 name: patch-file-safety
 description: 安全使用 patch 工具的最佳实践指南——何时用 patch、何时用 write_file、什么时候该重写整个文件。避免大块替换污染文件的风险。
-version: 1.0.0
+version: 1.2.0
 triggers:
 - 需要修改代码文件
 - patch 工具遇到问题
@@ -269,4 +269,113 @@ handle.write.assert_any_call("expected_substring")
 - `call_args_list` 的元素是 `unittest.mock.call` 对象，不是裸 tuple
 - 使用 `call_args[0][0]` 获取第一个位置参数
 - 对于多行写入，逐一提取并拼接
-- 如果只需确认内容包含某字符串，`str(call_obj)` 是最简单的近似方案
+    - 如果只需确认内容包含某字符串，`str(call_obj)` 是最简单的近似方案
+
+### 🚩 实战陷阱 6：multi-line old_string 中的换行符被转义为 \n
+
+**场景**：用 patch 工具替换多行文本（如 markdown 文档中的一段验收标准列表）。例如替换 EPIC-003.md 中的多行 AC：
+
+```python
+# old_string 有多行，直接写在字符串中：
+patch(
+    path="docs/EPIC-003.md",
+    old_string="- [ ] 映射表作为配置文件，支持用户自定义扩展\n- [ ] 在 `/validate` 端点中集成文件类型检查",
+    new_string="- [x] 映射表作为配置文件，支持用户自定义扩展\n- [x] 在 `/validate` 端点中集成文件类型检查"
+)
+```
+
+patch 成功后查看文件，发现换行符被转义为字面量 `\\n`：
+```
+- [ ] 映射表作为配置文件，支持用户自定义扩展\\n- [ ] 在 `/validate` 端点...
+```
+
+**根因**：patch 工具在序列化多行 old_string/new_string 时，对实际换行符做了二次转义。这与 §8 实战陷阱 1 的 f-string 转义类似，但触发条件不同——只要 old_string 或 new_string 包含**字面量换行符**（而非 `\n` 转义序列），就可能被二次转义。
+
+**诊断方法**：patch 后立即 `read_file` 查看被修改的区域，检查是否有 `\n` 变成 `\\n` 或 `\\n` 变成 `\\\\n`。
+
+**预防措施**：
+
+1. **首选方案**：用 `execute_code` 沙箱 + `hermes_tools.patch` 绕开转义问题：
+   ```python
+   from hermes_tools import patch
+   result = patch(path, old_string, new_string)
+   # execute_code 沙箱中的 patch 不会出现转义问题
+   ```
+
+2. **次选方案**：old_string 和 new_string 用**实际换行符**（按回车）写，但将 patch 作为 `execute_code` 中的 Python 调用来执行（从主会话调用也会触发转义）。
+
+3. **第三方案**：如果 patch 已经被转义污染，用第二遍 patch 把 `\\n` 替换回实际换行符：
+   ```python
+   # 第一遍 patch 后文件内容变成了 \\n，修复：
+   patch(path, old_string="\\n", new_string="\n")
+   # 注意：old_string 中写字面量 \\n，new_string 中写实际换行
+   ```
+
+4. **兜底方案**：如果文件已有多处转义污染，直接用 `write_file` 完整重写。
+
+**验证流程**（patch 多行内容后强制执行）：
+```bash
+# 对 Python 文件
+python3 -m py_compile modified_file.py
+
+# 对 markdown 文件——检查是否有异常转义
+grep -n '\\\\n' modified.md && echo "⚠️ 发现转义污染" || echo "✅ 无转义污染"
+```
+
+**铁律**：每次 patch 多行文本内容后，**必须检查转义污染**。尤其是 markdown 文档、配置文件、代码注释等非可执行文件——它们不会被语法检查器发现。
+
+**场景**：用 `replace_all=true` 替换文件中多处相同的文本行，但该文本出现在**不同嵌套深度**的代码块中。例如：
+
+```python
+# 文件中有 6 处 print("⚠️  SRA Daemon 未运行，使用本地模式")
+# 其中 4 处是顶级 if 块：
+if "error" in result:
+    print("⚠️  SRA Daemon 未运行，使用本地模式")  # ← 缩进 4 空格
+
+# 另外 2 处嵌套在二级 if 块内：
+if "error" in result:
+    if "未运行" in result.get("error", ""):
+        print("⚠️  SRA Daemon 未运行，使用本地模式")  # ← 缩进 8 空格
+```
+
+当用 `replace_all=true` 把 `print` 替换为 `logger.warning(...)` + `print` 双行时，**所有 6 处都被替换**，但 `new_string` 的缩进基于第一处匹配的上下文（4 空格）：
+
+```python
+# 结果：二级 if 块的缩进被破坏！
+if "error" in result:
+    if "未运行" in result.get("error", ""):
+        logger.warning("SRA Daemon 未运行，使用本地模式")
+    print("⚠️  SRA Daemon 未运行，使用本地模式")  # ← 缩进回退到 4 空格！
+        # ← 下面的原有代码缩进还停留在 8 空格，语法错误
+```
+
+**根因**：`replace_all=true` 用**相同的 `new_string` 替换所有匹配**，不感知每个匹配处周围的缩进上下文。`new_string` 中硬编码的缩进只能匹配一种嵌套层级。
+
+**预防措施**：
+
+1. **先 grep 确认上下文的统一性**：
+   ```bash
+   # 检查匹配行的上下文是否一致
+   grep -B2 "print.*SRA Daemon" cli.py | head -20
+   # 观察：是否有的前面是 if 语句，有的前面是另一个 if？
+   ```
+
+2. **`replace_all=true` 仅适用于纯文本内容（字符串字面量、版本号、URL）**，不适用于包含缩进的代码块替换
+
+3. **如果匹配行出现在多种缩进上下文** → 使用多个独立的 patch 调用，每个定位一种上下文：
+   ```python
+   # patch 1: 4 空格缩进版本（顶级 if）
+   patch(path, old_string="    print(...)", new_string="    logger.warning(...)\n    print(...)")
+   
+   # patch 2: 8 空格缩进版本（二级 if）  
+   patch(path, old_string="        print(...)", new_string="        logger.warning(...)\n        print(...)")
+   ```
+   每个 patch 的 `old_string` 包含足够的上下文（前后各 1 行）确保唯一匹配。
+
+4. **验证法则**：`replace_all` 后必须做两件事：
+   - `python3 -m py_compile file.py` — 语法检查（原样漏语法错误）
+   - `grep -n "your_pattern" file.py` — 检查替换后每一处的缩进是否一致
+
+5. **安全替代方案**：当替换涉及代码结构（非纯字符串），且有多处但不同上下文，直接用 `write_file` 重写整个函数/块，避免 patch 的多处替换风险。
+
+**检测方法**：`replace_all` 后立即 `python3 -m py_compile` 检查语法。如果语法正确但缩进可疑，用 `grep -n` 或 `cat -A` 查看每行的前导空格。最彻底的检测：`read_file` 逐一检查所有被替换的位置。此陷阱不会产生错误提示——patch 返回 `success: true`，文件也合法——但生成不正确的缩进的代码。

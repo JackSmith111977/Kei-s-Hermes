@@ -120,3 +120,19 @@ permissions:
 ```
 
 缺少 `id-token: write` 会导致 OIDC 认证失败。
+
+### 陷阱 D: 残留错误版本冲突
+
+**现象**：Trusted Publisher 正确配置后，PyPI 发布仍失败：
+```
+ERROR HTTPError: 400 Bad Request from https://upload.pypi.org/legacy/
+400 File already exists ('sra_agent-0.0.0.dev0-py3-none-any.whl', ...)
+```
+
+**根因**：之前 CI 构建了错误的版本号（如 `0.0.0.dev0`，见 `references/setuptools-scm-ci-version.md`）并已发布到 PyPI。同名的 wheel 文件不能重复发布。
+
+**解决方案**：
+1. 在 PyPI 项目页删除该版本的文件：`https://pypi.org/project/{pkg}/{version}/`
+2. 确保下次构建使用正确版本号（文件名不同就不会冲突）
+
+**预防措施**：避免 `setuptools-scm` fallback 到 `0.0.0.dev0`——确保版本检测机制正确，或在 CI 中显式设置版本号。

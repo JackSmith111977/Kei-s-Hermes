@@ -8,8 +8,8 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-11T02:00:00",
-      "freshness_score": 0.88,
+      "last_updated": "2026-05-12T08:10:00",
+      "freshness_score": 0.90,
       "review_schedule": {
         "l1": "2026-05-12",
         "l2": "2026-05-15",
@@ -100,8 +100,8 @@
       "target_skill": "memory-management",
       "priority": 0.6,
       "schedule_interval_hours": 6,
-      "last_updated": "2026-05-10T00:01:00",
-      "freshness_score": 0.7,
+      "last_updated": "2026-05-12T00:15:00",
+      "freshness_score": 0.9,
       "review_schedule": {
         "l1": "2026-05-11",
         "l2": "2026-05-17",
@@ -115,7 +115,13 @@
         "Multi-Agent Governance Six Primitives (Knowlee)",
         "Freshness SLA Framework (Wrodium/AgentForge/Atlan)",
         "Agentic KM 2026 Architecture Update"
-      ]
+      ],
+      "learning_history": {
+        "total_sessions": 1,
+        "avg_quality": 0.47,
+        "last_loop_count": 2,
+        "consecutive_failures": 0
+      }
     }
   ],
   "discovery_rules": [

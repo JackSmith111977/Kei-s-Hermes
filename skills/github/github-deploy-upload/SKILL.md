@@ -1,7 +1,7 @@
 ---
 name: github-deploy-upload
 description: 安全地将本地部署目录通过定时 cron 推送到 GitHub 仓库。涵盖认证令牌安全存储（独立文件 600 权限）、git remote 内容自动清理、远程分支适配等实践。
-version: 1.4.0
+version: 1.5.0
 triggers:
 - deploy upload
 - deploy-upload
@@ -112,6 +112,8 @@ git remote set-url origin "$REMOTE_BASE"
 | **运行时状态文件混入** | rsync 从 `~/.hermes/skills/` 同步时，会将 `.curator_state`、`.usage.json`、`.hub/` 等本地缓存/状态文件也复制进来，污染 git 仓库 | 在部署目录 `.gitignore` 中添加排除规则 |
 | **技能目录内嵌 .git 仓库** | 某些 skill 目录（如 `web-access`）本身包含 `.git/` 目录，rsync 复制后部署目录 git 会将其检测为子模块（"modified content, untracked content"），导致 `git status` 异常 | 在 `.gitignore` 中添加 `skills/**/.git/` 排除所有内嵌 git 仓库；同步后清理已复制的 `.git/` 目录 |
 | **HERMES_REPO_URL 环境变量** | cron 任务指令中引用此变量控制是否推送：未设置时只同步+commit，设置后才 push | 由 cron job 指令逻辑判断，非脚本内部逻辑；用于区分纯本地备份与远程同步 |
+| **deploy-upload.sh 忽略 HERMES_REPO_URL** | `~/.hermes/scripts/deploy-upload.sh` 的判断逻辑基于 git remote 配置 + token 文件是否存在，而非 `$HERMES_REPO_URL` 环境变量。即使 HERMES_REPO_URL 未设置，只要有 git remote 和 `.deploy_token`，脚本仍然会推送 | 如需严格遵从 HERMES_REPO_URL，有两种方案：(A) 在脚本开头添加 `[[ -z "$HERMES_REPO_URL" ]] && PUSH_ENABLED=false` 的显式判断；(B) 在 cron job 指令中判断该变量，仅当设置时才调用带 push 的脚本变体 |
+| **子模块条目已在 index 中 (mode 160000)** | 当某个 skill 目录（如 `skills/web-access`）**此前已被意外提交为 gitlink 子模块**（`git ls-files --stage` 显示 mode 160000），单纯清理磁盘上的 `.git/` 目录和 `.gitignore` 规则都无法修复。git status 会持续显示 `M skills/<name>`（modified content） | 需要执行三步手术：(1) `git rm --cached skills/<name>` 移除 index 中的子模块条目；(2) `rm -rf skills/<name>/.git` 清理磁盘上的内嵌仓库；(3) `git add skills/<name>/` 作为普通文件重新跟踪。此问题可能源自早期 rsync 同步时误提交了内嵌 `.git/` 目录，导致 git 自动将其注册为子模块 |
 | **`***` 脱敏陷阱** | `git remote get-url origin` 输出的 URL 中，token 部分会被 git 自动替换为 `***`。直接捕获此输出用于恢复 remote URL 会导致 literal `***` 写入 git config，认证失效 | 恢复 URL 时必须从 `~/.hermes/.deploy_token` 读取真实 token 重建 URL，而非依赖 captured output |
 
 ## 定时任务配置
@@ -187,9 +189,24 @@ git ls-files skills/.curator_state skills/.usage.json | wc -l
 
 # 确认没有内嵌 .git 被跟踪（子模块检测问题）
 git status skills/ | grep -c 'modified content' || echo "无子模块检测问题"
+
+# ★ 额外检查：检测子模块条目（mode 160000 gitlink）是否存在于 index 中
+#    这是比磁盘 .git/ 更严重的问题——子模块条目一旦提交，光靠 .gitignore
+#    和磁盘清理无法修复，必须 git rm --cached 移除
+SUBMODULE_COUNT=$(git ls-files --stage skills/ 2>/dev/null | grep -c '^160000' || true)
+if [ "$SUBMODULE_COUNT" -gt 0 ]; then
+    echo "⚠️  检测到 $SUBMODULE_COUNT 个子模块条目！需要 git rm --cached 修复"
+    git ls-files --stage skills/ | grep '^160000'
+else
+    echo "✅ 无子模块条目残留"
+fi
 ```
 
-**修复已混入的内嵌 .git：**
+**修复已混入的内嵌 .git 与子模块条目：**
+
+内嵌 `.git` 问题有两种严重程度，需要不同方案处理：
+
+**程度 A — 仅磁盘上有 .git 目录（尚未被提交为子模块）**
 
 推荐使用专用脚本（skill 已内置）进行清理：
 
@@ -200,6 +217,37 @@ bash scripts/cleanup-embedded-git.sh /tmp/hermes-catgirl-deploy
 # 方式二：手动清理
 cd /tmp/hermes-catgirl-deploy
 find skills/ -maxdepth 2 -name '.git' -type d -exec rm -rf {} + 2>/dev/null || true
+```
+
+**程度 B — .git 已被提交为子模块（index 中存在 mode 160000 gitlink）**
+
+当 `git ls-files --stage skills/web-access` 显示 `160000 ...` 时，说明该目录已被 git 注册为子模块（gitlink）。单纯删除磁盘上的 `.git/` 无效，需要从 index 中移除子模块条目：
+
+```bash
+cd /tmp/hermes-catgirl-deploy
+
+# 1. 检查哪些 skill 被错误地作为子模块跟踪
+git ls-files --stage skills/ | grep '^160000'
+
+# 2. 移除子模块条目（不会删除实际文件）
+git rm --cached skills/web-access
+
+# 3. 清理磁盘上的内嵌 .git 仓库
+rm -rf skills/web-access/.git
+
+# 4. 重新将目录作为普通文件跟踪
+git add skills/web-access/
+```
+
+**验证两种修复效果：**
+```bash
+cd /tmp/hermes-catgirl-deploy
+# 检查 git 状态是否干净（无 submodule modified content）
+git status --short
+# 输出应为空
+
+# 确认无残留子模块条目
+git ls-files --stage skills/ | grep '^160000' || echo "✅ 无子模块条目残留"
 ```
 
 ⚠️ **注意**：此问题是**每次 rsync 同步后都会出现**的 recurring issue，因为 `web-access` 等 skill 目录自身包含 `.git/` 仓库。建议在 `deploy-upload.sh` 的 rsync 步骤后自动调用 `scripts/cleanup-embedded-git.sh` 脚本。

@@ -201,7 +201,12 @@ fi
     ↓
 7. ✅ 验证（pytest + doc-alignment + commit-quality-check）
     ↓
-8. 📝 Spec 状态更新（complete → archive）
+8. 📋 AC 审计 ← 🔴 新增！确保 Epic AC 与代码同步
+   ├── python3 scripts/ac-audit.py check docs/EPIC-*.md
+   ├── 确认漂移 = 0
+   └── 如未勾选 → python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply
+    ↓
+9. 📝 Spec 状态更新（complete → archive）
 ```
 
 ---
@@ -257,7 +262,10 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py approve "SRA-004-01"
 # 5. 开始开发
 python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py start "SRA-004-01"
 # 6. 实现 + 测试 + doc-alignment
-# 7. 完成
+# 7. AC 审计 — 同步 Epic 文档
+python3 scripts/ac-audit.py check docs/EPIC-*.md        # 检查漂移
+python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply  # 同步 AC 勾选
+# 8. 完成
 python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py complete "SRA-004-01"
 python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py archive "SRA-004-01"
 ```
@@ -287,3 +295,4 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 | 3 | **Spec 和代码必须在同一次提交中** | 版本历史无法追溯 |
 | 4 | **每个 AC 必须可验证（自动化测试优先）** | 无法判断是否真的完成 |
 | 5 | **Spec 过期时间不得超过 7 天** | 代码已变但 Spec 未更新 → 漂移 |
+| 6 | **Story 完成时自动同步 Epic AC** ← 🔴 新增 | Story Spec 完成 → 运行 ac-audit sync 更新 Epic 文档中对应 AC |
