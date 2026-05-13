@@ -27,7 +27,6 @@ metadata:
       - development
       - methodology
       - index
-      - bmad
       - superpowers
       - gsd
     category: dogfood
@@ -49,14 +48,13 @@ depends_on:
   - analysis-workflow
   - one-three-one-rule
   - problem-solving-sherlock
-  - bmad-method
   - generic-dev-workflow
   - sdd-workflow
 ---
 
 # 🧭 开发工作流索引 v1.0
 
-> **整合 BMAD Method · Superpowers · GSD 三大 SDD 框架 + Hermes 现有能力**
+> **整合 Superpowers · GSD 两大 SDD 框架 + Hermes 现有能力**
 > 核心理念：**根据任务复杂度自适应选择流程深度，不搞一刀切，不搞企业级仪式感。**
 
 ---
@@ -96,27 +94,29 @@ depends_on:
     └── 走 SDD 路径 → 见 §8
 ```
 
-### 🔍 Phase 0: Reality Check + SDD 门禁 — 所有路径的强制前序
+### 🔍 Phase 0: pre_flight v2.0 门禁 — 所有路径的强制前序
 
-**在走决策树之前，先执行 Reality Check（见 §12）。** 这是 P0 铁律 #9 的实践步骤。
+**在走决策树之前，必须先执行 `pre_flight.py`。** 这是 P0 铁律 #11 的实践步骤。
 
 ```text
-[BEFORE 任何操作 — 强制 Reality Check]
-  1. 🔍 扫描代码库：git log --oneline -30 → 看最近变更
-  2. 🧪 测试验证：pytest --collect-only -q → 看实际测试数
-  3. 🏷️ 版本验证：python -c "from pkg import __version__" → 看实际版本
-  4. 📐 文档对齐验证：doc-alignment --verify → 检测文档漂移
-  5. ✅ 然后才读文档 — 带着「验证」心态，不盲信
-  └── 仅当代码现实与文档声明一致时，信任文档 ← 否则以代码为准
+[BEFORE 任何操作 — 强制 pre_flight 门禁]
+  1. 🛑 python3 ~/.hermes/scripts/pre_flight.py "<任务描述>"
+     ├── Gate 1: 学习状态检查
+     ├── Gate 2: SDD 门禁 — 复杂任务自动调用 spec-gate.py enforce
+     └── Gate 3: 技能/包检测 — 自动检测 skill-creator 或 cap-pack 操作
+  2. 结果：
+     ├── ✅ PASS (exit 0) → 继续走决策树
+     └── ❌ BLOCKED (exit 1) → 🛑 STOP！先处理阻塞项
 
 [THEN 标准前序]
-  1. 🛑 pre_flight.py → 检查工作流状态
-  2. 📡 skill_finder.py → 发现相关 skill → 自动加载
-  3. 📋 SDD 门禁检查（P0 铁律 #11）
-     ├── 复杂任务 → sdd-workflow skill 自动触发 → spec-gate.py enforce
-     ├── 简单任务 → 可跳过，但需向主人说明
-     └── 🔴 没有获批 Spec 就写代码 = P0 违规
-  4. 📋 [复杂任务] 写 todo 清单
+  1. 📡 skill_finder.py → 发现相关 skill → 自动加载
+  2. 📋 [复杂任务] 写 todo 清单
+
+[AFTER 任何变更]
+  1. ✅ 自检（self-review）
+  2. 🔍 文档一致性（doc-alignment）
+  3. 📝 [有 git] 提交前检查（commit-quality-check）
+  4. 🗂️ 经验沉淀（knowledge-ingest）
 ```
 [AFTER 任何变更]
   1. ✅ 自检（self-review）
@@ -270,7 +270,6 @@ depends_on:
 └──────────────────────────────────────────────────┘
                       ↓
 ┌──────────────────────────────────────────────────┐
-├── Phase 2: 规划（必须）                              │
 │   ├── 需求理解       → SCQA 框架                   │
 │   ├── Sprint 规划    → sprint-planning §1-5 分析    │
 │   ├── 架构设计       → writing-plans / 架构文档    │
@@ -294,17 +293,11 @@ depends_on:
 └──────────────────────────────────────────────────┘
 ```
 
-### BMAD 完整路径入口（当项目需要完整 SDD 框架时）
+### 完整路径说明
 
-如果主人明确说「用 BMAD」或项目需要完整团队级流程：
+> ⚠️ **注**: BMAD Method 框架已从本环境删除（项目级框架）。以下路径中使用 GSD + Superpowers 替代 BMAD 的完整流程。
 
-```text
-→ skill_view(name="bmad-method")
-    → 按决策树走 BMAD 完整路径
-    → 7 角色分工 (PM/BA/Arch/UX/Dev/Writer/Builder)
-    → 四阶段执行 (Analysis→Planning→Solutioning→Implementation)
-    → Party Mode 多智能体并行
-```
+如果项目需要完整团队级流程，直接走 SDD 规范路径（见 §8）：
 
 ### 铁律
 - 🔴 Phase 2（规划）不可跳过 — 「想到哪做到哪」是项目失败的根源
@@ -381,10 +374,7 @@ depends_on:
 [Phase 2] 深度审计（如需）
     ├── analysis-workflow → 代码库技术债审计（支持并行子代理4层扫描模式）
     ├── analysis-workflow §8 → 并行子代理审计（架构/代码质量/测试/文档同时扫）
-    └── BMAD 审查（如需）
-        ├── bmad-code-review → 对抗式审查
-        ├── bmad-review-adversarial-general → 全面审查
-        └── bmad-review-edge-case-hunter → 边界条件排查
+    └── 如需第三方审查框架 → 使用 `analysis-workflow` 的并行子代理审计模式
 
 [Phase 3] 修复与重构
     ├── 按优先级修复发现的问题
@@ -481,7 +471,9 @@ depends_on:
                       ↓
 ┌──────────────────────────────────────────────────┐
 │ Phase 3: IMPLEMENT — 按 Spec 开发                  │
-│   ├── spec-state.py start → 状态变为 in_progress   │
+│   ├── spec-state.py architect → 开始架构设计       │
+│   ├── spec-state.py plan → 开始实现计划            │
+│   ├── spec-state.py implement → 开始技术实现       │
 │   ├── 每个 AC 对应一个测试（TDD）                   │
 │   └── 逐个 Task 实现 + 验证                        │
 └──────────────────────────────────────────────────┘
@@ -644,18 +636,15 @@ depends_on:
 |:----|:-----------|:-----|:---------|
 | **调研** | `deep-research` | 深度调研工作流（MECE+SCQA+BLUF） | Hermes |
 | **调研** | `spike` | 原型快速验证 | GSD |
-| **调研** | `bmad-create-prd` | 产品需求文档创建 | BMAD |
 | **规划** | `sprint-planning` | 项目分析 + Sprint Backlog 生成 | Hermes |
 | **规划** | `writing-plans` | 编写实施计划（含全部代码） | Superpowers |
 | **规划** | `one-three-one-rule` | 1-3-1 方案对比决策 | Hermes |
 | **规划** | `information-decomposition` | 信息分解决策 | Hermes |
 | **实现** | `test-driven-development` | RED-GREEN-REFACTOR 循环 | Superpowers |
 | **实现** | `subagent-driven-development` | 子代理驱动+双阶段审查 | Superpowers |
-| **实现** | `bmad-dev-story` | BMAD Story 实现 | BMAD |
 | **审查** | `requesting-code-review` | 安全扫描+质量门禁 | Superpowers |
 | **审查** | `commit-quality-check` | 提交前一致性+安全检查 | Hermes |
 | **审查** | `self-review` | 通用自我审查 | Hermes |
-| **审查** | `bmad-code-review` | BMAD 对抗式审查 | BMAD |
 | **调试** | `systematic-debugging` | 4 阶段根因调试 | Superpowers |
 | **调试** | `problem-solving-sherlock` | 通用问题解决 | Hermes |
 | **调试** | `bmad-correct-course` |  Sprint 中途纠偏 | BMAD |

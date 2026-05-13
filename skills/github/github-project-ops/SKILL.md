@@ -488,6 +488,92 @@ jobs:
 
 详见 `references/python-ci-test-fixtures.md`。
 
+### 4.6 CI 陷阱与修复模式
+
+#### ⚠️ 陷阱1: `setup-python@v5` + `cache: pip` 缺依赖清单文件
+
+**现象**：`actions/setup-python@v5` 配置了 `cache: pip`，但仓库没有 `pyproject.toml` 或 `requirements.txt`，导致 job 硬错误退出：
+
+```
+##[error]No file matched to [**/requirements.txt or **/pyproject.toml]
+```
+
+**根因**：`cache: pip` 需要找到 pip 支持的依赖清单文件来计算缓存 key。纯脚本项目（无 python 包结构）会触发此错误。
+
+**修复方案**：
+
+| 方案 | 适用场景 | 操作 |
+|:-----|:---------|:-----|
+| 🥇 **创建 pyproject.toml** | 有依赖管理的项目 | 添加 `[build-system]` 和 `[project]` 段，声明 pyyaml 等依赖 |
+| 🥈 **去掉 `cache: pip`** | 纯脚本项目，无 pip 依赖 | 删除 `cache: pip` 行，只留 `python-version` |
+| 🥉 **创建 requirements.txt** | 依赖极少 | 写入 `pyyaml>=6.0` 等 |
+
+**最佳实践**：即使是不发布的脚本项目，也推荐创建 `pyproject.toml`，声明版本号 + 依赖，一举两得（CI 缓存 + 版本管理）。
+
+#### ⚠️ 陷阱2: YAML 块标量 `|` + shell heredoc 缩进冲突
+
+**现象**：在 `run: |` 中使用 Python heredoc (`python3 << 'PYEOF'`)，Python 代码没有缩进到 YAML 块标量要求的级别，导致 YAML 解析器提前终止块标量：
+
+```yaml
+# ❌ 错误 — `import yaml` 在 column 1，YAML 块提前终止
+      - name: YAML check
+        run: |
+          python3 << 'PYEOF'
+import yaml, sys, os   # <- column 1 < 块标量缩进 (10)!
+errors = []
+PYEOF
+```
+
+**修复方案**（按推荐优先级）：
+
+| 方案 | 说明 | 优点 |
+|:-----|:------|:------|
+| 🥇 **提取为独立脚本** | 将 Python 代码写入 `scripts/ci-xxx.py`，CI 中仅调用 `python3 scripts/ci-xxx.py` | 无缩进冲突，可本地复现，可维护 |
+| 🥈 **`python3 -c` 单行** | 用 `python3 -c "..."` 将代码写在一行内 | 适合短逻辑，不需要脚本文件 |
+| 🥉 **YAML 折叠块 `>`** | 用 `>` 替代 `|` 配合 `\n`，不推荐 | 代码可读性差 |
+
+**推荐模式**（独立脚本）：
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  lint:
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pyyaml
+      - name: YAML syntax check
+        run: python3 scripts/ci-check-yaml.py  # 逻辑在独立脚本中
+```
+
+#### 🔧 模式: 纯脚本 Python 项目的 CI 架构
+
+当仓库只有 `.py` 脚本（无 `setup.py`/`pyproject.toml` 包结构）时，推荐 CI 架构：
+
+```yaml
+jobs:
+  lint:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # cache: pip   ← 无 pyproject.toml 时去掉此行
+      - run: pip install pyyaml   # 显式装依赖
+      - run: |
+          # Python 语法检查
+          find . -name '*.py' -not -path './.git/*' \
+            -exec python3 -m py_compile {} \;
+      - run: python3 scripts/validate-all.py  # 独立验证脚本
+
+  consistency:
+    needs: lint
+    steps:
+      - run: python3 scripts/ci-cross-ref-check.py
+```
+
+**优势**：lint → validate → consistency 三段式并行，每段职责单一。
+**关键**：复杂逻辑放在独立脚本中，workflow 只做编排。
+
 ```yaml
 # 生产部署需要审批
 deploy:

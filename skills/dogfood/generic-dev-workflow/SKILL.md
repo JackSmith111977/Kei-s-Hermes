@@ -1,7 +1,7 @@
 ---
 name: generic-dev-workflow
 description: "通用开发工作流 — 项目无关的轻量级开发实施流程。从需求理解到提交的 7 步标准循环。可被任何项目直接加载使用，与 sdd-workflow(Spec管理) 和 development-workflow-index(决策树) 互补。任何涉及开发/实现/编码/修复等任务时自动加载。"
-version: 1.0.0
+version: 1.1.0
 triggers:
   - 开发
   - 实现
@@ -224,6 +224,16 @@ git commit -m "type(scope): description"
 
 ---
 
+## 🪤 常见陷阱
+
+| 陷阱 | 场景 | 解决 |
+|:-----|:------|:------|
+| **CLI 脚本导入失败** | `ModuleNotFoundError: No module named 'scripts'` | CLI 入口和命令模块都需要加 `sys.path.insert(0, ...)` 指向项目根目录。详见 `references/python-cli-pitfalls.md` |
+| **测试路径假设** | 测试从项目根运行没问题，但从子目录运行报错 | 所有路径用 `Path(__file__).resolve().parent` 构造，不用相对路径字符串 |
+| **版本号不同步** | pyproject.toml 的 version 和 CHANGELOG 的版本不一致 | 提交前用 `grep "version"` 交叉检查，或用 `bump-version.py` 统一管理 |
+
+---
+
 ## 🔴 铁律
 
 | # | 铁律 | 违背后果 |
@@ -258,9 +268,10 @@ sdd-workflow              ← 更新 Spec 状态：complete → archive
 
 ```
 ~/.hermes/skills/dogfood/generic-dev-workflow/
-├── SKILL.md                         ← 主入口（7 步流程 + 铁律）
+├── SKILL.md                         ← 主入口（7 步流程 + 铁律 + 陷阱）
 └── references/
-    └── scenario-guide.md            ← 场景指南（新功能/修 Bug/重构/快速修复）
+    ├── scenario-guide.md            ← 场景指南（新功能/修 Bug/重构/快速修复）
+    └── python-cli-pitfalls.md       ← Python CLI 导入路径问题与解决
 ```
 
 ## 📚 参考深度阅读

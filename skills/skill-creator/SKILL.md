@@ -1,7 +1,7 @@
 ---
 name: skill-creator
 description: "创建、优化、评估 Skill 的完整工作流。支持从实战任务中提取知识、从学习笔记转化 Skill。内置 5 种设计模式，9 阶段创作流程（含快速更新通道），引用依赖检查，以及 skill-manage 联动拦截。"
-version: 4.1.0
+version: 5.0.0
 triggers:
 - skill
 - 创建技能
@@ -10,6 +10,18 @@ triggers:
 - 技能升级
 - 依赖检查
 - skill-manage 联动
+- 质量评分
+- 质量检查
+- SQS
+- 技能质量
+- 技能审计
+- 技能生命周期
+- 技能退役
+- skill audit
+- 全量审计
+- 技能健康
+- quality gate
+- 质量门禁
 allowed-tools:
 - terminal
 - read_file
@@ -48,6 +60,8 @@ metadata:
 ## 〇、🚨 铁律拦截 (Pre-flight Gate)
 
 **在任何 Skill 操作前，必须通过此检查门！**
+
+> **v4.2 更新**: pre_flight.py v2.0 现在会自动检测技能操作（识别 "创建/编辑/更新/删除 skill" 等关键词），自动运行 `dependency-scan.py --target <skill>` 定向扫描，并提示加载 skill-creator。但仍需 agent 手动执行 `skill_view(name='skill-creator')` 加载完整流程。
 
 ```
 [准备调用 skill_manage] 
@@ -114,6 +128,42 @@ metadata:
 9.  **调研整理** (Inversion + Generator)
 
 ## 三、核心工作流
+
+### 工作流 0: pre_flight 自动触发（v4.2 新增）
+
+日常开发中无需手动想起 skill-creator。运行 `pre_flight.py` 后自动检测：
+
+```bash
+python3 ~/.hermes/scripts/pre_flight.py "更新pdf-layout skill的字体配置"
+
+# Gate 3 自动输出:
+#   🎯 检测到技能操作: Skill CRUD
+#   📌 必须加载 skill-creator:
+#      skill_view(name='skill-creator')
+#   📌 自动运行定向依赖扫描...
+#      🎯 定向扫描: pdf-layout
+#      📦 pdf-layout (v2.0.0)
+#        → 被 2 个 skill 引用: pdf-render-comparison, vision-qc-patterns
+```
+
+**流程链**:
+```
+主人说"更新 skill X"
+  ↓
+pre_flight.py 检测到技能操作
+  ├── 自动跑 dependency-scan --target X
+  └── 提示加载 skill-creator
+      ↓
+skill_view(name='skill-creator')  ← agent 手动执行
+  ↓
+本 skill 的 9 阶段流程（或快速更新通道）
+  ↓
+dependency-scan 确认无断裂引用
+  ↓
+skill_manage 执行操作
+```
+
+**关键点**: pre_flight 负责**检测+提醒**，skill-creator 负责**流程+质量**。两者配合形成完整的 Skill 操作管道。
 
 ### 工作流 A: 从零创建 (9 阶段)
 ```
@@ -225,7 +275,8 @@ referenced_by:
 3. **YAML 中 triggers 只写在正文**：加载器无法识别，必须写在 frontmatter 中。
 4. **不声明依赖关系**：导致 Skill 升级时影响范围不可控。
 5. **把长流程塞进 Memory**：Memory 容量有限，操作 SOP 必须存入 Skill。
-6. **触发词过于书面化/学术化**：如果 Trigger 只写“经验沉淀”而没写“总结/复盘/踩坑”，用户在自然对话中就**无法自动触发**该 Skill！**必须穷举口语化表达**。
+6. **触发词过于书面化/学术化**：如果 Trigger 只写"经验沉淀"而没写"总结/复盘/踩坑"，用户在自然对话中就**无法自动触发**该 Skill！**必须穷举口语化表达**。
+7. **忽略了 pre_flight 的检测输出**：pre_flight v2.0 Gate 3 会检测技能操作并提示加载 skill-creator。看到提示后必须执行 `skill_view(name='skill-creator')`，不能跳过该步骤直接操作。
 
 ## 九、评估用例 (Eval Cases)
 
@@ -241,3 +292,110 @@ referenced_by:
 4. **Eval-004 (创建新 Skill)**：
    - *输入*："创建一个新的 API 参考 skill"
    - *预期*：走 9 阶段流程，生成标准 SKILL.md，询问依赖关系，写入文件。
+
+---
+
+## 十、Skill 质量生命周期体系 (Quality Lifecycle System)
+
+> 本节定义了 skill-creator 在 skill 全生命周期中的角色——不仅是创建工具，更是**质量守门员**。
+
+### 10.1 生命周期概览
+
+```
+                      ┌──────────────────────────┐
+                      │   🔬 pre_flight v2.0      │
+                      │   自动检测 skill 操作      │
+                      │   ├─ SQS 质量评分          │
+                      │   ├─ 依赖扫描              │
+                      │   └─ 提醒加载 skill-creator │
+                      └──────────┬───────────────┘
+                                 │ 触发
+                                 ▼
+┌──────────────────────────────────────────────────────┐
+│  skill-creator 全生命周期管理                          │
+│                                                        │
+│  创建 (CREATE) → 质量门禁 (QA) → 部署 (DEPLOY)         │
+│     │               │              │                   │
+│     │ 9 阶段流程    SQS >= 50    写入技能库           │
+│     │ + 质量清单    SQS < 50     触发钩子             │
+│     │ + 依赖扫描    返回改进                        │
+│     │                                                  │
+│  维护 (MAINTAIN) → 审计 (AUDIT) → 退役 (DEPRECATE)     │
+│     │               │              │                   │
+│     │ 更新内容      SQS 定期扫描   影响分析              │
+│     │ 更新版本      新鲜度检查     通知引用者             │
+│     │ 同步依赖      生命周期报告   标记退役               │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 10.2 质量门禁 (Quality Gate)
+
+所有 skill 操作前必须通过的质量检查：
+
+| 门禁 | 检查项 | 阻断条件 | 自动化程度 |
+|:-----|:-------|:---------|:----------|
+| **QSG-1** | SQS 质量分 >= 50 | < 50 分时禁止创建/部署 | ✅ pre_flight 自动 |
+| **QSG-2** | 依赖无断裂引用 | 存在断裂引用时警告 | ✅ pre_flight 自动 |
+| **QSG-3** | YAML frontmatter 完整 | 缺少 name/version/description | ✅ validate-skill.sh |
+| **QSG-4** | triggers 列表 >= 3 | < 3 个 triggers 时警告 | 手册 质量清单 |
+| **QSG-5** | 有 Red Flags 章节 | 缺失时建议补充 | 手册 质量清单 |
+
+### 10.3 SQS 质量评分公式
+
+Skill Quality Score (SQS) = 5 维度 x 20 分 = **100 分**
+
+| 维度 | 权重 | 评分依据 | 工具 |
+|:-----|:----:|:---------|:-----|
+| S1 结构完整性 | 20 | YAML frontmatter 完整度、目录结构 | skill-quality-score.py |
+| S2 内容准确性 | 20 | 代码示例、Red Flags、操作步骤 | skill-quality-score.py |
+| S3 时效性 | 20 | 版本号、最后更新日期、创建日期 | skill-quality-score.py |
+| S4 关联完整性 | 20 | depends_on、referenced_by、交叉引用 | skill-quality-score.py |
+| S5 可发现性 | 20 | triggers 丰富度、标签、描述质量 | skill-quality-score.py |
+
+**等级**:
+- 优秀 (90-100): 可直接发布
+- 良好 (70-89): 建议优化薄弱维度
+- 需改进 (50-69): 必须改进后才能部署
+- 不合格 (< 50): 禁止部署，需重建
+
+### 10.4 生命周期状态管理
+
+每个 skill 有 5 个生命周期状态：
+
+| 状态 | 含义 | 转换条件 |
+|:-----|:------|:---------|
+| active | 活跃、可正常使用 | 默认状态 |
+| under_review | 正在被审查/改进 | SQS < 50 或主人标记 |
+| frozen | 暂时冻结，不主动推荐 | 依赖工具变更待适配 |
+| deprecated | 已标记退役，仍可使用但警告 | 被替代或不再维护 |
+| archived | 已归档，不再可用 | deprecated 超过 30 天 |
+
+### 10.5 自动化管道
+
+当主人说「创建/编辑/更新 skill」时，以下流程自动触发：
+
+```
+主人: "更新 pdf-layout skill"
+  ↓
+pre_flight v2.0:
+  ├── Gate 1: 学习状态检查
+  ├── Gate 2: SDD 门禁 (技能操作，跳过)
+  └── Gate 3: 触发 skill-creator 管道
+        ├── SQS 质量评分 -> 71.8/100
+        ├── 定向依赖扫描 -> 被 2 个 skill 引用
+        └── 提示: 必须加载 skill-creator
+  ↓
+boku:
+  skill_view(name='skill-creator')     <- 强制加载
+  检查质量清单                           <- 确保符合标准
+  skill_manage(action='patch', ...)    <- 允许操作
+```
+
+### 10.6 相关脚本
+
+| 脚本 | 位置 | 用途 |
+|:-----|:------|:------|
+| skill-quality-score.py | scripts/ | SQS 质量评分（单 skill / --audit 全量） |
+| skill-lifecycle-audit.py | scripts/ | 生命周期审计 + deprecate/revive 管理 |
+| dependency-scan.py | scripts/ | 依赖关系扫描（全量 / --target 定向） |
+| pre_flight.py | ~/.hermes/scripts/ | 通用守门员（集成以上所有检查） |

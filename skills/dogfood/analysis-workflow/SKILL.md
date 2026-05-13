@@ -710,6 +710,20 @@ delegate_task(
 
 ---
 
+## 八、Skill/Agent 库存扫描（新增）
+
+> **参考文件**: `references/skill-inventory-scan.md` — 完整的 Hermes/Agent skill 扫描方法论
+
+当需要统计 Agent 平台的 skill 总量、分布、归属时，不要用 `ls -d` 只数顶层目录。Skill 可能嵌套在子分类中（如 dogfood 含 20+ 子 skill），导致统计严重低估。
+
+**正确做法**: `find -name "SKILL.md" -type f | wc -l`（递归统计真实 SKILL.md 文件数）。
+
+**实战教训（2026-05-13）**: 最初统计 Hermes skill 时用 `ls -d ~/.hermes/skills/*/ | wc -l` 只得到 85，但实际 `find -name "SKILL.md" | wc -l` 得到 351（含 bmad-method 153 个）。删除 bmad-method 后仍有 199 个 skill。**绝对不要用顶层目录数代替真实 SKILL.md 数。**
+
+详见 `references/skill-inventory-scan.md`。
+
+---
+
 ## 九、检查清单
 
 处理大文件前，boku 必须自查：

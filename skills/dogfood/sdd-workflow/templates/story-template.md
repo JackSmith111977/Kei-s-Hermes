@@ -2,11 +2,11 @@
 # SDD Story Spec 模板
 #
 # 用法:
-# 1. 复制到 docs/stories/STORY-XXX-NN.md
+# 复制到 docs/stories/STORY-{epic}-{spec}-{seq}.md（命名规范: STORY-{epic}-{spec}-{seq}，如 STORY-1-4-3）
 # 2. 填写所有字段
 # 3. spec-state.py submit <story_id> 提交审阅
 
-story: ""              # 唯一标识，如 SRA-004-01
+story: ""              # 唯一标识，如 STORY-1-4-3, STORY-3-1-1
 title: ""              # 简短标题
 status: draft          # draft | review | approved | in_progress | completed | archived
 created: YYYY-MM-DD

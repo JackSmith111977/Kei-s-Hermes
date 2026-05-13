@@ -1,7 +1,7 @@
 ---
 name: deep-research
 description: "深度调研工作流 — 从需求理解到可交付报告（PDF/PPT）的完整方法论。融合 MECE 原则、金字塔原理、SCQA 框架、BLUF 原则。支持产出结构化研究报告（PDF）和演示文稿（PPT）。任何涉及'调研/研究/对比/分析'的任务应优先加载此 skill。"
-version: 2.1.0
+version: 2.2.0
 triggers:
   - 调研
   - 研究
@@ -148,6 +148,76 @@ depends_on:
 | 🥇 | 权威基准测试 | AIMultiple、Proxyway | ✅ 高 |
 | 🥈 | 技术博客 / 社区讨论 | Medium、Reddit、Dev.to | ⚠️ 需交叉验证 |
 | 🥉 | AI 聚合 / 个人博客 | 无原文链接的内容 | ❌ 仅作线索 |
+
+### 🔗 铁律：每项事实必须携带可验证链接
+
+**这是报告质量的核心门禁。每项事实、数据、结论都必须在报告中标注可点击的源链接。**
+
+#### 1. 链接标注规范
+
+| 事实类型 | 标注要求 | 示例 |
+|:---------|:---------|:------|
+| **报价/定价** | 官方定价页面 URL + 最后验证日期 | `[OpenAI Pricing](https://openai.com/pricing) — 2026-05确认` |
+| **技术架构** | 官方文档或论文 URL | `[AIOS arxiv 2403.16971](https://arxiv.org/abs/2403.16971)` |
+| **统计数据** | 来源 URL + 发布时间 | `[Colaberry AI — 16,896 skills](https://colaberry.ai/aixcelerator/skills/ontology) — 2026年` |
+| **对比结论** | 至少 2 个独立来源交叉验证 | `[Source A](url1) + [Source B](url2) — 交叉验证一致` |
+| **业界实践** | 产品/项目主页或文档 | `[MoFA Microkernel](https://mofa.ai/mofa/concepts/microkernel.html)` |
+
+#### 2. 格式标准（HTML 报告）
+
+```html
+<!-- 内联引用 — 正文中直接链接 -->
+<p>Colaberry AI 在生产中管理 <a href="https://colaberry.ai/aixcelerator/skills/ontology">16,896 个 skill</a>，
+其三层设计与我们的架构一致。</p>
+
+<!-- 脚注引用 — 用 sup 标记 -->
+<p>微内核架构在 Agent 系统中已被验证有效<sup><a href="https://arxiv.org/abs/2512.01610">[1]</a></sup>。</p>
+
+<!-- 对比矩阵中的链接 -->
+<tr>
+  <td>方案 A</td>
+  <td>$0.01/次 <a href="https://example.com/pricing">[定价页]</a></td>
+</tr>
+```
+
+#### 3. 格式标准（Markdown 报告）
+
+```markdown
+Colaberry AI 在生产中管理 [16,896 个 skill](https://colaberry.ai/aixcelerator/skills/ontology)，
+其三层设计与我们的架构一致。
+
+微内核架构在 Agent 系统中已被验证有效[^1]。
+
+[^1]: Agent-Kernel, arxiv 2512.01610, https://arxiv.org/abs/2512.01610
+```
+
+#### 4. 参考文献章节
+
+报告末尾必须包含**完整参考文献**，按分类分组的链接清单：
+
+```markdown
+## 参考文献
+
+### 学术论文
+- [1] AIOS: LLM Agent Operating System, arxiv 2403.16971
+- [2] Agent-Kernel: MicroKernel MAS, arxiv 2512.01610
+- ...
+
+### 业界实践
+- Colaberry AI Skill Ontology: https://colaberry.ai/aixcelerator/skills/ontology
+- OntoSkills: https://ontoskills.sh/docs/overview/
+- ...
+```
+
+#### 5. 质量门禁检查
+
+报告生成后必须自检：
+
+- [ ] 每个事实/数据点都有 URL 来源？
+- [ ] 所有 URL 可点击（HTML 的 `<a href>` 或 Markdown 的 `[]()`）？
+- [ ] 定价信息标注了"最后验证日期"？
+- [ ] 参考文献章节存在且完整？
+- [ ] 结论性陈述至少 2 个独立来源交叉验证？
 
 ### 交叉验证标准
 
@@ -309,6 +379,8 @@ depends_on:
     → 只有主人明确说实施再动手
 ```
 
+**参考文件**: `references/html-retroactive-source-linking.md` — 已有 HTML 报告追溯添加可点击链接的操作手法
+
 **常见错误：**
 - ❌ 调研完直接说"我来实施" → 应该先问"主人觉得这个方向对不对？"
 - ❌ 调研和方案混在一起 → 应该清晰区分"调研发现"和"建议方案"
@@ -389,4 +461,5 @@ depends_on:
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 1.0.0 | 2026-05-05 | 初始版本。融合 MECE、金字塔原理、SCQA、BLUF。 |
+| 2.2.0 | 2026-05-13 | **来源链接铁律**：新增 §🔗 每项事实必须携带可验证链接（HTML + Markdown 格式标准、参考文献章节、质量门禁）。新增 `references/html-retroactive-source-linking.md` 追溯链接化操作指南。 |
 | 2.1.0 | 2026-05-09 | **调研交付流程修正**：新增"调研不等于实施指令"原则，明确调研后必须等主人判断再动手。新增 Don't 项。 |
