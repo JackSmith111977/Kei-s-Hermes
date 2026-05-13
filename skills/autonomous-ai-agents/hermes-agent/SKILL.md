@@ -320,7 +320,8 @@ $HERMES_HOME/skills/        Installed skills
 ~/.hermes/hermes-agent/     Source code (if git-installed)
 ```
 
-Profiles use `~/.hermes/profiles/<name>/` with the same layout.
+| Source code | `~/.hermes/hermes-agent/` |
+| Subagent architecture deep-dive | `references/subagent-architecture.md` |
 
 ### Config Sections
 

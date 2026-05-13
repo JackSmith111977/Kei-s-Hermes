@@ -1,7 +1,62 @@
 # 🧠 Agentic Knowledge Management 2026 — 关键概念速查
 
-> **提炼日期**: 2026-05-11 | **来源**: 15+ 权威来源交叉验证  
+> **提炼日期**: 2026-05-11 | **最后更新**: 2026-05-13 | **来源**: 18+ 权威来源交叉验证（含 2026-05 更新）  
 > **用途**: 为夜间自习引擎 productivity 领域轮次提供即时上下文
+
+---
+
+## 📌 2026-05-13 更新：最新进展补充
+
+### A. FalkorDB GraphRAG SDK 1.0 — 首个生产级 SDK
+**来源**: FalkorDB Blog (Apr 29, 2026) 🥇
+- GraphRAG-Bench Novel **#1 (63.73)**, Medical **#1 (75.73)**
+- Modular API, async-first architecture, strategy pattern
+- 增量图合并（非全量重建）— 摄入成本 $0.0055/文档
+- 跨 LLM 兼容: OpenAI/Anthropic/Google/Cohere/本地模型
+- **核心洞察**: "The harness matters more than the model"
+
+### B. A-RAG — 分层检索接口 Agentic RAG
+**来源**: arXiv 2602.03442 🥇
+- 三层检索工具: `keyword_search`, `semantic_search`, `chunk_read`
+- 一致性超越 GraphRAG 和 Workflow RAG 方法
+- **关键结论**: Agent 友好接口比复杂检索算法更重要
+- test-time scaling 表现优秀（强推理模型扩展更好）
+
+### C. RAGSearch — "我们还需要 GraphRAG 吗？"
+**来源**: arXiv 2604.09666 (Apr 1, 2026) 🥇
+- Agentic search + Dense RAG 大幅缩小与 GraphRAG 差距
+- **GraphRAG 在复杂多跳推理上仍然占优势**
+- 两者互补：显式图结构 vs 隐式交互结构
+
+### D. LazyGraphRAG — 1000x 成本降低
+**来源**: Microsoft Research via BestAIWeb 🥈
+- 索引成本降至全量 GraphRAG 的 ~0.1%
+- 之前的成本屏障消失，GraphRAG 部署门槛大幅降低
+
+### E. ServiceNow Context Engine (Knowledge 2026, May 5)
+**来源**: ServiceNow 🥇
+- **4 Graph 架构**: Enterprise Knowledge + Security + Decision + User Graph
+- 共享本体层（ServiceNow Data Catalog + Pyramid Analytics）
+- 通过 350+ 系统（Workflow Data Fabric）拓展上下文覆盖
+- `Veza(身份)+Armis(设备)+TraceLoop(决策追溯)+Cuein(结果确认)`
+- **核心叙事**: "模型从来不是问题，上下文才是缺失的一环"
+- **与已有知识关联**: 独立验证了 Context Kubernetes 架构在企业级平台的可行性
+
+### F. Opcito — 5 个 Agentic AI Context Engineering 模式 (May 5)
+**来源**: Opcito Blog 🥇
+1. **Task State as Explicit Context** — 结构化对象每步注入，保持目标可读
+2. **Structured Context Checkpointing** — ACE 框架(Stanford+SambaNova)减少 context drift
+3. **Dynamic Tool Loading** — 按需加载 tool schema（Hermes skill_view() 已实现）
+4. **Validated Action Tiers** — 可逆→日志→硬验证三级
+5. **Cross-Agent Trust Boundaries** — Agent 间通信不应默认信任
+- EU AI Act **2026 年 8 月截止** — 上下文级可观测性成为合规门槛 🚨
+
+### G. CDO's Playbook — 企业上下文工程
+**来源**: Promethium.ai 🥈
+- 2025 Karpathy 提出 → 2026 成为核心学科
+- 70% CDAOs 领导 AI 战略 (Gartner)
+- 四阶段框架: Anchor → Operationalize → Scale → Embed
+- 现有数据架构(BI/目录/语义模型)是资产不是负担
 
 ---
 

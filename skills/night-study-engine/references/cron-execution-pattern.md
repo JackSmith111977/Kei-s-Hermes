@@ -145,3 +145,93 @@ if next_review and next_review <= today:  # <= 而非 <
 - 如果 `last_reviewed == today` 的概念很多，说明复习日期逻辑正常执行中
 
 **无需干预**，运行 `--update-review` 即可推进所有到期概念的 `next_review`。
+
+## 混合模式执行：广度扫描 + 到期概念同步复习（2026-05-13 新增）
+
+当 cron 执行的 night study 面对 **backlog 领域**（mastered ≤ 60% 且总概念 ≥ 50）时，推荐在单次会话中同时做两件事：
+
+1. **正常广度搜索新内容**（按 multi-topic-broad-search-strategy.md 的三轮并行法）
+2. **同步复习到期概念**（next_review ≤ today 的概念）
+
+### execute_code 模板（概念复习 + KB 更新）
+
+```python
+# 在 execute_code 中执行混合模式 KB 更新
+import json, os
+from datetime import datetime, timedelta
+
+today = "2026-05-13"
+kb_path = os.path.expanduser('~/.hermes/night_study/knowledge_base/{domain}.json')
+with open(kb_path) as f:
+    kb = json.load(f)
+
+# 步骤 A：更新到期概念
+due = ['concept_a', 'concept_b']
+for cname in due:
+    if cname in kb['concepts']:
+        c = kb['concepts'][cname]
+        c['last_reviewed'] = today
+        old_interval = c.get('review_interval', 3)
+        c['review_interval'] = min(old_interval + 1, 30)
+        c['next_review'] = (datetime.strptime(today, '%Y-%m-%d')
+                          + timedelta(days=c['review_interval'])).strftime('%Y-%m-%d')
+        # 状态升级
+        status_map = {'new': 'developing', 'developing': 'mastering', 'mastering': 'mastered'}
+        if c.get('status') in status_map:
+            c['status'] = status_map[c['status']]
+        # 添加更新标记
+        notes = c.get('key_points', [])
+        notes.append(f'[{today} 复习] 参见搜索结果')
+        c['key_points'] = notes
+
+# 步骤 B：新增概念（上限压缩）
+new_concepts = {
+    'new_concept': {
+        'status': 'new',
+        'date_introduced': today,
+        'last_reviewed': today,
+        'next_review': (datetime.strptime(today, '%Y-%m-%d') + timedelta(days=3)).strftime('%Y-%m-%d'),
+        'review_interval': 3,
+        'key_points': ['发现概要'],
+        'relationships': [{'type': 'related_to', 'target': 'related_concept', 'strength': 0.7}]
+    }
+}
+# 限制新增数量
+max_new = 5 if len(kb['concepts']) < 50 else 3
+deduped = {k: v for k, v in new_concepts.items() if k not in kb['concepts']}
+for name, data in list(deduped.items())[:max_new]:
+    kb['concepts'][name] = data
+
+# 步骤 C：更新元数据
+kb['last_updated'] = f'{today}T02:00:00'
+lh = kb.get('learning_history', {'total_sessions': 0, 'avg_quality': 0, 'last_loop_count': 1, 'consecutive_failures': 0})
+old_total = lh['total_sessions']
+lh['total_sessions'] = old_total + 1
+lh['avg_quality'] = round((lh['avg_quality'] * old_total + 90) / (old_total + 1), 2)
+lh['last_loop_count'] = 2
+lh['consecutive_failures'] = 0
+kb['learning_history'] = lh
+
+with open(kb_path, 'w') as f:
+    json.dump(kb, f, ensure_ascii=False, indent=2)
+```
+
+### 混合模式与标准模式对比
+
+| 方面 | 标准模式（新内容专用） | 混合模式 |
+|:----|:---------------------|:---------|
+| 到期概念 | 忽略（等下次专门复习） | ✅ 本次一起处理 |
+| 新概念上限 | 5-10 个 | ✅ 压缩到 3-5 个 |
+| 会话价值 | 知识扩张 | ✅ 知识扩张 + 债务偿还 |
+| 适用 | mastered ≥ 60% 或 due = 0 | ✅ mastered ≤ 60% 且 due ≥ 2 |
+
+### 决策检查
+
+```python
+# 在会话开始前运行决策检查
+total = len(kb['concepts'])
+mastered = sum(1 for v in kb['concepts'].values() if v.get('status') == 'mastered')
+due = sum(1 for v in kb['concepts'].values() if v.get('next_review', '9999') <= today)
+use_mixed = (mastered / total * 100 <= 60) and due >= 2
+# True → 调取本节的混合模式模板
+```

@@ -496,8 +496,10 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │   ├── references/agentic-km-concepts-2026.md # Agentic KM 五大新概念速查（2026-05-11）
 │   ├── references/high-density-domain-strategy.md # 高密度领域边缘狩猎策略（2026-05-12）
 │   ├── cron-tavily-quota-strategy.md # 配额管理策略
-│   └── cron-execution-pattern.md    # 安全扫描器感知的 cron 执行模式（v3.3）
-        └── scripts/
+│   ├── references/cron-execution-pattern.md    # 安全扫描器感知的 cron 执行模式（v3.3）
+│   ├── references/multi-topic-broad-search-strategy.md # 多主题广度域并行搜索策略（2026-05-13）
+│   ├── references/domain-selection-cross-validation.md # 领域选择交叉验证——超越调度器的决策层（2026-05-13）
+│   ├── references/cron-tavily-quota-strategy.md
             ├── select_domain.py             # 自适应调度选择器 v3.0
             ├── discover_domains.py          # 领域发现器 v3.0
             ├── update_knowledge_base.py     # 知识库更新器 v3.0（含关系图谱）
@@ -648,6 +650,46 @@ STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
 22. ❌ **Learning state machine 的步骤编号与夜间自习引擎流程不对齐** — 状态机只支持 `step0_map` 到 `step5_validate`，但自习引擎有 STEP 6 (Artifact) 和 STEP 7-10 (日志/知识库/经验/复习)。用 `learning-state.py complete step6_artifact` 会报 "未知步骤"。
     - **解决**：Artifact 产出后不需要单独标记状态机步骤。只需确保产出物已创建，然后运行 `learning-state.py reset` 归档即可。
 
+### v3.6 新增 — 实践教训（来自 2026-05-13 实测：概念 Backlog 与多主题搜索策略）
+
+23. ❌ **概念 Backlog 被忽视** — 当域概念总数 ≥ 80 但 mastered 占比 ≤ 60% 时，大量概念处于 "new"/"developing" 状态。每次学习都加 5-10 个新概念而不提升旧概念的状态，会导致 KB 膨胀但 mastered 率持续下降。这与饱和（Red Flag #6）是相反的问题：
+    - **饱和**：mastered ≥ 60% → 边缘狩猎模式（搜 patch/revert/deprecation）
+    - **Backlog**：mastered ≤ 50% 且总数 ≥ 80 → 定期进行 consolidation session（只提升现有概念状态，不加新概念）
+    - **缓解策略**：每隔 3-4 次学习会话，安排一次 "consolidation 轮次" — 从 KB 中选出 overdue 的 developing/new 概念，搜索最新信息并提升状态，不加新概念。
+    - **替代策略（v3.6+）**：对于 mastered 在 40-60% 之间的领域，**混合模式**比纯 consolidation 轮次更高效——每次正常搜索新内容的同时，同步复习到期概念（见 `references/cron-execution-pattern.md` 混合模式章节）。这样既保持知识扩张，又逐步偿还知识债，无需专门安排 consolidation 轮次。
+    - **检测方式**：`python3 -c "import json; kb=json.load(open('~/.hermes/night_study/knowledge_base/{domain}.json')); c=kb['concepts']; n=sum(1 for v in c.values() if v.get('status') in ('new','developing')); t=len(c); print(f'Backlog: {n}/{t} = {n/t*100:.0f}%')"`
+
+### v3.7 新增 — 实践教训（来自 2026-05-13 实测：L1 批量复习与 JSON patch 陷阱）
+
+24. ❌ **`patch` 工具在 JSON 文件中删除行末逗号导致 JSONDecodeError** — 当用 `patch` 修改 JSON 文件的某行末尾时（如更新 `last_updated` 时间戳），如果匹配区域恰好跨越逗号位置，`patch` 可能**无声地删除行末的逗号**，使 JSON 语法失效。
+    - **实际案例**：更新 `ai_tech.json` 的 `"last_updated": "2026-05-13T08:00:00"` 时，下一个 patch 前的旧字符串 `"2026-05-12T08:10:43"` 匹配到了上一轮写入的完整行。替换后，原本行末的逗号 `,` 丢失，导致 `JSONDecodeError: Expecting ',' delimiter`。
+    - **根因**：当 `patch` 的 `old_string` / `new_string` 跨越**非逗号→逗号边界**时，`patch` 认为逗号属于原匹配段的延续而删除它。这在 JSON 中尤其危险，因为逗号对 agent 来说不明显。
+    - **检测**：每次 `patch` JSON 后立即验证 JSON 语法有效性（cron 环境尤其关键，因为无批准者 catch error）：
+      ```bash
+      python3 -c "import json; json.load(open('...'))"
+      ```
+    - **缓解策略**：
+      A. 对 `last_updated` 这类顶层字段的写入，用 `execute_code` + Python dict 操作（最安全，因为 Python 的 `json.dumps` 自动处理逗号）
+      B. 使用 `patch` 时，确保 `old_string` 包含**逗号本身**以保留它，例如：
+         ```
+         old_string: "last_updated": "yyyy-mm-ddTHH:MM:SS",
+         new_string: "last_updated": "2026-05-13T08:00:00",
+         ```
+         而不是在逗号前截断。
+      C. Patch 完成后立刻运行 JSON 语法验证命令。若失败，用 `execute_code` + Python dict 重新写入整个文件（而非第二次 patch 修复）。
+    - **推荐工作流**：对所有 KB JSON 的结构性修改（添加 session_log、更新 last_updated、批量改概念），优先使用 `execute_code` 执行 Python dict 操作（见 `templates/kb-update-pattern.py`），避免 `patch` 的 JSON 语义损失风险。仅对简单的单一字符串替换（如 notes 内的小改动）使用 `patch`，且每次验证。
+    - **和现有红标 #19 的关系**：#19 覆盖 `terminal` 中 CJK Unicode 参数被安全扫描器阻塞的问题（工具调用层面）；本条目覆盖 `patch` 工具的 JSON 语义损失问题（数据完整性层面）。两者是独立且正交的陷阱。
+
+### v3.8 新增 — 实践教训（来自 2026-05-13 实测：L1 大批量概念复习的并行搜索模式）
+
+25. ✅ **L1 大批量复习（20+ 到期概念）的推荐模式 — 并行多主题搜索** — 当日到期概念超过 15 个时，逐个概念搜索效率极低（需 `O(n)` 轮工具调用）。已验证的替代模式：
+    - **第一步**：将到期概念按主题聚类（例如「OpenAI 系列」、「Anthropic 系列」、 「架构论文」、「MCP 生态」）。
+    - **第二步**：对每个聚类发起一次 `web_search`（或 `mcp_tavily_tavily_search`），并行 3-5 个搜索请求。
+    - **第三步**：从搜索结果判断是否有**显著新信息**（新基准分数、新版本号、新的合作伙伴公告等）。大多数近期（3-7 天内）引入的概念不会有新信息。
+    - **第四步**：只有真正有新信息的概念才更新 `notes`；其余仅推进 `next_review`（通过 `--update-review` 批量处理）。
+    - **效果**：23 个到期概念仅需 8-10 次搜索（3 轮批量并行），而非 23 次顺序搜索。总工具调用量减少约 60%。
+    - **注意**：此模式适用于 L1 *复习*而非完整学习会话。完整学习会话仍需进 R1/R2/R3 质量门禁循环。
+
 ### v3.1 新增 — 实践教训（来自 2026-05-10 实测）
 
 14. ❌ **手动计算领域优先级而不使用 adaptive_scheduler.py** — `scripts/adaptive_scheduler.py` 已内置 v2→v3 配置自动降级和自适应调度算法。直接运行 `python3 select_domain.py` 即可获取最需学习的领域，无需手动按 priority×freshness 公式计算。`select_domain.py` 是包装器，最终委托给 `adaptive_scheduler.py`。还支持 `--review`（检查间隔复习）、`--list`（排序展示）、`--skip`（跳过领域）等参数。
@@ -752,6 +794,19 @@ Request
 | **Progressive Disclosure** — 按相关性分层加载 | Skill 触发词匹配（发现→激活→执行；80 tokens 发现到 275-8000 激活） |
 | **Context Routing** — 查询分类到正确源 | `select_domain.py` 使用 priority × freshness 公式路由到最需更新的领域 |
 | **Rule File Ecosystem** — `agents.md` / `copilot-instructions.md` / `*.prompt.md` | `SOUL.md` + `AGENTS.md` + Skill SKILL.md 三层规则文件体系
+
+---
+
+### 🧬 AKU Skill 进化补充：Continuation Paths + Validators（2026-05-12）
+
+夜间自习引擎的 Skills 与 Agentic KM 前线的 AKU (Atomic Knowledge Units) 架构高度对齐。近期研究 (arXiv:2603.14805 Knowledge Activation) 确认：Hermes Skills 已实现 7 组件中的 ①-③，但缺失 **⑥ Continuation Paths** 和 **⑦ Validators** 组件：
+
+| 组件 | Hermes 缺口 | 影响 |
+|:---|:---|:---|
+| **Continuation Paths** | `depends_on` 只表达依赖不表达流向 | 技能孤立，代理不知下一步 |
+| **Validators** | `scripts/` 目录无语义化标签 | 无自动化治理门禁 |
+
+**建议扩展方向**：在 SKILL.md frontmatter 新增 `continuations`（成功/失败/回退三路径）和 `validators`（pre/post/invariant 三类验证器）字段。详细 YAML 规约和 CK 完整映射表见 `references/aku-hermes-skill-evolution.md`。
 
 ---
 

@@ -13,6 +13,8 @@
 
 **同时满足上述条件时**，应切换到边缘狩猎模式。
 
+**⚠️ 补充：高成熟度但概念数少的领域** — 当 mastered ≥ 80% 且概念总数 < 50 时，边缘狩猎同样合适。因为核心知识已完全掌握，广度搜索只会重复已有内容。这种「小但精」的领域常见于研究型话题（如 Context Engineering 这类新兴学科），应优先搜索：学术界新论文、行业整合实践、交叉验证性文章。
+
 ## 边缘狩猎策略
 
 ### 1. 时段感知搜索关键词
@@ -37,12 +39,16 @@ mastered = sum(1 for c in concepts.values() if c.get('status') == 'mastered')
 developing = sum(1 for c in concepts.values() if c.get('status') == 'developing')
 new_count = sum(1 for c in concepts.values() if c.get('status') == 'new')
 due_today = sum(1 for c in concepts.values() if c.get('next_review', '') <= today)
+open_q_count = len(kb.get('open_questions', []))
 
 print(f"Total:{total} Mastered:{mastered} Developing:{developing} New:{new_count} Due:{due_today}")
+print(f"Open questions: {open_q_count}")
 if mastered >= total * 0.6:
     print("🔧 高密度领域 — 切换到边缘狩猎模式")
     # 搜索策略: 聚焦 patch release / bugfix / regression
 ```
+
+**🆕 新增检查：开放问题对齐** — 记录 `open_q_count`，在搜索和提炼阶段**检查新发现是否回答了任何开放问题**。如果发现某个新信息来源回答了开放问题，在 KB 更新时同步更新该问题的 `status` 和 `answer_preview`。
 
 ### 3. 搜索关键词生成规则
 
@@ -54,22 +60,50 @@ if mastered >= total * 0.6:
 搜索词 = 最新版本号 + "rc" / "beta" / "regression" / "revert" / "CVE" / "deprecation"
 ```
 
-**示例**（dev_tools 领域，2026-05-12）：
-- KB 已有 `python3.15_lazy_imports` → 不需要搜 "Python 3.15 features"
-- 但 KB 没有 `python3.14_gc_revert` → 搜 "Python 3.14.5 GC regression revert" → **命中！**
+对于**研究型话题**（如连版本号都不存在的架构概念），关键词生成规则调整为：
 
-### 4. 质量分调整
+```
+已知概念的关键词列表 → 从搜索词中排除
+                         ↓
+搜索词 = 领域名 + 最新领域进展关键词
+         "new developments" / "2026 May" / "latest" / "production" /
+         "enterprise" / "benchmark" / "conference"
+```
+
+**示例**（productivity 领域，2026-05-13）：
+- KB 已掌握 "Context Kubernetes 7 services" → 不需要搜 "What is Context Kubernetes"
+- 但 KB 没有 "ServiceNow Context Engine" → 搜 "ServiceNow context engineering 2026" → **命中！**
+
+### 4. 搜索后的开放问题对齐
+
+边缘狩猎发现的可能回答了 KB 中的开放问题：
+
+| 开放问题状态 | 发现类型 | 处理方式 |
+|:-----------|:---------|:---------|
+| **新发现完全回答** | 搜索命中明确匹配 | 设置 `status: "answered"` + 填充 `answer_preview` |
+| **新发现部分回答** | 搜索命中间接证据 | 设置 `status: "partially_answered"` + 填充 `answer_preview` |
+| **无关联** | 搜索无相关结果 | 保持原状 |
+
+**🆕 建议流程**：提炼阶段后半段（R3 之前）增加一个检查步骤：
+1. 遍历 KB 的 `open_questions` 数组
+2. 逐一对照新发现的核心结论
+3. 若匹配 → 更新问题状态 + 记录来源引用
+4. 在 session_log 中记录开放问题更新数量
+
+### 5. 质量分调整
 
 边缘狩猎模式下，质量评分标准微调：
 
 | 维度 | 常规模式 | 边缘狩猎模式 |
 |:----|:--------|:------------|
-| 信息覆盖度 | 要求覆盖 4+ 子主题 | 允许聚焦 1-2 个具体变更 |
-| 交叉验证 | ≥2 来源 | 官方单来源可接受（patch note） |
+| 信息覆盖度 | 要求覆盖 4+ 子主题 | 允许聚焦 1-2 个具体变更，但需包含开放问题对齐检查 |
+| 交叉验证 | ≥2 来源 | 官方单来源可接受（patch note），但新概念需验证 |
 | 可操作性 | 要求完整操作步骤 | 允许只记录影响和迁移建议 |
-| 结构完整度 | 5 章齐全 | 可压缩为 3 章 |
+| 结构完整度 | 5 章齐全 | 可压缩为 3 章，但开放问题对齐部分不可省略 |
 
 **通过门槛不变**（raw ≥ 60），但搜索效率提升：用更少的时间覆盖更多的领域边际。
+
+**🆕 开放问题对齐奖励分**：如果本次边缘狩猎回答了 ≥1 个开放问题，在 operability 维度 +5 分奖励。
 
 ## 配套的 KB 更新策略
 
@@ -84,6 +118,8 @@ if mastered >= total * 0.6:
 
 **不建新概念的条件**：如果变更只影响已有概念的数值/状态/日期，只更新 key_points，不创建新概念。避免概念膨胀。
 
+**🆕 开放问题更新**：如果新发现回答了开放问题，在 KB 更新时同步修改 `open_questions` 数组中的对应条目。
+
 ## 实战验证
 
 ### dev_tools 领域 (2026-05-12)
@@ -97,6 +133,14 @@ if mastered >= total * 0.6:
 - 边缘搜索发现: GPT-5.5-Cyber 安全专用模型 (官方公告)
 - 结果: 2 新概念, Q=89
 
+### productivity 领域 (2026-05-13) — 🆕 高熟度低数量案例
+- 已有概念: 29, mastered: 90% (28/29), 今日 session: 0
+- 概念数 < 50 但 mastered > 80% → 边缘狩猎同样适用
+- 开放问题: 19 个（部分可回答的新发现）
+- 搜索方向: GraphRAG 新基准 / Context Engineering 企业实践 / Obsidian MCP 新项目
+- 发现: FalkorDB SDK 1.0 (#1 benchmark)、A-RAG 框架、ServiceNow Context Engine 4 Graph 架构（验证 CK 企业可行性）、Opcito 5 个 Agentic CE 模式
+- 更新: 3 概念复习 + 4 notes 扩展 + 1 概念升级 mastered, Q=86
+
 ---
 
-**来源**：2026-05-12 dev_tools 知识库回访实践
+**来源**：2026-05-12 dev_tools 知识库回访实践 + 2026-05-13 productivity 边缘狩猎实践

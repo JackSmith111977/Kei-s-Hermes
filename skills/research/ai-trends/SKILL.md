@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.11.0
+version: 1.12.0
 triggers:
 - ai trends
 - ai前沿
@@ -210,7 +210,11 @@ metadata:
 | **Zyphra ZAYA1-8B** | Zyphra (2026.05) | 开源 8B MoE 推理模型，<1B active params，Apache 2.0。CCA 注意力 + MLP 路由器 + Markovian RSA 测试时计算。AMD MI300X 1024 GPU 训练。匹配 Nemotron-3-Nano/Mistral-Small，与 DeepSeek-R1/Gemini-2.5-Pro 竞争 |
 | **Google DeepMind Gemma 4** | Google (2026.05) | Apache 2.0 开源。26B-A4B MoE 达 31B Dense 旗舰 **97% 质量**，8 倍少算力。4 种规格：E2B/E4B/26B-MoE/31B，支持多模态 + 音频输入 |
 || **EMO (EMergent mOdularity MoE)** | AI2 (2026.05.08) | 14B总/1B活跃 MoE（128专家/8活跃/1T tokens训练）。文档边界弱监督强制专家按语义域组织。12.5%专家≈全模型性能(-3%)；标准MoE同设定急剧下降。1个few-shot即可选专家子集。Apache 2.0开源。训练代码+基线已发布 |
-|| **NVIDIA Star Elastic** | NVIDIA (2026.05.09) | **单检查点多嵌套模型**: 30B/23B/12B 从一次后训练(~160B tokens)提取。360× token减少, 23B→30B预算控制 +16% 准确率 1.9× 低延迟。NVFP4 18.7GB, 12B可在RTX 5080运行。宽度压缩(98.1%)优于深度(95.2%) |
+| | **OpenAI Workspace Agents** | OpenAI (2026.05) | GPTs进化版，云端Agent可自主持续工作(准备报告/写代码/响应消息)。共享组织内改进。审批机制。Research Preview in Business/Enterprise/Edu。 |
+| | **Microsoft MDASH** | Microsoft (2026.05.12) | 100+专业Agent安全扫描编排(Prepare→Scan→Validate→Dedup→Prove)。16个Windows新CVE(4 Critical RCE)。21/21注入漏洞零误报。CyberGym 88.45%。可插拔Plugin架构 |
+| | **Honeycomb Agent Observability** | Honeycomb (2026.05.12) | Agent Timeline(多Agent多Trace统一视图), Canvas Agent(自然语言调查), Canvas Skills(可复用playbook)。OTel GenAI语义协定v1.40.0集成。开源标准无锁定 |
+| | **GPT-5.3-Codex** | OpenAI (2026.02) | 最强Agentic编码模型，25%更快。SOTA: SWE-Bench Pro 56.8%, Terminal-Bench 2.0 77.3%, OSWorld 64.7%。首个High-capability网络安全分类。实时交互协作。内部自改进。$10M API Credits安全防御 |
+| | **AlphaEvolve 2026** | Google DeepMind (2026.05) | Gemini驱动编码Agent年度回顾：DeepConsensus 30%变异检测错误降低；电网可行解14%→88%；灾难预测+5%；Willow量子10x误差降低；Spanner写放大-20%，存储-9% |
 || **ATOM Report** | Interconnects AI (arxiv 2604.07190) | **开源LLM生态全景**: 20.4亿累计下载(6× YoY)。中国1.15B vs 美国723M。Qwen ~942M最受欢迎, DeepSeek 75.6%推理token份额(OpenRouter)。RAM指标量化动量 |
 
 ### 2026 趋势观察（2026.05 更新）
@@ -360,3 +364,4 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-10: **v1.9 更新** — DeepSeek 图像识别模式 (Thinking with Visual Primitives, ~90 tokens/图像)；Transformers v5.8.0 新模型支持 (DeepSeek-V4/Gemma 4 Assistant/EXAONE-4.5/Granite)；OrcaRouter Lite MIT 开源LLM路由；NIST CAISI 前沿AI预部署测试协议 (MS/Google/xAI签署)；MCP 2026路线图深度展开 (MCP Apps/97M月下载/10K+服务器)；MCP基础设施全面产品化 (AWS MCP Server GA/Red Hat MCP Gateway TP/Retool/MCP Toolbox v1.0)；Airbnb 60%代码AI生成；llama.cpp b9045 Granite Speech支持
 > - 2026-05-11: **v1.10 更新** — NVIDIA Star Elastic 单检查点多模型嵌套(360× token/53%存储)；Mozilla×Mythos 271漏洞实战数据(180 sec-high, 几乎无假阳性)；ATOM Report 开源模型生态全景(中国1.15B, Qwen 69%衍生份额)；Mythos 条目更新 Firefox 实战数据；趋势观察 #14-#15 新增
 > - 2026-05-12: **v1.11 更新** — Amazon SageMaker AI Agent Experience(5/4, Agentic模型定制)；Twilio Agent Connect GA(5/6, 自托管音视频编排)；IBM Think 2026(5/5, watsonx/Concert/Sovereign Core四支柱)；MCP生态数据更新(13K+服务器/97M+月下载/Streamable HTTP标准/云厂商Gateway对比)；GPT-5.5 API完整规格(1,050K上下文/$5-$30定价/Rate Limits)；趋势观察 #16(企业Agent基础设施三强争霸)
+> - 2026-05-13: **v1.12 更新** — GPT-5.3-Codex 最强Agentic编码(SOTA SWE-Bench Pro 56.8%/Terminal-Bench 77.3%/OSWorld 64.7%/Cybersecurity High-capability)；Microsoft MDASH 100+Agent安全系统(16 CVE/88.45% CyberGym)；OpenAI Workspace Agents(云端Agent自主工作)；AlphaEvolve 2026年度突破回顾；Honeycomb Agent Observability(Agent Timeline/Canvas/Skills)；DeepSeek V4定价经济学(34x比GPT-5.5便宜)；Qwen 3.6 Max-Preview(6项基准#1)；Gemini 3.1 Pro(GPQA 94.3%)/Grok 4.20多Agent辩论；Apple ICLR 2026(ParaRNN 665x/Manzano/SHARP/SimpleFold)

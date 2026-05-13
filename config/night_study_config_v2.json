@@ -8,10 +8,10 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-12T08:10:00",
-      "freshness_score": 0.90,
+      "last_updated": "2026-05-13T08:00:00+08:00",
+      "freshness_score": 0.88,
       "review_schedule": {
-        "l1": "2026-05-12",
+        "l1": "2026-05-14",
         "l2": "2026-05-15",
         "l3": "2026-06-04"
       },
@@ -29,9 +29,9 @@
         "Mozilla×Mythos Agent Harness 漏洞挖掘模式"
       ],
       "learning_history": {
-        "total_sessions": 1,
-        "avg_quality": 0.91,
-        "last_loop_count": 2,
+        "total_sessions": 2,
+        "avg_quality": 0.9,
+        "last_loop_count": 1,
         "consecutive_failures": 0
       }
     },
@@ -42,12 +42,12 @@
       "target_skill": "linux-ops-guide",
       "priority": 0.7,
       "schedule_interval_hours": 4,
-      "last_updated": "2026-05-11T00:10:00",
-      "freshness_score": 0.75,
+      "last_updated": "2026-05-13T02:00:00",
+      "freshness_score": 0.85,
       "review_schedule": {
         "l1": "2026-05-14",
-        "l2": "2026-05-18",
-        "l3": "2026-06-11"
+        "l2": "2026-05-17",
+        "l3": "2026-06-13"
       },
       "knowledge_gaps_filled": [
         "Go 1.24 Swiss Tables / weak pointer / tool directive",
@@ -62,7 +62,13 @@
         "Go 1.26 Green Tea GC 默认 / new(expr) / 自引用泛型",
         "Python 3.15 beta frozendict/Tachyon/JIT 6-12%",
         "TypeScript 7.0 Go 编译器并行控制参数"
-      ]
+      ],
+      "learning_history": {
+        "total_sessions": 5,
+        "avg_quality": 0.81,
+        "last_loop_count": 2,
+        "consecutive_failures": 0
+      }
     },
     {
       "id": "anime_acg",

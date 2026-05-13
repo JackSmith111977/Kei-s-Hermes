@@ -160,18 +160,48 @@ class AgentAdapter(Protocol):
 
 ### 文件结构
 
-```text
-cap-pack/{name}/
-├── cap-pack.yaml        ← 模块清单（必需）
-├── SKILLS/              ← 技能目录
+能力包的物理存储推荐使用两层结构：项目级仓库存放多个能力包，每个包独立一个目录。
+
+```
+packs/{name}/                # 推荐结构，适合多包管理
+├── cap-pack.yaml            ← 模块清单（必需）
+├── SKILLS/                  ← 技能目录
 │   ├── skill-a.md
 │   └── skill-b.md
-├── EXPERIENCES/         ← 经验目录
-│   ├── pitfall-foo.md   # type: pitfall
-│   └── decision-bar.md  # type: decision-tree
-└── MCP/                 ← MCP 配置目录
+├── EXPERIENCES/             ← 经验目录
+│   ├── pitfall-foo.md       # type: pitfall
+│   └── decision-bar.md      # type: decision-tree
+└── MCP/                     ← MCP 配置目录（可选）
     └── server.yaml
 ```
+
+> **注意**: 物理路径是 `packs/` 而非 `cap-pack/`——因为多包场景下 `packs/` 语义更清晰，与常见的 monorepo 约定一致。单包场景可直接使用 `cap-pack/{name}/`。
+
+### 配套文件
+
+每个格式定义应附带一个 JSON Schema 用于编程验证：
+
+```
+schemas/
+├── cap-pack-format-v1.md       ← 格式规范文档（人类阅读）
+└── cap-pack-v1.schema.json     ← JSON Schema（机器验证）
+```
+
+验证命令：
+```bash
+python3 -c "
+import json, yaml
+with open('schemas/cap-pack-v1.schema.json') as f:
+    schema = json.load(f)
+with open('packs/doc-engine/cap-pack.yaml') as f:
+    pack = yaml.safe_load(f)
+import jsonschema
+jsonschema.validate(instance=pack, schema=schema)
+print('✅ 验证通过')
+"
+```
+
+> ⚠️ 确保 YAML 中所有日期字段（`created`/`updated`）都加引号，否则被解析为 `datetime.date` 对象而非字符串。
 
 ### cap-pack.yaml 核心字段
 
@@ -279,6 +309,7 @@ hooks:                  # 生命周期钩子
 | 过度设计 — 追求完美格式 | 项目卡在 Phase 1 出不来 | 先最小可用（只含 skills + experiences），再逐步迭代 |
 | 分割维度不统一 | 模块间边界模糊 | 用「四问测试」验证每个模块边界 |
 | 忽略 MCP 差异 | 适配时发现某些 Agent 不支持 | 在 compatibility 中声明每项能力 |
+| **YAML 日期未引号包裹** | `created: 2026-05-13` 被 YAML 解析为 `datetime.date` 对象 → JSON Schema 验证失败（期望 string） | **`created: '2026-05-13'`** 日期字段务必加引号！YAML 自动解析 ISO 日期为 date 对象 |
 
 ### 适配层阶段
 
@@ -328,3 +359,4 @@ hooks:                  # 生命周期钩子
 |:-----|:------|
 | `references/feasibility-study-2026-05-12.md` | 实战记录：18 模块分类 + 遗漏分析 + 业界对比数据 + 扩展性设计 |
 | `references/industry-research.md` | 业界模块化方案调研笔记 |
+| `references/phase1-execution-notes.md` | Phase 1 实操记录：从零创建 doc-engine 能力包的步骤、坑、决策 |

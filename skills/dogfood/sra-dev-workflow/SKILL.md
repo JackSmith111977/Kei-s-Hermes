@@ -258,6 +258,107 @@ for s in stories:
 
 ---
 
+## 🔴 铁律：防止重复仓库目录
+
+### 问题：AI 代理复制仓库而不是用 Git Worktree
+
+AI 代理在需要隔离工作空间时，容易执行 `cp -r repo/ repo-new/`，导致：
+
+| 后果 | 说明 |
+|:-----|:------|
+| 两个独立 Git 仓库 | 各自演进，版本不同步 |
+| 文档漂移 | CHANGELOG、EPIC 文档两侧各自更新 |
+| 手动合并 | 需用 diff 对比后手动 cherry-pick commits |
+| 磁盘浪费 | 两套 `.git/` 对象存储 |
+
+**实际案例**：SRA 项目出现 `sra/` (v2.0.3) 和 `sra-new/` (v2.0.4) 两个独立仓库，后者有 3 个额外 commit（AC 审计脚本 + 三重加固），需手动合并。
+
+### 三层防御体系
+
+```
+预防 (Prevention)      检测 (Detection)         修正 (Correction)
+    │                       │                        │
+    ├─ Git Worktree 强制    ├─ 重复仓库扫描器         ├─ 合并协议
+    ├─ AGENTS.md 铁律       ├─ Git 远程对比           ├─ repo-cleanup.sh
+    └─ pre_flight 门禁      └─ 提交前自动检测          └─ 资产保障
+```
+
+### 预防：用 Git Worktree 替代 cp -r
+
+**Git Worktree 是业界标准方案**——同一仓库的多个工作目录，共享同一个 `.git` 对象存储。
+
+```bash
+# ❌ 禁止：cp -r 创建新目录
+cp -r sra/ sra-new/     # 两个独立仓库，各自演进
+
+# ✅ 正确：用 git worktree 新建隔离工作空间
+cd ~/projects/sra
+git worktree add -b feat/my-feature ../sra-my-feature main
+
+# ✅ Hermes 自动模式（推荐）
+cd ~/projects/sra
+hermes -w               # 自动创建 .worktrees/hermes-<timestamp>
+```
+
+**对比**：
+
+| 方式 | 创建时间 | 磁盘开销 | 历史共享 | 合并方式 |
+|:-----|:--------:|:--------:|:--------:|:--------:|
+| ❌ `cp -r` | 秒级 | 全量重复 | ❌ 分离 | 手动 diff |
+| ❌ `git clone` | 30-120s | 完整仓库 | ❌ 需同步 | git merge |
+| ✅ `git worktree` | **< 1s** | **仅工作文件** | **共享对象库** | **标准 merge** |
+
+### 检测：重复仓库扫描
+
+```bash
+# 快速检测 ~/projects/ 下是否有相同 remote 的多份副本
+for d in ~/projects/*/; do
+  if [ -d "$d/.git" ]; then
+    remote=$(cd "$d" && git remote get-url origin 2>/dev/null)
+    echo "$(basename $d): $remote"
+  fi
+done | sort -k2 | uniq -f1 -d
+
+# 精确对比两个仓库的差异 commit
+cd ~/projects/repo-a && git log --oneline --format="%h %s" --not ~/projects/repo-b
+cd ~/projects/repo-b && git log --oneline --format="%h %s" --not ~/projects/repo-a
+```
+
+### 修正：重复仓库清理协议
+
+当检测到重复仓库时，按此流程操作：
+
+```bash
+# 1. 确定谁更"新"——比较最新 commit
+cd ~/projects/repo-a && git log --oneline -1
+cd ~/projects/repo-b && git log --oneline -1
+
+# 2. 推送更新的那个到远程（保障资产）
+cd ~/projects/repo-newer && git push origin master
+
+# 3. 检查是否有运行中的进程用旧路径
+lsof +D ~/projects/repo-older/ 2>/dev/null
+
+# 4. 删除旧仓库，重命名新仓库
+rm -rf ~/projects/repo-older
+mv ~/projects/repo-newer ~/projects/repo
+
+# 5. 验证
+cd ~/projects/repo && git log --oneline -1 && git describe --tags --always
+```
+
+### AGENTS.md 写入铁律
+
+```markdown
+## 🔴 铁律：禁止复制仓库目录
+- 需要独立工作空间 → 必须用 `git worktree`
+- 禁止 `cp -r <repo> <repo>-new`
+- 禁止 `git clone` 到 `~/projects/` 作为新工作目录
+- 使用 `hermes -w` 自动创建 worktree
+```
+
+---
+
 ## ⚠️ CI/CD 常见陷阱
 
 ### 陷阱 0: setuptools-scm 在 CI 中版本号解析失败（2026-05-11 新增）

@@ -98,3 +98,26 @@
 | contextstudios.ai (2026) | https://www.contextstudios.ai/blog/context-engineering-how-to-build-reliable-llm-systems-by-designing-the-context | 8 层上下文包 + 11 步指南 + 预算分配 |
 | rephrase-it.com (2026) | https://rephrase-it.com/blog/7-steps-to-context-engineering-2026 | 7 步迁移 + 分层模板 + 质量门 |
 | design.dev (2026) | https://design.dev/guides/context-engineering/ | 跨平台配置对照 + AGENTS.md 标准细则 |
+
+## 八、Agentic AI 上下文工程操作模式 (2026-05 更新)
+
+**来源**: Opcito Blog (May 5, 2026) 🥇 + ServiceNow Knowledge 2026 🥇
+
+与前文的架构模式不同，下面五个模式聚焦 **Agent 运行时的上下文管理操作**，即「当 Agent 已经在运行了，如何管理它的上下文」：
+
+| # | 模式 | 描述 | Hermes 映射 | 优先级 |
+|:-:|:----|:----|:-----------|:----:|
+| 1 | **Task State as Explicit Context** | 维护结构化对象（目标/决策/阻塞项），每步注入。保持目标可读，不随工具输出膨胀丢失 | `learning_state.json` 已部分实现 | 🔴 高 |
+| 2 | **Structured Context Checkpointing** | 按间隔总结上下文，保留决策+错误信息逐字。ACE 框架(Stanford+SambaNova)验证显著减少 context drift | R1/R2/R3 门禁文件 + extracted_knowledge.md 已实现 | ✅ 已有 |
+| 3 | **Dynamic Tool Loading** | 按需加载工具 schema，不是 session 开始时全量加载。每 saved token 都可用于实际推理 | `skill_view()` 按需加载 = 此模式的完整实现 | ✅ 已有 |
+| 4 | **Validated Action Tiers** | 可逆操作→自由执行 / 状态修改→日志 / 难逆操作→硬验证。损坏的上下文不能触发高权限操作 | `pre_flight.py` 部分实现（exit code 门禁但缺少按风险分级） | 🟡 中 |
+| 5 | **Cross-Agent Trust Boundaries** | Agent A 发上下文给 Agent B 时，B 不应默认信任。来源标记+特权验证 | 子代理间通信缺失此模式 | 🟡 中 |
+
+**关键驱动力**: EU AI Act **2026 年 8 月截止** — 高风险 AI 系统必须满足记录保存、透明度、人类监督、网络安全。上下文级可观测性是合规门槛。Opcito: "没有上下文级可观测性就在运行自治系统而没有诊断、合规或调查的能力"。
+
+**企业平台验证**: ServiceNow Context Engine (Knowledge 2026, May 5) 采用 4 Graph 架构（Enterprise Knowledge + Security + Decision + User Graph）+ 共享本体层，通过 350+ 系统拓展上下文覆盖。验证了 Context Kubernetes 架构思想的企业级可行性。
+
+**推荐优先级**: 
+1. 短期（本周）: 将 `learning_state.json` 补充 task_state/blockers 字段
+2. 中期（本月）: 实现 Validated Action Tiers 风险分级
+3. 长期（本季度）: 跨子代理信任边界审计
