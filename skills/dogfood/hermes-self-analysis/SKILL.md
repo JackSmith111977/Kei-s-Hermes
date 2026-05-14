@@ -1,7 +1,7 @@
 ---
 name: hermes-self-analysis
 description: boku（Emma/小喵猫娘女仆 AI）对自身的全面分析——架构理解、工具能力评估、已知弱点、学习经验、决策模式。知己才能更好地发挥所长、规避短板。
-version: 2.1.0
+version: 2.2.0
 triggers:
 - 分析自己
 - 了解自己的能力
@@ -116,7 +116,7 @@ web, browser, terminal, file, code_execution, vision, image_gen, tts, skills, me
 |:---|:---|:---|:---|
 | 1 | **patch 工具污染文件** | 大块替换时吞掉相邻代码 | 模糊匹配对大段内容不可靠 |
 | 2 | **execute_code 沙箱无环境变量** | 访问不到 API 凭证 | 沙箱隔离设计 |
-| 3 | **分心/违反铁律** | 联网不走 web-access、创建 skill 不走 skill-creator | 主动性过强，跳过流程 |
+| 3 | **分心/违反铁律** | 联网不走 web-access、创建 skill 不走 skill-creator、**忘记调 SRA Proxy** | 主动性过强，跳过流程 |
 | 4 | **信息量大时容易跳过** | 大段搜索结果直接放弃 | 缺乏分批处理策略 |
 | 5 | **重复循环回复同一内容** | 连续多轮用相似措辞汇报进度，零信息增量 | 上下文截断遗忘 + 无去重检查 + 弱终止信号 |
 
@@ -182,6 +182,10 @@ web, browser, terminal, file, code_execution, vision, image_gen, tts, skills, me
 
 ```
 接任务时：
+  ↓
+🔴 **铁律 0: 调 SRA Proxy！** — 每次非闲聊消息先 curl /recommend
+   ├─ 如果 should_auto_load → skill_view 加载
+   └─ 如果 rag_context → [SRA] 标注推荐
   ↓
 需要联网？ → 加载 web-access
 需要学习？ → 加载 learning

@@ -4,7 +4,7 @@ description: >-
   Agent 能力模块化与跨平台复用方法论。涵盖能力包(Capability Pack)格式设计、
   模块分割决策、生命周期管理、迭代进化闭环、跨 Agent 适配层架构。
   适用于将单体 Agent 能力拆分为可移植、可组合、可进化的模块化能力单元。
-version: 2.3.0
+version: 2.6.0
 author: boku (Emma/小玛)
 license: MIT
 tags:
@@ -53,6 +53,11 @@ triggers:
   - SRA 适配
   - skill runtime advisor
   - 运行时发现
+  - 后置质量升级
+  - 三层改造
+  - post-extraction
+  - 质量升级
+  - 能力包合并
 depends_on:
   - sdd-workflow
   - deep-research
@@ -131,6 +136,60 @@ Q4: 本模块能独立在另一个 Agent 上运行吗？
     → 否 → 依赖了宿主 Agent 特有能力
 ```
 
+#### ①-α Skill 组织架构决策（2026-05-13 调研新增）
+
+> **背景**：2026-05 深度调研了原子 Skill + MCP + Workflow 编排 vs 树状多层 Skill 两种架构的效率差异。调研覆盖 9 篇学术论文 + 8 篇实践指南，详见 `reports/skill-tree-architecture-research.html`。
+
+**核心发现**：两种架构不是竞争对手，而是互补的设计模式。
+
+| 对比维度 | 原子 Skill + MCP + Workflow | 树状多层 Skill |
+|:---------|:---------------------------:|:--------------:|
+| 设计哲学 | 微内核：小即是美，组合胜过继承 | 层次抽象：分类驱动，渐进式降维 |
+| 检索复杂度 | **O(n)**（依赖 workflow 匹配） | **O(log n)**（树遍历） |
+| 并行能力 | ✅ **原生 DAG 并行**（3.6× 加速） | ❌ 串行递归 |
+| Token 成本 | **极低**（蓝本固化，99% 节省） | 中（三层渐进式加载） |
+| 大规模韧性 | ⚠️ 随规模递减（100+ 临界点） | ✅ **优异**（树路由防止相变） |
+| 组合灵活性 | ⭐ **9.5/10**（DAG: 并行/条件/循环） | ⭐ 5.5/10（本质串行） |
+| 推理可追溯 | ⭐ 7/10（需理解编排逻辑） | ⭐ **8.5/10**（天然清晰） |
+| 生态整合 | ✅ **极佳**（MCP 10,000+ 服务器） | ⚠️ 自有体系 |
+
+**关键学术发现**（arxiv 2601.04748）：LLM 的 skill 选择精度存在**相变临界点**——当库大小超过 ~100-200 时，选择精度不是逐渐降低而是急剧崩塌。根因是 skill 间的**语义混淆度**而非库大小本身。层次化组织（即树模式）能显著缓解此问题。
+
+**三支柱融合模型**——能力包的推荐架构：
+
+```text
+                  Agent LLM
+                     |
+            +--------+--------+
+            │  🌳 树状 Skill   │  ← 渐进式索引（发现/路由）
+            │  Index           │     树分类 + 粗到细检索
+            +--------+--------+
+                     |
+            +--------+--------+
+            │  🔄 Workflow    │  ← DAG 编排（组合/执行）
+            │  Orchestrator   │     并行/串行/管道/条件
+            +--------+--------+
+                     |
+     +---------------+---------------+
+     │               │               │
+  Skill A         Skill B        Skill C  ← 原子 Skill（能力单元）
+     │               │               │
+   MCP X           MCP Y          MCP Z   ← MCP 工具（连接层）
+```
+
+**针对能力包的决策指南**：
+
+| 能力包规模 | Skill 数 | 推荐组织方式 | 理由 |
+|:----------|:--------:|:------------|:-----|
+| **小型包** | < 10 | 扁平列表 + 语义描述 | 树状开销 > 收益 |
+| **中型包** | 10-50 | **轻度层次化**（2-3 级分类） | ⬅️ 大部分 cap pack 在此区间 |
+| **大型包** | 50+ | 完整树状索引 + 可选 Workflow | 进入相变区，必须层次化 |
+
+**实践建议**：
+1. **包内 skill 用 2 层深度**（类别→skill）足够，3 层以上开始造成过深遍历开销
+2. **MCP 连接层与 skill 层保持正交**——skill 描述"做什么/怎么做"，MCP 描述"能连什么"
+3. **Workflow 编排**在 cap pack 中通过 `cap-pack.yaml` 的 `lifecycle` hooks 和跨 skill 引用实现轻量级编排，不引入外部 DAG 引擎
+
 #### ② 管理方案 (Management)
 
 **六阶段生命周期**：
@@ -138,6 +197,8 @@ Q4: 本模块能独立在另一个 Agent 上运行吗？
 ```
 DRAFT → ACTIVE → MATURING → STABLE → DEPRECATED → ARCHIVED
 ```
+
+**后置质量升级阶段**: 当所有模块提取完成后，建议执行 EPIC-004 规划的三层改造（L2 Experiences + L3 Brain 补充）、全量健康度检测（CHI ≥ 0.85）、合并重叠 skill。详见 `capability-pack-design/references/post-extraction-quality-upgrade.md`。
 
 **语义版本号**：MAJOR.MINOR.PATCH（格式变更/新增技能/经验修正）
 
@@ -184,8 +245,93 @@ class AgentAdapter(Protocol):
 
 ## 二、Capability Pack 格式
 
-### 2026-05-13 更新
-- **JSON Schema 已发布**: `schemas/cap-pack-v1.schema.json`（可编程验证所有 cap-pack.yaml）
+### v1 格式 (2026-05-13)
+
+- **JSON Schema**: `schemas/cap-pack-v1.schema.json`（基本验证）
+- **三工具链**: `scripts/extract-pack.py` / `validate-pack.py` / `install-pack.py`
+- **原型验证**: doc-engine（12 skills, 5 experiences）
+
+### v2 结构化格式 (2026-05-14 新增) 🔥
+
+**JSON Schema**: `schemas/cap-pack-v2.schema.json`（完整验证，全部 7 个 pack 已通过）
+
+**v1 → v2 核心变更**：
+
+| 字段 | v1 | v2 | 原因 |
+|:-----|:---|:---|:------|
+| `classification` | ❌ 可选 | ✅ 必填（domain/toolset/skill/**infrastructure**） | 区分业务包与系统包 |
+| `display_name` | ❌ 缺失 | ✅ 必填 | 人类可读包名 |
+| `integration` | ❌ 缺失 | ✅ 新增 | 声明外部集成脚本 |
+| `verification` | ❌ 缺失 | ✅ 新增 | 健康检查 + 签名 |
+| `lifecycle` | 仅有简单 hooks | ✅ 三阶段（install/update/uninstall 各含子阶段） | 工程化安装 |
+| `config_schema` | ❌ 缺失 | ✅ 新增 | 配置值类型声明 |
+| `compatibility.hermes_version` | ❌ 缺失 | ✅ 新增（min/max 版本范围） | 跨版本兼容性 |
+| `skills[].path` | ❌ 必填 | 🔄 可选（与 source 二选一） | 向后兼容 v1 |
+| `experiences[].type` | `enum` 限制 | 🔄 新增 `experience` 类型 | 默认通用类型 |
+| 日期字段 | 未限制 | 必须加引号（`"2026-05-14"`） | JSON Schema 要求 string |
+
+**快速迁移**：
+```bash
+cd ~/projects/hermes-cap-pack
+python3 -c "
+import json, yaml
+from pathlib import Path
+with open('schemas/cap-pack-v2.schema.json') as f:
+    schema = json.load(f)
+import jsonschema
+for p in sorted(Path('packs').iterdir()):
+    if p.is_dir() and (p / 'cap-pack.yaml').exists():
+        pack = yaml.safe_load((p / 'cap-pack.yaml').read_text())
+        try:
+            jsonschema.validate(instance=pack, schema=schema)
+            print(f'✅ {p.name}')
+        except jsonschema.ValidationError as e:
+            print(f'❌ {p.name}: {e.message[:80]}')
+"
+```
+- **JSON Schema**: `schemas/cap-pack-v1.schema.json`（基本验证）
+- **三工具链**: `scripts/extract-pack.py` / `validate-pack.py` / `install-pack.py`
+- **原型验证**: doc-engine（12 skills, 5 experiences）
+
+### v2 结构化格式 (2026-05-14 新增) 🔥
+
+**JSON Schema**: `schemas/cap-pack-v2.schema.json`（完整验证，全部 7 个 pack 已通过）
+
+**v1 → v2 核心变更**：
+
+| 字段 | v1 | v2 | 原因 |
+|:-----|:---|:---|:------|
+| `classification` | ❌ 可选 | ✅ 必填（domain/toolset/skill/**infrastructure**） | 区分业务包与系统包 |
+| `display_name` | ❌ 缺失 | ✅ 必填 | 人类可读包名 |
+| `integration` | ❌ 缺失 | ✅ 新增 | 声明外部集成脚本（见 §七） |
+| `verification` | ❌ 缺失 | ✅ 新增 | 健康检查 + 签名 |
+| `lifecycle` | 仅有简单 hooks | ✅ 三阶段（install/update/uninstall 各含子阶段） | 工程化安装 |
+| `config_schema` | ❌ 缺失 | ✅ 新增 | 配置值类型声明 |
+| `compatibility.hermes_version` | ❌ 缺失 | ✅ 新增（min/max 版本范围） | 跨版本兼容性检查 |
+| `skills[].path` | ❌ 必填 | 🔄 可选（与 source 二选一） | 向后兼容 v1 pack |
+| `experiences[].type` | `enum` 限制 | 🔄 新增 `experience` 类型 | 默认通用类型 |
+| 日期字段 | 可能被 YAML 解析为 date 对象 | 必须加引号（`"2026-05-14"`） | JSON Schema 验证要求 |
+
+**快速迁移：**
+```bash
+# 验证所有 pack 是否符合 v2
+cd ~/projects/hermes-cap-pack
+python3 -c "
+import json, yaml, os
+from pathlib import Path
+with open('schemas/cap-pack-v2.schema.json') as f:
+    schema = json.load(f)
+import jsonschema
+for p in Path('packs').iterdir():
+    if p.is_dir() and (p / 'cap-pack.yaml').exists():
+        pack = yaml.safe_load((p / 'cap-pack.yaml').read_text())
+        try:
+            jsonschema.validate(instance=pack, schema=schema)
+            print(f'✅ {p.name}')
+        except jsonschema.ValidationError as e:
+            print(f'❌ {p.name}: {e.message[:80]}')
+"
+```
 - **三工具链就绪**: `scripts/extract-pack.py` / `validate-pack.py` / `install-pack.py`
 - **原型验证通过**: doc-engine（12 skills, 5 experiences, 完整 linked files）
 
@@ -331,7 +477,235 @@ hooks:                  # 生命周期钩子
 
 ---
 
-## 四-B、SRA 运行时发现适配
+### 四-B、能力包提取 SOP (Standard Operating Procedure) 🔥
+
+> **2026-05-14 实战经验** — 从 Hermes 技能目录提取标准化能力包的 6 步操作流程。  
+> 实战验证: learning-engine 能力包（11 skills, 平均 SQS 72.1）
+
+当需要将一批 Hermes skill 提取为 cap-pack 时，严格按以下 6 步执行：
+
+#### 第 1 步：盘点 (Inventory)
+
+```bash
+# 确认每个 skill 的 SKILL.md 文件位置
+for skill in skill-a skill-b skill-c; do
+    find "$HOME/.hermes/skills" -path "*/$skill/SKILL.md" -type f
+done
+```
+
+**产出**: skill 清单 + 位置映射表
+
+#### 第 2 步：SQS 质检 (Quality Baseline)
+
+```bash
+for skill in skill-a skill-b skill-c; do
+    python3 ~/.hermes/skills/skill-creator/scripts/skill-quality-score.py "$skill" --json
+done
+```
+
+**门禁**: SQS < 50 的 skill 不放行，标注到 exceptions
+
+#### 第 3 步：提取 (Extraction)
+
+```bash
+mkdir -p packs/{name}/SKILLS/{skill-a,skill-b}
+cp "$SOURCE/$skill/SKILL.md" "packs/{name}/SKILLS/$skill/SKILL.md"
+```
+
+**cap-pack.yaml 编写要点**:
+- `classification`: domain / toolset / infrastructure
+- `compatibility.hermes_version`: 设置 min/max 范围
+- 日期字段加引号：`created: "2026-05-14"`
+- 依赖包声明：`dependencies.cap_packs`
+
+#### 第 4 步：验证 (Validation)
+
+```bash
+python3 -c "import json, yaml; import jsonschema; ..."  # v2 schema 验证
+```
+
+#### 第 5 步：项目对齐 (Project Alignment)
+
+> **🚨 强制门禁** — 提取后必须同步更新以下项目文档，否则全景报告与代码状态脱节。
+
+```bash
+# 5a. 更新 project-report.json 或项目状态文件
+#  - 在 architecture.layers[].modules[] 添加新包
+#  - 注册新 Story
+
+# 5b. 更新 PROJECT-PANORAMA.html
+#  - 添加新包卡片
+#  - 更新 KPI 数据（包数、覆盖百分比）
+#  - 更新"剩余模块"清单
+
+# 5c. 更新 EPIC 文档（EPIC-003-module-extraction.md）
+#  - 标记模块为 ✅ 已提取
+
+# 5d. 更新全景路线图（EPIC-003-comprehensive-roadmap.md）
+#  - 全景表: ⬜ → ✅
+#  - Story 行: 更新状态
+
+# 5e. 🆕 运行提取完成仪式（自动更新 project-state.yaml + Story doc）
+python3 scripts/complete-extraction.py <module-name>
+
+# 5f. 🆕 验证项目状态一致性
+python3 scripts/project-state.py verify
+# exit 0 = 通过, exit 1 = 失败（必须修复）
+
+# 5g. 确认无残留引用
+# 如涉及模块合并（见 四-D），用 grep 检查残留旧名称
+```
+
+#### 第 6 步：提交前门禁 (Pre-push Gate)
+
+> **🚨 新增门禁** — 提交前必须运行 pre-push 本地检查，避免 CI 失败。
+
+```bash
+# 运行本地门禁
+bash scripts/pre-push.sh
+# 全部 ✅ → 可以提交
+# 任何 ❌ → 先修复再提交
+
+git add packs/{name}/ docs/ PROJECT-PANORAMA.html scripts/
+git commit -m "feat: {name} 能力包提取 (N skills)"
+
+项目报告同步更新：project-report.json + PROJECT-PANORAMA.html"
+```
+
+#### SOP 速查表
+
+| 步骤 | 命令 | 关键检查点 | 耗时 |
+|:-----|:------|:-----------|:----:|
+| ① 盘点 | `find + ls` | 所有 skill 都有 SKILL.md | 10min |
+| ② SQS | `skill-quality-score.py` | 无可跳过项（<50） | 5min |
+| ③ 提取 | `mkdir + cp + write yaml` | cap-pack.yaml 包含全部 skill | 20-40min |
+| ④ 验证 | `jsonschema.validate` | v2 schema 全部通过 | 5min |
+| ⑤ 对齐 | 更新 project-report + HTML + state | 项目报告反映新包 | 5min |
+| ⑥ 提交 | `git commit` | SDD complete | 2min |
+
+### 四-B-α 批量操作模式（"继续"工作流）
+
+> **实战验证**: 从 cap-pack-operations 吸收——当用户对已建立的工作流只说"继续"时，进入批量高效模式。
+
+| 行为 | 说明 |
+|:-----|:------|
+| 交互模式 | 每完成一个模块，用户回应"继续"即启动下一个。无需汇报摘要、等待明确批准 |
+| 模块顺序 | 按 Phase 优先级执行。提供下一模块名让用户确认（如"继续 next-module？"），用户回"继续"视为确认 |
+| 每模块时间盒 | 大模块（5+ skills）~10 min，小模块（1-2 skills）~5 min |
+| 产出原则 | 只提交实质性变更；不创建中间状态文件 |
+| 批量完成清单 | SKILL.md 复制 + experiences 创建 + cap-pack.yaml 更新 + schema 验证 + 项目报告同步 + 提取完成仪式 + pre-push 门禁 |
+
+**详细命令参考**: `references/extraction-commands.md`（已吸收自 cap-pack-operations）
+**CI 失败恢复**: `references/ci-failure-recovery.md`（已吸收自 cap-pack-operations）
+
+---
+
+### 四-D、能力包合并工作流 (Merge Workflow) 🔥
+
+> **2026-05-14 新增** — 当发现两个能力包内容重叠、技能已被另一包吸收、或边界划分不合理时的标准化合并流程。
+> 实战验证: knowledge-base 合并至 learning-engine（8 份文档对齐 + 脚注标注原因）
+
+#### 触发条件
+
+| 信号 | 示例 | 优先级 |
+|:-----|:------|:------:|
+| **技能重叠** | 包 A 的 70%+ 技能已在包 B 中 | 🔴 立即 |
+| **循环依赖** | 包 A 依赖包 B，包 B 也依赖包 A | 🔴 立即 |
+| **自然吸收** | 提取包 A 时发现核心技能已被包 B 吸收 | 🟡 中 |
+| **边界模糊** | 包 A 的领域描述与包 B 无法清晰区分 | 🟡 中 |
+
+#### 合并七步流程
+
+```text
+Step 1: 重叠审计 ── 列出两个包的技能清单，精确比对重叠度
+    ↓
+Step 2: 决策确认 ── 主人批准合并方向（A→B 还是 B→A）
+    ↓
+Step 3: 依赖解除 ── 更新目标包 cap-pack.yaml：移除合并源包的依赖声明
+    ↓
+Step 4: 技能整合 ── 更新目标包描述、技能数、tag 以反映合并
+    ↓
+Step 5: 文档对齐 ── 逐一更新所有引用合并源包的文档
+    ↓
+Step 6: 标注原因 ── 每处修改添加合并注释 + 脚注（原因三要素）
+    ↓
+Step 7: 提交验证 ── git commit + 验证无残留引用
+```
+
+#### 文档对齐检查清单（Step 5 + 6）
+
+合并后必须检查并更新以下文档层级。每一处修改必须附带合并注释和原因：
+
+| 层级 | 文档 | 需更新内容 |
+|:-----|:-----|:----------|
+| 🔴 **P0** | 目标包 `cap-pack.yaml` | 移除合并源包依赖 + 添加注释 |
+| 🔴 **P0** | 模块分割 Spec（如 `SPEC-1-1`） | 模块表移除/合并行 + 更新技能数 + 分层图 |
+| 🔴 **P0** | 提取路线图（如 `EPIC-003`） | Phase 表、路线图、KPI、验收标准 |
+| 🟡 **P1** | 全景路线图（如 `EPIC-003-comprehensive-roadmap`） | 全景表、Phase 分配、依赖图 |
+| 🟡 **P1** | 提取计划 Spec（如 `SPEC-3-3`） | 模块清单、执行计划、AC 表 |
+| 🟡 **P1** | 分类映射表（如 `SPEC-2-3` SRA） | 合并类别别名 |
+| 🟢 **P2** | `README.md` | 包列表、覆盖统计、脚注 |
+| 🟢 **P2** | `constraints.md` | 如有模块数引用 → 更新 |
+
+#### 合并注释三要素
+
+每处修改必须标注以下三个信息，保证可追溯性：
+
+```
+原因①: 什么被合并（技能/领域列表）
+原因②: 为什么合并（消除循环依赖 / 自然吸收 / 边界模糊）
+原因③: 合并后影响（模块数变化 / 覆盖率变化 / 依赖树变化）
+```
+
+**脚注格式示例**（用于 Markdown 文档）：
+```markdown
+[^1]: **⚡ 合并注释**: `knowledge-base`（原 #1，📚 知识库系统）已于 2026-05-14 合并至
+      `learning-engine`。原因：① 核心知识技能（knowledge-precipitation, knowledge-routing,
+      hermes-knowledge-base, llm-wiki）已在 learning-engine 提取时吸收；② 消除包间循环依赖
+      （原 learning-engine 依赖 knowledge-base，但 knowledge-base 又依赖 learning 方法论）；
+      ③ 合并后模块体系从 18+3 更新为 **17+3**。
+```
+
+**cap-pack.yaml 注释示例**：
+```yaml
+# ⚡ knowledge-base 已合并至此包 — 详见 SPEC-1-1 合并注释
+dependencies:
+  cap_packs:
+    - name: skill-quality
+      version: "1.0.0"
+```
+
+#### 合并风险与回退
+
+| 风险 | 概率 | 缓解 |
+|:-----|:----:|:------|
+| 文档对齐遗漏 | 中 | 用 `grep -r "原模块名"` 检查残留引用后提交 |
+| 依赖指向已删除包 | 低 | `validate-pack.py` 会检测断裂依赖 |
+| 分类映射未更新 | 低 | SRA 仍使用旧类别名 → 无错但效率降低 |
+
+#### 相关参考
+
+| 文档 | 说明 |
+|:-----|:------|
+| `references/cap-pack-merge-workflow-example.md` | knowledge-base → learning-engine 实战合并记录（完整对齐清单 + 验证步骤） |
+
+#### 验证命令（提交前运行）
+
+```bash
+# 1. 检查残留引用（确保无遗漏）
+cd ~/projects/hermes-cap-pack
+grep -rn "knowledge-base" docs/ packs/ README.md | grep -v "合并注释\|合并" || echo "✅ 无残留引用"
+
+# 2. 验证目标包 YAML 完整性
+python3 -c "import yaml; yaml.safe_load(open('packs/target/cap-pack.yaml'))"
+
+# 3. 项目状态一致性
+python3 scripts/project-state.py verify
+```
+
+---
+
+### 四-C、SRA 运行时发现适配（原 §四-C 不变，编号后移）
 
 > **2026-05-13 新增** — CAP Pack 与 SRA (Skill Runtime Advisor) 的适配策略
 
@@ -548,11 +922,140 @@ python3 ~/projects/hermes-cap-pack/scripts/sra-discovery-test.py --json
 | `~/projects/hermes-cap-pack/scripts/health-check.py` | 可复用健康检查脚本 |
 | `~/projects/hermes-cap-pack/scripts/sra-discovery-test.py` | SRA 发现验证脚本（15条测试查询） |
 | `references/doc-engine-sra-test-data.md` | doc-engine 实战 SRA 测试原始数据 |
+| `references/layer-validation-pattern.md` | **三层结构验证模式** — validate-layers.py + frontmatter 标准 + CI 集成 |
+| `references/extraction-commands.md` | 能力包提取命令速查（15+ 模块实战） |
 
 **doc-engine 实战基线 (Before)**:
 - CHI: 0.6029 🟠 | 平均 SQS: 64.0 | 低分率: 35% | 版本完整率: 59%
 - 17 技能 → 目标 10 技能 + 11 经验 + 7 簇
 - SRA 推荐命中率: ~85% | 错误推荐: 3/13 (23%) | 微技能占位: 3/13 (23%)
+
+---
+
+## 七、外部集成架构 (External Integration Pattern) 🔥
+
+> **2026-05-14 新增** — 当需要扩展 Agent 能力但**不修改核心代码**时使用此模式。
+
+### 7.1 核心理念
+
+并非所有能力都需要修改 Agent 核心。许多扩展可以通过 **检测 + 监控 + 门禁 + 审计 + 行为约束** 的五层纯外部方案实现：
+
+```
+🚫 不修改 Agent 核心代码
+🚫 不维护 .diff / .patch 文件（路径随版本改变）
+🚫 不依赖特定版本的内部 API
+
+✅ 通过已有扩展点集成（pre_flight / cron / skill 规则）
+✅ 用自动化环境检测替代硬编码路径
+✅ 用行为约束替代代码钩子
+✅ 用事后审计兜底替代事前拦截
+```
+
+### 7.2 五层架构
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Layer 5: 行为约束 (Behaviors)                          │
+│  Agent 自我约束规则，通过 context 注入 / 路径自检 / cron   │
+│  无代码修改，纯行为规范                                  │
+├────────────────────────────────────────────────────────┤
+│  Layer 4: 审计层 (Audits)                               │
+│  定期扫描 + 报告生成 → 发现异常时通知                    │
+│  替代缺失的事前拦截，事后检测兜底                         │
+├────────────────────────────────────────────────────────┤
+│  Layer 3: 门禁层 (Gates)                                │
+│  通过已有入口调用（pre_flight / skill-creator 流程等）    │
+│  不修改被调用系统，只提供可选检查脚本                     │
+├────────────────────────────────────────────────────────┤
+│  Layer 2: 监控层 (Monitors)                             │
+│  文件变更监控 / 版本变化检测 / 定时扫描                  │
+│  纯外部进程，不侵入 Agent 运行                           │
+├────────────────────────────────────────────────────────┤
+│  Layer 1: 检测层 (Locate)                               │
+│  跨系统自动检测 Agent 安装位置 / 版本 / 工具路径         │
+│  所有外部脚本的先决条件                                  │
+└────────────────────────────────────────────────────────┘
+```
+
+### 7.3 核心组件：hermes-locate.py
+
+环境检测引擎是所有外部方案的基础：
+
+| 检测项 | 方法 | 支持场景 |
+|:-------|:------|:---------|
+| Hermes home | `HERMES_HOME` env var → `~/.hermes` | git clone / pip / system |
+| 源码位置 | 优先 git_clone，回退 pip_package → system → unknown | 4 种安装类型 |
+| Hermes 版本 | `hermes --version` 或 `__init__.py` | 兼容性判断 |
+| 工具路径 | `tools/file_tools.py` 等 | 定位目标文件 |
+| Skills 目录 | 主目录 + external_dirs + profile skills | 全量技能扫描 |
+| 补丁状态 | 检查已应用 vs 未应用的修改 | 增量判断 |
+
+```bash
+python3 hermes-locate.py              # JSON 输出
+python3 hermes-locate.py --format human  # 人类可读
+python3 hermes-locate.py --check-only   # exit 0/1 就绪判定
+```
+
+### 7.4 行为约束模式
+
+行为约束是纯外部方案中最柔性的机制——通过规则约束 Agent 行为：
+
+| 约束类型 | 示例 | 执行方式 |
+|:---------|:-----|:---------|
+| **context 注入** | delegate_task 时附加「如需修改 skill 请先加载 skill-creator」 | 每次委托时手动注入 |
+| **路径自检** | write_file/patch 前检查目标是否为 skill 目录 | 每次文件操作前自检 |
+| **操作后验证** | 修改 skill 后自动运行 SQS 评分 | 每次 skill 操作后 |
+| **定时自省** | cron 每日检查 skill 目录完整性和脚本一致性 | 定时触发 |
+
+cap-pack.yaml 中通过 `integration.behaviors` 声明：
+
+```yaml
+integration:
+  behaviors:
+    - id: subagent-skill-guard
+      rule: "在 delegate_task context 中注入 skill 操作约束：如需修改 skill 必须先加载 skill-creator"
+      enforcement: self_discipline
+      trigger_condition: "每次调用 delegate_task 时检查任务描述"
+    - id: script-integrity-check
+      rule: "learning-workflow 等关键脚本应定期校验 hash，防止被意外覆盖"
+      enforcement: cron_audit
+      trigger_condition: "每日 6:00 检查关键脚本 hash"
+```
+
+### 7.5 什么时候用纯外部？什么时候必须改核心？
+
+| 场景 | 推荐方案 | 理由 |
+|:-----|:---------|:------|
+| 增强 pre_flight 检测 | ✅ 纯外部 | pre_flight 设计为可扩展脚本管道 |
+| 约束子代理行为 | ✅ 纯外部 | delegate_task 有 context 参数可注入 |
+| 监控 curator 质量 | ✅ 纯外部 | 事后审计足够 |
+| CLI 安装质量门禁 | ✅ 纯外部 | 安装后验证脚本 |
+| 学习脚本完整性 | ✅ 纯外部 | 定时校验 hash |
+| 拦截 write_file 到 skill 目录 | 部分外部(行为约束+审计) | 文件工具无钩子系统 |
+| 修改 curator 内部逻辑 | ❌ 需改核心 | 后台进程无外部注入点 |
+| 修改 skill_manage 工具行为 | ❌ 需改核心 | 工具注册表无外部钩子 |
+
+### 7.6 实战参考：skill-quality 能力包
+
+`packs/skill-quality/` 是纯外部方案的原型实现：
+
+| 层 | 脚本 | 状态 |
+|:---|:-----|:----:|
+| Locate | `scripts/hermes-locate.py` | ✅ 完成 |
+| Gates | `scripts/*-gate.py` (×4) | 🚧 骨架 |
+| Audits | `scripts/*-audit.py` (×2) | 🚧 骨架 |
+| Monitors | `scripts/*-monitor.py` (×2) | 🚧 骨架 |
+| Behaviors | `cap-pack.yaml` 声明 | ✅ 完成 |
+
+### 7.7 与适配器模式的关系
+
+| 维度 | 适配器 (Adapter) | 外部集成 (External Integration) |
+|:-----|:----------------|:-------------------------------|
+| 目标 | 安装能力包到不同 Agent | 不修改核心，扩展 Agent 能力 |
+| 修改方式 | 代码层写入目标路径 | 行为层 + 脚本层 |
+| 风险 | 可能破坏目标 Agent 配置 | 零侵入 |
+| 维护 | 需跟踪 Agent 版本变化 | 低维护成本 |
+| 覆盖度 | 100%（可做任何事） | 60-90%（受限于扩展点） |
 
 ---
 

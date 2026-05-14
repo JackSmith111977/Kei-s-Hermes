@@ -19,6 +19,11 @@ triggers:
   - 测试覆盖
   - 质量报告
   - 测试策略
+  - qa 门禁
+  - 继续质量
+  - 继续qa
+  - qa检查
+  - 门禁检查
 author: Emma (小玛)
 license: MIT
 metadata:

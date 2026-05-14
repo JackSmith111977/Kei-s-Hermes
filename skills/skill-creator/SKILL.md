@@ -1,7 +1,7 @@
 ---
 name: skill-creator
-description: "创建、优化、评估 Skill 的完整工作流。支持从实战任务中提取知识、从学习笔记转化 Skill。内置 5 种设计模式，9 阶段创作流程（含快速更新通道），引用依赖检查，以及 skill-manage 联动拦截。"
-version: 5.0.0
+description: "创建、优化、评估 Skill 的完整工作流。支持从实战任务中提取知识、从学习笔记转化 Skill。内置 5 种设计模式，9 阶段创作流程（含快速更新通道），引用依赖检查，skill-manage 联动拦截，以及全生命周期覆盖审计。"
+version: 5.2.0
 triggers:
 - skill
 - 创建技能
@@ -22,6 +22,17 @@ triggers:
 - 技能健康
 - quality gate
 - 质量门禁
+- 覆盖审计
+- 生命周期审计
+- 全量审计
+- 全生命周期覆盖
+- 全量入口
+- skill bypass
+- subagent bypass
+- curator bypass
+- 工具绕过
+- 子代理绕过
+- 策展人绕过
 allowed-tools:
 - terminal
 - read_file
@@ -114,6 +125,9 @@ metadata:
 | **Reviewer** | 对照标准检查并评分 | 代码审查、产品验证、安全检查 |
 | **Inversion** | 从结果反推执行步骤 | 调研整理、问题诊断、逆向工程 |
 | **Pipeline** | 多步骤顺序执行 + 进度追踪 | 部署流程、复杂分析、工作流 |
+| **External Gate** | 纯外部质量门禁 — 不修改核心代码，通过脚本 + cron 实现 | Hermes 环境检测、skill 操作预检、定期审计 |
+
+> **外部门禁模式**的详细实现请见 [`references/external-quality-gate-pattern.md`](references/external-quality-gate-pattern.md)
 
 ## 二、9 种 Skill 类型
 
@@ -251,11 +265,12 @@ referenced_by:
 
 ## 六、目录结构规范
 
-```
+```text
 ~/.hermes/skills/[skill-name]/
 ├── SKILL.md                          # 主文档 (必须 < 300 行)
 ├── references/                       # 详细参考文档
-│   └── api-details.md
+│   ├── api-details.md
+│   └── cap-pack-v2-patterns.md       # v5.2: 能力包 v2 schema 设计模式
 ├── scripts/                          # 自动化脚本
 │   └── dependency-scan.py            # v4.0: 依赖扫描脚本
 └── checklists/                       # 执行清单
@@ -277,6 +292,10 @@ referenced_by:
 5. **把长流程塞进 Memory**：Memory 容量有限，操作 SOP 必须存入 Skill。
 6. **触发词过于书面化/学术化**：如果 Trigger 只写"经验沉淀"而没写"总结/复盘/踩坑"，用户在自然对话中就**无法自动触发**该 Skill！**必须穷举口语化表达**。
 7. **忽略了 pre_flight 的检测输出**：pre_flight v2.0 Gate 3 会检测技能操作并提示加载 skill-creator。看到提示后必须执行 `skill_view(name='skill-creator')`，不能跳过该步骤直接操作。
+8. **write_file/patch 直写 skill 目录绕过 skill_manage**：write_file 和 patch 是通用文件工具，可以直接写入 `~/.hermes/skills/xxx/` 目录，**完全绕过 skill_manage 和 skill-creator 的质量门禁**。pre_flight.py 只通过任务描述的关键词匹配检测技能操作，无法拦截无意中或未声明的文件操作。必须自觉：在直写 skill 目录前，先加载 skill-creator 检查质量。
+9. **假设子代理会自动遵守 skill-creator 规则**：delegate_task 启动的子代理默认 `skip_context_files=True`，**不加载 SOUL.md/AGENTS.md**，因此不知道 skill-creator 的存在。在委托涉及 skill 操作的任务时，必须在 context 中手动注入：「如需修改 skill，必须先加载 skill-creator」。
+
+10. **learning-workflow 状态脚本被破坏后可导致整个学习流程瘫痪**：`learning-state.py`、`reflection-gate.py`、`skill_finder.py` 可能因文件系统操作意外覆盖为 91 字节的 stub 文件（内容只剩 `print(f'{script_name} OK')`）。表现为学习流程完全无法初始化。检测方法：检查文件大小是否为 91 字节或查看文件头部是否为 stub。恢复：从 profile 备份复制 —— `cp ~/.hermes/profiles/*/skills/learning-workflow/scripts/*.py ~/.hermes/skills/learning-workflow/scripts/`。预防：核心脚本 git commit 后不要未经验证的 `write_file` 或 `cp` 操作覆盖。
 
 ## 九、评估用例 (Eval Cases)
 
@@ -399,3 +418,190 @@ boku:
 | skill-lifecycle-audit.py | scripts/ | 生命周期审计 + deprecate/revive 管理 |
 | dependency-scan.py | scripts/ | 依赖关系扫描（全量 / --target 定向） |
 | pre_flight.py | ~/.hermes/scripts/ | 通用守门员（集成以上所有检查） |
+
+### 10.7 生命周期覆盖审计 (Lifecycle Coverage Audit)
+
+> **关键发现**：Hermes 系统中共有 **27 个 skill 操作入口**，skill-creator + pre_flight 当前仅覆盖 **4 个**（约 15%）。本节目的是绘制完整地图，指导后续工程化覆盖。
+
+#### 10.7.1 十大入口分类
+
+| 分类 | 入口数 | 已覆盖 | 示例 |
+|:----|:-----:|:------:|:-----|
+| Agent 工具层 | 2 | 1 | `skill_manage` ✅ / `write_file` ❌ |
+| CLI 命令层 | 5 | 0 | `hermes skills install` ❌ |
+| 同步层 | 1 | 0 | `skills_sync` ❌ |
+| 策展人层 | 2 | 0 | `agent/curator` ❌ |
+| 文件系统层 | 4 | 0 | git cp/mv/rm ❌ |
+| 脚本自动化层 | 2 | 0 | cronjobs ❌ |
+| 知识沉淀层 | 4 | 1 | learning-workflow STEP 4 ✅ |
+| Profile 层 | 2 | 0 | `profile --clone` ❌ |
+| 插件层 | 2 | 0 | `plugins install` ❌ |
+| 安全扫描层 | 3 | 0 | `skills_guard`（仅安全）❌ |
+
+> 完整 27 入口详细分析 → `references/lifecycle-coverage-audit.md`
+
+#### 10.7.2 当前覆盖矩阵
+
+| 入口 | 路径 | 保护强度 |
+|:-----|:-----|:--------:|
+| `skill_manage`（agent 直接调用） | pre_flight + AGENTS.md 铁律 | 🟢 强 |
+| learning-workflow STEP 4 | 显式调用 skill-creator | 🟢 强 |
+| `skill_manage`（curator 内部） | skill_provenance 标记，无质量门禁 | 🟡 弱 |
+| `hermes skills install` | skills_guard 只查安全，不查质量 | ❌ 缺失 |
+| `write_file`/`patch` → skill 目录 | 完全无检测 | ❌ 缺失 |
+| `delegate_task` 子代理 → skill 操作 | skip_context_files=True 完全失守 | ❌ 缺失 |
+| night-study-engine → 创建 skill | 无独立 skill-creator 门禁 | ❌ 缺失 |
+| profile create --clone | 直接文件复制 | ❌ 缺失 |
+
+### 10.8 四大架构缺口 (Four Architectural Gaps)
+
+#### 缺口 1：工具层绕过 (Tool Bypass) 🔴 高危
+
+```
+skill_manage (skill-creator 门禁存在)
+    ↓
+~/.hermes/skills/xxx/SKILL.md
+    ↑
+write_file("~/.hermes/skills/xxx/SKILL.md") ← ❌ 完全无门禁！
+patch → skill 文件                            ← ❌ 完全无门禁！
+terminal: cat/echo/tee > skill 目录           ← ❌ 完全无门禁！
+```
+
+**根因**：write_file/patch 是通用文件工具，没有针对 skill 目录路径的特化检测。pre_flight.py 只通过**任务描述的文本关键词**匹配（如"创建/编辑 skill"），而非检测实际文件操作路径。
+
+**缓解**：在涉及 skill 目录的 write_file/patch 前，自觉加载 skill-creator 检查质量。
+
+#### 缺口 2：子代理盲区 (Subagent Blind Spot) 🔴 高危
+
+```
+delegate_task → 子代理启动
+  → skip_context_files=True
+  → 不读 SOUL.md / AGENTS.md / .hermes.md
+  → 子代理不知道 skill-creator 规则
+  → 可随意调 skill_manage 或 write_file 到 skill 目录
+```
+
+**根因**：Hermes 子代理设计上为了降低 token 消耗跳过了所有上下文文件（issue #18963）。当前暂无系统级修复。
+
+**缓解**：在 `delegate_task` 的 context 参数中手动注入：「🔒 如需修改 skill，必须先加载 skill-creator 并通过质量检查」。
+
+#### 缺口 3：策展人质量门禁缺失 (Curator Quality Gap) 🟠 中危
+
+```
+curator.py 后台 → 每 7 天自主扫描
+  → 检测 stale skill → 自主创建/合并/归档
+  → 通过 skill_manage API 操作
+  → 但 curator 实例未加载 skill-creator
+  → ❌ 无 SQS 检查、无依赖扫描、无 9 阶段流程
+```
+
+**根因**：curator 是后台辅助模型（auxiliary model），设计哲学是"只操作 agent-created skills"且"never auto-deletes"。它通过 `skill_provenance` 标记区分来源，但未引入质量门禁。
+
+**缓解**：审查 curator 报告，对 curator 创建的 skill 手动运行 SQS。
+
+#### 缺口 4：CLI 命令隔离 (CLI Isolation) 🟡 低危
+
+```
+hermes skills install   → tools/skills_hub.py → 下载 → skills_guard → 写入
+hermes skills update    → tools/skills_hub.py → 对比 → 更新
+hermes skills uninstall → tools/skills_hub.py → 删除
+上述 CLI 命令完全不经过 skill-creator！
+```
+
+**根因**：CLI 命令调用的是 Hermes 内部库函数（`tools/skills_hub.py`），不走 agent 的工具调用管道，skill-creator 作为 agent 侧的 skill 无法拦截。且 hub skill 有安全扫描（skills_guard）兜底。
+
+**缓解**：安装 hub skill 后自觉运行 `skill-quality-score.py` 检查质量。
+
+### 10.9 外部质量门禁集成 (External Quality Gates) 🛡️
+
+> **v5.2 新增** — 纯外部方案，零修改 Hermes 核心代码。  
+> 对应能力包: `hermes-cap-pack/packs/skill-quality/` (cap-pack v2 schema)
+
+skill-creator 的质量门禁可以通过 **纯外部方法** 实现，无需修改任何 Hermes 核心文件。外部质量门禁架构分为五层：
+
+```
+L5: 行为约束层 (Behaviors)     — boku 行为规则
+L4: 审计层 (Audits)            — 每日 SQS 审计 + 每周 CHI 报告
+L3: 门禁层 (Gates)             — pre-flight 增强 + 创建/编辑/删除预检
+L2: 监控层 (Monitors)          — skill 目录文件变更监控
+L1: 检测层 (Locate)            — hermes-locate.py 环境自动检测
+```
+
+**核心检测引擎**: `hermes-locate.py`
+- 自动检测 Hermes 安装类型: git_clone / pip_package / system / unknown
+- 跨 Profile 感知: 能发现所有 profile 的 skills 目录
+- 输出格式: JSON (程序消费) / human (人读) / feishu (飞书卡片)
+- 持续监控: `--watch` 模式自动轮询环境变更
+- 状态对比: `--save-state` + `--diff` 检测变更
+
+**门禁脚本 (scripts/ 目录)**:
+| 门禁 | 触发点 | 作用 |
+|:-----|:--------|:-----|
+| pre-flight-enhancer.py | pre_flight 链 | 增强 skill 操作检测（中英文皆可）|
+| skill-create-gate.py | skill 创建前 | 名称冲突检查 + 归属建议 |
+| skill-delete-gate.py | skill 删除前 | 引用链分析 + 影响范围评估 |
+
+**设计原则**:
+- 🚫 **零修改 Hermes 核心**: 所有脚本是独立的外部工具
+- 🔌 **通过已有入口集成**: pre_flight.py、skill-creator 流程、boku 行为规则
+- 🔄 **模式匹配而非行号匹配**: 检测引擎使用正则模式定位代码点，不受版本变更影响
+- 📦 **能力包容器化**: 所有脚本打包为 `skill-quality` cap-pack，通过 `cap-pack-v2.schema.json` 验证
+
+**用法示例**:
+```bash
+# 1. 检测环境
+python3 hermes-locate.py --format human
+
+# 2. 增强 pre-flight 检测
+python3 pre-flight-enhancer.py "创建一个新的 pdf-layout skill" --json
+
+# 3. 创建前检查
+python3 skill-create-gate.py "my-new-skill"
+
+# 4. 删除前分析
+python3 skill-delete-gate.py "old-skill" --json
+```
+
+**行为约束（boku 规则，不碰核心）**:
+| ID | 规则 | 触发条件 |
+|:---|:-----|:---------|
+| subagent-skill-guard | delegate_task context 中注入 skill 操作约束 | 任务描述含 skill 关键词 |
+| write-file-awareness | write_file/patch 前检查目标是否为 skill 路径 | 路径匹配 `~/.hermes/skills/*/` |
+| cron-skill-safety | cron prompt 开头注入 quality gate | cron 含 skill_manage 或 SKILL.md 写入 |
+| curator-complement | curator 运行后自动触发质量审计 | 检测到 curator 状态更新 |
+
+### 10.10 覆盖路线图 (Coverage Roadmap) 🗺️
+
+将 skill-creator 从 **15% 覆盖**提升到 **100% 覆盖**的三阶段工程计划：
+
+#### P0：防御层 — 工具层绕过修复 🔥
+
+| 目标 | 方法 |
+|:-----|:------|
+| write_file/patch 路径检测 | 在 pre_flight.py 增加路径检测：目标是否为 `~/.hermes/skills/*/` |
+| 自动触发质量门禁 | 识别 skill 路径后自动运行 SQS + 依赖扫描 |
+| 子代理 context 注入 | delegate_task context 中自动附加 skill 操作约束文本 |
+
+#### P1：子代理防护盾 🔥🔥
+
+| 目标 | 方法 |
+|:-----|:------|
+| 子代理 skill 操作约束 | delegate_task context 尾部追加 skill-creator 加载规则 |
+| cronjob 约束 | cron 任务涉及 skill 操作时注入相同约束 |
+| 手动注入脚本 | 创建 `scripts/inject-skill-creator-constraint.py` |
+
+#### P2：策展人质量门禁 🧊
+
+| 目标 | 方法 |
+|:-----|:------|
+| curator 创建 skill 前 SQS | 修改 agent/curator.py，注入内联 SQS 检查 |
+| curator 质量报告 | 低质量 skill 不直接进入库，先记录报告 |
+| curator 整合审计 | 定期运行 skill-lifecycle-audit.py 作为前序步骤 |
+
+#### P3：CLI 与生态整合 🧊🧊
+
+| 目标 | 方法 |
+|:-----|:------|
+| hermes skills install 后 SQS | 在 skills_hub.py 安装流程末尾调用 skill-quality-score.py |
+| profile 克隆后验证 | profile --clone 后自动扫描新目录完整性 |
+| 插件提供 skill 验证 | plugins install 后检查 skill 目录结构 |

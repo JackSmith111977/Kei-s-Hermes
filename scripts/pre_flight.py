@@ -231,6 +231,86 @@ def check_skill_creator_need(task):
     if not need_skill_creator and not need_pack_tools:
         print("  ⏭️  未检测到技能/包操作")
 
+    # ── skill-quality enhancer 集成 ──
+    ENHANCER = os.path.expanduser(
+        "~/.hermes/cap-packs/skill-quality/scripts/pre-flight-enhancer.py")
+    if not os.path.exists(ENHANCER):
+        ENHANCER = os.path.expanduser(
+            "~/projects/hermes-cap-pack/packs/skill-quality/scripts/pre-flight-enhancer.py")
+    if os.path.exists(ENHANCER):
+        try:
+            enh_result = subprocess.run(
+                [sys.executable, ENHANCER, task, "--json"],
+                capture_output=True, text=True, timeout=10
+            )
+            if enh_result.returncode == 0:
+                enh_data = json.loads(enh_result.stdout)
+                analysis = enh_data.get("analysis", {})
+                if analysis.get("is_skill_operation"):
+                    detected_skill = analysis.get("detected_skill_name")
+                    path_match = analysis.get("matches_skill_dir")
+                    conf = analysis.get("confidence", 0)
+                    print(f"\n  🔎 [skill-quality 增强检测]")
+                    print(f"     操作类型: {analysis.get('operation_type', '?')}")
+                    if detected_skill:
+                        print(f"     检测到 skill: {detected_skill}")
+                    if path_match:
+                        print(f"     路径匹配: 检测到 skill 目录文件操作")
+                    print(f"     置信度: {conf:.0%}")
+                    
+                    # Check for gaps
+                    gaps = enh_data.get("recommendation", {}).get("pre_flight_gaps", [])
+                    if gaps:
+                        print(f"     ⚠️ pre_flight 遗漏:")
+                        for g in gaps:
+                            print(f"        • {g}")
+                    
+                    # If it's a delete operation, run delete gate
+                    if analysis.get("operation_type") == "delete" and detected_skill:
+                        DELETE_GATE = os.path.join(os.path.dirname(ENHANCER),
+                                                    "skill-delete-gate.py")
+                        if os.path.exists(DELETE_GATE):
+                            del_result = subprocess.run(
+                                [sys.executable, DELETE_GATE, detected_skill, "--json"],
+                                capture_output=True, text=True, timeout=15
+                            )
+                            if del_result.returncode == 0:
+                                del_data = json.loads(del_result.stdout)
+                                if not del_data.get("passed", True):
+                                    blocks = del_data.get("blocks", [])
+                                    refs = del_data.get("referrers", [])
+                                    print(f"     🗑️  删除门禁: ❌ BLOCKED")
+                                    for b in blocks:
+                                        print(f"        • {b}")
+                                    if refs:
+                                        print(f"        引用者 ({len(refs)}):")
+                                        for r in refs[:3]:
+                                            print(f"          - {r['skill']}")
+                                        if len(refs) > 3:
+                                            print(f"          ...及另外 {len(refs)-3} 个")
+                    
+                    # If it's a create operation, run create gate
+                    if analysis.get("operation_type") in ("create", "edit") and detected_skill:
+                        CREATE_GATE = os.path.join(os.path.dirname(ENHANCER),
+                                                    "skill-create-gate.py")
+                        if os.path.exists(CREATE_GATE):
+                            cr_result = subprocess.run(
+                                [sys.executable, CREATE_GATE, detected_skill, "--json"],
+                                capture_output=True, text=True, timeout=10
+                            )
+                            if cr_result.returncode == 0:
+                                cr_data = json.loads(cr_result.stdout)
+                                if not cr_data.get("passed", True):
+                                    print(f"     📝 创建门禁: ❌ 冲突")
+                                    for i in cr_data.get("issues", []):
+                                        print(f"        • {i}")
+                                elif cr_data.get("warnings"):
+                                    print(f"     📝 创建门禁: ✅ 但需注意")
+                                    for w in cr_data.get("warnings", []):
+                                        print(f"        • {w}")
+        except Exception as e:
+            print(f"  ⚠️ skill-quality enhancer 异常: {e}")
+
     return PASS
 
 

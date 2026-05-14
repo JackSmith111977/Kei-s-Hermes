@@ -1,7 +1,7 @@
 ---
 name: sdd-workflow
-description: "Spec-Driven Development 完整工作流 — 从 Spec 创建到代码实现的自动化生命周期管理。含状态机(spec-state.py)、门禁检查(spec-gate.py)、模板库、技术版本规约。任何涉及 SDD/规范驱动/Story 开发的任务自动触发。"
-version: 3.6.0
+description: "Spec-Driven Development 完整工作流 — 从 Spec 创建到代码实现的自动化生命周期管理。含状态机(spec-state.py)、门禁检查(spec-gate.py)、模板库、技术版本规约。触发「继续」「下一阶段」「phase」「推进」等延续关键词时自动加载，衔接 DEV→QA 工作流链。任何涉及 SDD/规范驱动/Story 开发/阶段推进的任务自动触发。"
+version: 3.7.0
 triggers:
   - sdd
   - spec-driven
@@ -14,6 +14,12 @@ triggers:
   - 验收
   - 完成 story
   - sdd 门禁
+  - epic 开发
+  - epic 计划
+  - 开发计划
+  - 计划创建
+  - 质量升级
+  - 增量循环
   - spec 检查
   - story 模板
   - epic 模板
@@ -46,6 +52,21 @@ triggers:
   - 项目报告
   - html报告
   - 生成报告
+  - 继续
+  - phase
+  - 下一阶段
+  - 下一步
+  - 继续做
+  - continue
+  - next phase
+  - next step
+  - carry on
+  - resume
+  - 恢复
+  - 往下走
+  - 启动
+  - 阶段推进
+  - 推进
 author: Emma (小玛)
 license: MIT
 depends_on:
@@ -56,7 +77,6 @@ depends_on:
   - commit-quality-check
   - sdd-research
   - unified-state-machine
-  - project-state-machine
 metadata:
   hermes:
     tags:
@@ -79,20 +99,31 @@ metadata:
 ## 〇、工作流总览
 
 ```
-CLARIFY ──→ RESEARCH ──→ CREATE ──→ QA_GATE ──→ REVIEW ──→ APPROVED
- 需求澄清    sdd-research 结构化调研   写 Spec      质量检查     主人审阅     批准
- +Reality                                                                    ↓
- +Check                                                            ARCHITECT ──→ PLAN ──→ IMPLEMENT
-                                                                   架构设计      实现计划     技术实现
-                                                                        +doc-alignment      +
-                                                                        Phase 0            Phase 1
-                                                                                           ↓
-                                                                                     COMPLETED ──→ ARCHIVED
-                                                                                      完成      +doc-alignment
-                                                                                      +Phase 2  Phase 3
+CLARIFY ──→ RESEARCH ──→ SPEC_CREATE ──→ SPEC_REVIEW ──→ STORY_CREATE ──→ STORY_REVIEW ──→ QA_GATE ──→ REVIEW ──→ APPROVED
+ 需求澄清    sdd-research      写 Spec       🔔 主人审阅    写 Story       🔔 主人审阅     质量检查      最终审阅     批准
+  +Reality                                                                                                         ↓
+  +Check                                                                                                   ARCHITECT ──→ PLAN ──→ IMPLEMENT
+                                                                                                           架构设计      实现计划     技术实现
+                                                                                                               +doc-alignment      +
+                                                                                                               Phase 0            Phase 1
+                                                                                                                                  ↓
+                                                                                                                            COMPLETED ──→ ARCHIVED
+                                                                                                                             完成      +doc-alignment
+                                                                                                                             +Phase 2  Phase 3
 
-**九个状态，八个转换门禁，每个门禁必须通过才能进入下一状态。**
-**新增**: ARCHITECT（架构设计）、PLAN（实现计划）、IMPLEMENT（技术实现）三阶段替代原 IN_PROGRESS。
+**十一个状态，十三个转换门禁，每个门禁必须通过才能进入下一状态。**
+
+### 🔔 审阅门禁详解
+
+| 审阅点 | 触发时机 | 方式 | 门禁条件 |
+|:-------|:---------|:-----|:---------|
+| **SPEC_REVIEW** | Spec 文档写完后 | 通过飞书消息发送 Spec 摘要给主人 | 主人明确回复"批准"或使用 `spec-state.py approve` |
+| **STORY_REVIEW** | Story 文档写完后 | 通过飞书消息发送 Story 摘要给主人 | 主人明确回复"批准"或使用 `spec-state.py approve` |
+
+**铁律**:
+- Spec 未批 → 禁止进入 Story 阶段
+- Story 未批 → 禁止进入实施阶段
+- 驳回时必须记录原因 → `spec-state.py reject <id> "原因"`
 
 ---
 
@@ -146,9 +177,16 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 | draft | `submit` | review | Spec 文件存在 + 必需字段完整 |
 | review | `approve` | approved | 主人确认批准 |
 | review | `reject` | draft | 记录拒绝原因，退回修改 |
+| research | `spec_write` | spec_create | 调研完成 |
+| spec_create | `spec_submit` | spec_review | Spec 文件存在 + 必需字段完整 |
+| **spec_review** | `spec_approve` | **story_create** | 主人确认批准 Spec |
+| **spec_review** | `spec_reject` | **research** | 记录拒绝原因，退回调研 |
+| **story_create** | `story_submit` | **story_review** | Story 文件存在 + 必需字段完整 |
+| **story_review** | `story_approve` | **qa_gate** | 主人确认批准 Story |
+| **story_review** | `story_reject` | **spec_create** | 记录拒绝原因，退回 Spec |
 | approved | `architect` | architect | 无（主人已批准，开始架构设计）|
-| **architect** | `plan` | **plan** | 架构文档完整 + ADR 记录完成 |
-| **plan** | `implement` | **implement** | 实施计划完整 + 任务分解可执行 |
+| architect | `plan` | plan | 架构文档完整 + ADR 记录完成 |
+| plan | `implement` | implement | 实施计划完整 + 任务分解可执行 |
 | implement | `complete` | completed | pytest 通过 + AC 验证通过 + doc-alignment Phase 1-2 完成 |
 | completed | `archive` | archived | doc-alignment Phase 3 验证通过 (--verify 漂移=0) + HTML 已生成 |
 ### 8.3 未来自动化的 qa-gate.py
@@ -244,6 +282,102 @@ cap-pack 项目中 SPEC-004（适配器方案）的完整分解过程见：
 ---
 
 ## ⚠️ 已知陷阱与解决方案
+
+### Phase Gate — Phase 转换门禁（v3.8.0 新增）
+
+EPIC 级别的 Phase 化工作流（如 EPIC-004 的 Phase 0/1/2/3/4）需要显示执行 Phase 门禁，禁止跳过未完成的 Phase。
+
+**问题**：EPIC 中定义了 Phase 内容 → 容易误以为「EPIC 已批准 = 所有 Phase 可直接实施」
+
+**铁律**：
+- EPIC 批准 ≠ Phase 批准。每个 Phase 必须在进入前经过 CLARIFY
+- Phase N 的 CLARIFY 必须在 Phase N-1 全部完成后才能发起
+- 不允许在同一个 CLARIFY 中同时确认多个 Phase
+
+**使用方式**（cap-pack 项目 `scripts/phase-gate.py`）：
+```bash
+# 列表所有 Phase 状态
+python3 scripts/phase-gate.py list EPIC-004
+
+# 检查是否可以进入目标 Phase
+python3 scripts/phase-gate.py check EPIC-004 Phase-2
+
+# 开始 Phase（自动检查前置）
+python3 scripts/phase-gate.py start EPIC-004 Phase-2
+
+# 标记 Phase 完成
+python3 scripts/phase-gate.py complete EPIC-004 Phase-2
+```
+
+**Phase schema 配置**（位于 `docs/project-state.yaml` 的 `phases:` 字段）：
+```yaml
+phases:
+  EPIC-XXX:
+    title: 描述
+    phases:
+      - name: Phase-N
+        title: Phase 标题
+        acceptance_criteria:
+          - criteria: AC 描述
+            done: false
+        requires:
+          - Phase-(N-1) 已完成
+        stories:
+          - STORY-X-Y-Z
+    completed_phases:
+      - Phase-0
+      - Phase-1
+```
+
+**集成到 SDD 工作流**：进入 Phase N 前，先运行 `phase-gate.py check` 确认前置条件满足。
+
+---
+
+### 批量创建陷阱：跳过审阅门禁批量写文档
+
+- **问题**：当一个 Epic 有多个 Phase、多个 SPEC 和多个 Story 时（如 EPIC-004 有 4 个 SPEC + 12 个 Story），一次批量创建所有文档，跳过 SPEC_REVIEW 和 STORY_REVIEW 门禁
+- **后果**：
+  - 主人没有机会在早期纠正方向 → 可能白做
+  - 批量创建的文档如果方向错了，回退成本高
+  - 违反了「Spec 未批 → 禁止进入 Story 阶段」的铁律
+  - 增加了主人认知负担（一次看太多文档）
+- **根因**：想快速交付结果，低估了「方向确认」的价值
+- **解决**：严格按照状态机逐阶段推进：
+  1. EPIC CLARIFY → 主人确认 → EPIC REVIEW → 主人批准
+  2. SPEC-1 CLARIFY → RESEARCH → SPEC_CREATE → SPEC_REVIEW → 主人批准
+  3. 只有 SPEC 批准后才创建该 SPEC 的 Stories → STORY_REVIEW → 主人批准
+  4. 只有当前 SPEC 全部批准后才进入下一个 SPEC 的 CLARIFY
+  5. **禁止一次性批量创建超过 1 个 SPEC 或超过 3 个 Story 而不经过审阅门禁**
+- **检查清单**：在创建任何文档前，问自己：
+  - [ ] 当前 EPIC 是否已批准？
+  - [ ] 当前 SPEC 的上一个 SPEC 是否已批准？
+  - [ ] 这些 Story 所属的 SPEC 是否已批准？
+  - [ ] 如果以上任一为「否」→ 先走审阅门禁，再创建下一步文档
+
+#### 恢复路径：如果已经批量创建了未审阅的文档
+
+当违反上述规则、一次性创建了大量未审阅的 SPEC/Story 文档时：
+
+1. **立即停止创建新文档**，不要再继续推进
+2. **`git status --short` 全貌扫描**：先看 `M`（修改了现有文件） vs `??`（新建未跟踪文件），区分哪些是这次批量操作产生的
+3. **跑 `project-state.py verify`** 确认当前不一致的全貌
+4. **回退**：
+   - 修改过的现有文件 → `git checkout -- <file>`（从上次 commit 恢复）
+   - 新建的未审阅文件 → `rm -f <file>`（直接删除）
+   - 注意：EPIC 文档可能已存在（`M` 状态），只需恢复旧版本；SPEC/Story 文件通常是新建（`??` 状态），直接删除即可
+   - 确认所有 EPIC-004/SPEC-4/STORY-4 类文件已清除：`git status --short` 不应再显示相关的 M 或 ??
+5. **从头走 CLARIFY**：向主人展示全貌方案，等待方向确认
+6. **严格逐阶段推进**：EPIC REVIEW → 批准 → 仅创建当前 SPEC → SPEC REVIEW → 批准 → 仅创建该 SPEC 的 Stories → STORY REVIEW → 批准 → 下一 SPEC
+7. **一次只送审一个 SPEC**，不要同时送审多个 SPEC 或超过 3 个 Story
+
+**恢复路径的核心理念**：回退的成本远低于在错误方向上继续推进的成本。不要怕回退——回退后重新走 SDD 流程是主人期望的纠正方式，不是失败。
+
+**实战验证**（2026-05-14 cap-pack EPIC-004）：本恢复路径已在实际项目中被主人要求执行并验证有效。回退步骤完整走通，包括 `git checkout --` 恢复 EPIC/YAML/README 修改 + `rm` 删除 16 个未审阅的 SPEC/Story 文件 → 从 CLARIFY 重新开始 → 主人批准后逐阶段推进 → Phase 0 和 Phase 1 均完整通过 SDD 流程。
+
+### 沟通陷阱：展示范围时只给部分信息
+- **问题**：当主人问「这个 Epic 是什么」或讨论计划时，如果只展示你当前关注的子集（如「Phase 1 有 3 个模块」），主人会以为这就是全部
+- **后果**：主人纠正你「不是只有这些吧？」，降低信任
+- **解决**：永远先展示**全貌**（完整列表/所有 Phase），再聚焦当前讨论的子集。先给全景地图，再放大局部
 
 ### 工具超时陷阱
 
@@ -566,7 +700,8 @@ v2.0 (长期) — 飞书交互卡片
     ├── real-world-usage-sra-004-01.md ← SRA 项目实战记录
     ├── sdd-known-gaps-and-roadmap.md ← 已知缺口与改进路线图
     ├── batch-rename-pitfalls.md     ← 批量重命名陷阱与安全替换模式
-    └── sdd-doc-alignment-integration.md ← SDD × doc-alignment 集成协议 v1.0（2026-05-14）
+    ├── sdd-doc-alignment-integration.md ← SDD × doc-alignment 集成协议 v1.0（2026-05-14）
+    └── feishu-review-flow.md        ← Spec/Story 飞书审阅工作流与消息模板
 ```
 
 > ⚠️ **历史**: 2026-05-13 之前 spec-state.py 和 spec-gate.py 仅在文档中描述但未实现。2026-05-13 在 hermes-cap-pack 项目中重建实现。如果在现有安装中找不到脚本，运行以下命令检验：

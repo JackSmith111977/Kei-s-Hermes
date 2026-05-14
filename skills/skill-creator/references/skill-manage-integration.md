@@ -83,3 +83,9 @@ skill_manage(action='create', ...)           # 直接调用，未经检查
 - 跳过依赖扫描执行 delete/patch
 - 修改后不更新 version 字段
 - 删除被引用的 Skill 不提示
+
+## 范围说明
+
+> ⚠️ 本文件仅覆盖 **skill_manage 工具** 的拦截。`skill_manage` 只是 Hermes 中 27 个 skill 操作入口之一（约 15% 覆盖率）。其他入口（write_file/patch 直写、CLI 命令、策展人后台、子代理等）另有绕过风险。
+>
+> 完整覆盖审计 → `references/lifecycle-coverage-audit.md`

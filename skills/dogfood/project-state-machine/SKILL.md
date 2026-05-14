@@ -53,6 +53,29 @@ skill_type: Workflow
 
 > **核心理念**: 项目状态的真相来源只有一个。所有实体（Epics、Specs、Stories、Sprints）的状态集中在一个 YAML 文件中管理，每次变更必须通过脚本门禁。
 
+## 快速开始
+
+```bash
+# 初始化（新建项目）
+cp ~/.hermes/skills/dogfood/project-state-machine/templates/project-state.yaml docs/
+pip install pyyaml pygithub gitpython              # 脚本依赖（按需）
+python3 scripts/project-state.py sync
+python3 scripts/project-state.py verify
+
+# 日常使用
+python3 scripts/project-state.py status          # 全局状态
+python3 scripts/project-state.py verify          # 一致性验证（CI 门禁）
+python3 scripts/project-state.py gate EPIC-002 approved    # 门禁预检
+python3 scripts/project-state.py transition EPIC-003 create "开始提取"  # 状态转换
+python3 scripts/project-state.py history         # 变更日志
+
+# 初始化后集成到四个工作流（详见 references/workflow-integration-guide.md）：
+#   sdd-workflow     → 每次 spec-state 前 verify / 后 sync
+#   generic-dev      → Step 7.4 同步 sync + verify
+#   generic-qa       → L4 发布门禁 verify
+#   project-startup  → Phase 4.5 初始化
+```
+
 ## 为什么需要统一状态机？
 
 | 问题 | 无状态机方案 | 有状态机方案 |
@@ -96,7 +119,7 @@ project:                     # 项目基本信息
 
 workflow:                    # 工作流状态机定义
   sdd:
-    state_machine: [CLARIFY → RESEARCH → CREATE → QA_GATE → REVIEW → APPROVED → ARCHITECT → PLAN → IMPLEMENT → COMPLETED → ARCHIVED]
+    state_machine: [CLARIFY → RESEARCH → SPEC_CREATE → SPEC_REVIEW → STORY_CREATE → STORY_REVIEW → QA_GATE → REVIEW → APPROVED → ARCHITECT → PLAN → IMPLEMENT → COMPLETED → ARCHIVED]
     transitions:              # 每个转换的门禁条件
       - from: implement → to: completed, gate: complete, checks: [pytest, ac_verified, doc_alignment]
   development: ...
@@ -180,6 +203,12 @@ python3 scripts/project-state.py verify
 | draft | review | 文档存在 + 必需字段完整 | `transition SPEC-1-1 review` |
 | review | approved | 主人明确批准 | `transition SPEC-1-1 approved` |
 | review | draft | 记录拒绝原因 | `transition SPEC-1-1 draft "缺少测试方案"` |
+| research | spec_create | 调研完成 | (脚本内触发) |
+| spec_create | spec_review | Spec 文件存在 + 必需字段完整 | `transition SPEC-3-1 spec_review` |
+| **spec_review** | **story_create** | 🟢 主人批准 | 🔔 通过飞书送审后主人确认 |
+| **spec_review** | **research** | 🔴 主人驳回 | 🔔 记录驳回原因后返回调研 |
+| **story_review** | **qa_gate** | 🟢 主人批准 | 🔔 通过飞书送审后主人确认 |
+| **story_review** | **spec_create** | 🔴 主人驳回 | 🔔 记录驳回原因后返回 Spec |
 | approved → completed | (多个中间状态) | 每步有对应 AC | 逐级 transition |
 | qa_gate | approved | QA 门禁通过 | `transition EPIC-002 approved` |
 | implement | completed | pytest + AC + doc-alignment | `transition STORY-2-1-1 completed` |
@@ -232,7 +261,10 @@ init                — 初始化（交互式创建 project-state.yaml）
 | **transition 前忘记 gate 检查** | 状态跳转不符合工作流 | 先 `gate` 再 `transition` |
 | **修改文档后忘记 sync** | YAML 和文档漂移 | 在 commit 前运行 `sync + verify` |
 | **漂移积累太多再修复** | 不知道哪个版本是正确的 | 每次状态变更后立即 sync |
-| **Story 无独立文件** | scan/verify 显示警告 | YAML 中注明无独立文件的 Story |
+| **Story 无独立文件** | scan/verify 显示警告 | 创建 Story 时同步创建 md 文件 + YAML 条目 |
+| **文档状态字段格式不统一** | scan 扫不到某些文档的状态 | `get_doc_states()` 兼容 `**状态**:` 和 `**status**:` 两种格式 |
+| **YAML 缩进被 patch 破坏** | YAMLError，lint 失败 | 修改 YAML 后必须 `python3 -c "import yaml; yaml.safe_load(open(...))"` 验证 |
+| **大范围提取只规划部分** | 用户纠正「还有更多没规划」 | 提取/迁移前先做全盘规划（列出全部实体 → 按优先级分组 → 再逐个 Phase 执行） |
 
 ## 与现有状态机的关系
 
@@ -276,7 +308,8 @@ init                — 初始化（交互式创建 project-state.yaml）
 │   └── project-state.yaml          ← 新项目初始化模板（即开即用）
 └── references/
     ├── yaml-schema-template.md     ← YAML 字段约束与完整模板参考
-    └── workflow-integration-guide.md ← 四种工作流集成详细步骤
+    ├── workflow-integration-guide.md ← 四种工作流集成详细步骤
+    └── script-location.md          ← 脚本位置与在新项目中设置指南（已吸收自 unified-state-machine）
 ```
 
 ## 铁律

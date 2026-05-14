@@ -18,6 +18,10 @@ triggers:
   - html对齐
   - 报告对齐
   - 文档对齐
+  - 继续开发
+  - 继续实现
+  - 开始实施
+  - start implementing
 author: Emma (小玛)
 license: MIT
 metadata:
@@ -162,9 +166,9 @@ skill_view(name="test-driven-development")
 
 ---
 
-### Step 5: 全量验证
+### Step 5: 全量验证 + QA 门禁
 
-**做什么**: 运行所有测试，确保不破坏已有功能。
+**做什么**: 运行所有测试 + QA 分层门禁，确保不破坏已有功能。
 
 ```bash
 # 5.1 运行全量测试
@@ -172,9 +176,52 @@ python -m pytest tests/ -q --tb=short -o "addopts="
 
 # 5.2 与基线对比（测试数不应低于基线）
 # 5.3 如果有 lint: ruff check / flake8 等
+
+# 🚦 ----- QA 门禁（自动触发）-----
+# 根据变更类型运行对应 L0-Lx 门禁
+# 变更类型: bugfix/feature/arch/release
+# 需要加载 generic-qa-workflow 后执行:
+#   skill_view(name='generic-qa-workflow')
+#   查看 generic-qa-workflow §三、QA 决策树
+
+# L0: ruff check / ast.parse
+ruff check . 2>/dev/null || echo "⚠️  lint not configured"
+python3 -c "
+import ast, os, sys
+errors = []
+for root, dirs, files in os.walk('.'):
+    dirs[:] = [d for d in dirs if d not in ('.git','__pycache__','venv','node_modules')]
+    for f in files:
+        if f.endswith('.py'):
+            with open(os.path.join(root,f)) as fp:
+                try: ast.parse(fp.read())
+                except SyntaxError as e: errors.append((os.path.join(root,f), e))
+if errors:
+    for p,e in errors: print(f'❌ {p}: {e}')
+    sys.exit(1)
+print('✅ L0: All .py files parseable')
+"
+
+# L1: 单元测试
+python -m pytest tests/ -q --tb=short -o "addopts=" || {
+    echo "❌ L1: 单元测试失败 — 阻塞提交"
+    exit 1
+}
+echo "✅ L1: 单元测试通过"
+
+# 如果有集成测试: L2
+if [ -f "tests/test_api.py" ] || [ -f "tests/test_cli.py" ]; then
+    python -m pytest tests/test_api*.py tests/test_cli*.py -q --tb=short || {
+        echo "❌ L2: 集成测试失败"
+        exit 1
+    }
+    echo "✅ L2: 集成测试通过"
+fi
+
+# 🚦 ----- QA 门禁完成 -----
 ```
 
-**产出**: 测试报告（全部通过 / 失败详情）
+**产出**: 测试报告 + QA 门禁结果
 **耗时**: ~2-5 分钟（取决于测试数量）
 
 ---
@@ -266,7 +313,11 @@ development-workflow-index  ← 决策树：选哪条路？
 sdd-workflow              ← Spec 门禁：有批准吗？
     ↓ 已批准
 本 skill                  ← 通用开发工作流：7 步实施
+    ├── Step 5 自动触发 QA 门禁
+    │   └── generic-qa-workflow ← L0-L4 分层检查
     ↓ 完成
+chain-state.py advance    ← 自动推进工作流链
+    ↓
 sdd-workflow              ← 更新 Spec 状态：complete → archive
     ↓
 主人确认完成

@@ -31,6 +31,7 @@ depends_on:
   - html-presentation
   - learning-workflow
   - deep-research
+  - unified-state-machine
 design_pattern: Pipeline
 skill_type: Workflow
 ---
@@ -44,6 +45,13 @@ skill_type: Workflow
 > - ❌ 旧方案：Python 脚本 + 硬编码 HTML 模板 + `.replace()` 占位符替换
 > - ✅ 新方案：Hermes Skill + LLM 驱动 + 深度循环分析 + 手工定制 HTML
 > - 旧方案产出「看起来都一样」的报告；新方案产出**有灵魂的数据叙事**
+>
+> **什么时候生成报告？**
+> 报告生成是 SDD 工作流的自然一环，不是手动触发的独立任务。
+> - Sprint/Phase 完成 → QA_GATE 后 → 自动进入报告生成步骤
+> - Epic 批准后 → 生成全景报告
+> - 主人说「看看最新状态」→ 按需生成
+> - **不要**在任务中途主动问「要不要生成报告」——等流程走到该步骤再生成
 
 ---
 
@@ -129,6 +137,11 @@ skill_view(name='html-presentation')
 
 # 3. 加载数据收集 tools
 skill_view(name='deep-research')  # 如果需要外部调研
+
+# 4. 检查项目状态一致性（如项目有 unified-state-machine）
+if [ -f "docs/project-state.yaml" ]; then
+    python3 scripts/project-state.py verify  # 确认零漂移再开始
+fi
 ```
 
 ---
@@ -172,6 +185,7 @@ skill_view(name='deep-research')  # 如果需要外部调研
 | 数据源 | 位置 | 提供信息 |
 |:-------|:-----|:---------|
 | `docs/project-report.json` | 项目根目录 | 版本/Epics/Sprints/测试/元数据 |
+| `docs/project-state.yaml` | 项目根目录 | 统一状态机 — 3 Epic/9 Spec/28 Story 状态 + 4 Sprint 进度 + 质量指标 |
 | `~/.hermes/data/skill-quality.db` | SQS 数据库 | 200+ skills 的五维质量评分 + 历史趋势 |
 | `docs/*.md` + `docs/stories/*.md` | SDD 文档目录 | 文档树 + 状态 + SDD 阶段 |
 | `.git/` | Git 仓库 | 版本标签/分支/提交数 |
@@ -207,6 +221,7 @@ tag = subprocess.run(["git", "describe", "--tags", "--always"], capture_output=T
 - [ ] 项目元数据: version/author/repo/license
 - [ ] 架构信息: 模块数/层数/技术栈
 - [ ] Epics & Stories: 完整交付清单
+- [ ] 状态一致性: project-state.yaml 已 verify（零漂移）
 - [ ] SQS 数据: 均分/分布/五维/趋势/低分
 - [ ] 测试数据: 总数/通过率/文件分布
 - [ ] 文档体系: 类型/数量/状态
@@ -495,7 +510,11 @@ send_message(
 
 ## 🚩 常见陷阱 (Red Flags)
 
-### ❌ 陷阱 1：跳过 Phase 0 直接写 HTML
+### ❌ 陷阱 1：在任务中途主动问「要不要生成报告」
+- **后果**：打断工作流，主人觉得你在推销而不是在做事
+- **解决**：报告生成是 SDD 工作流的自然一环（Sprint/Phase 完成 → QA_GATE → 报告生成），不要在半路问。等流程走到该步骤再生成，或者主人说「看看最新状态」时再按需生成
+
+### ❌ 陷阱 2：跳过 Phase 0 直接写 HTML
 - **后果**：没有设计系统，边写边改，最后风格不一致
 - **解决**：严格走 Phase 0 → 1 → 2 → 3 顺序
 
@@ -530,6 +549,77 @@ send_message(
 | html-presentation | Hermes skill | HTML/CSS 实现方案 |
 | deep-research | Hermes skill | 需要外部调研时使用 |
 | learning-workflow | Hermes skill | 深度循环学习方法论 |
+| unified-state-machine | Hermes skill | 项目状态机 — 数据一致性验证 + 实体状态跟踪 |
+| [cap-pack-merge-pattern](references/cap-pack-merge-pattern.md) | (ref) | 模块合并全流程 7 步 + 文件清单 + 注释模板 |
+| [data-sources-hermes-cap-pack](references/data-sources-hermes-cap-pack.md) | (ref) | cap-pack 项目数据源清单 |
+| [css-patterns](references/css-patterns.md) | (ref) | 可复用的 CSS 布局模式 |
+
+---
+
+## Phase 6: 增量更新模式（非首次创作）
+
+**适用场景**: 项目已有报告，只需反映最新变更（如新增模块、更新 Story 状态、版本升级）。
+**不适用场景**: 首次创作、大幅度重新设计、风格变更 → 走 Phase 0-5 全流程。
+
+### 何时用增量模式
+
+| 场景 | 模式 | 理由 |
+|:-----|:----:|:------|
+| 新增 1 个能力包 | ✅ 增量 | 包列表 + KPI + 剩余模块数变化 |
+| Story 状态变更 | ✅ 增量 | 只改 epic 进度条和 story grid |
+| 版本号更新 | ✅ 增量 | 只改 KPI 卡片数值 |
+| 首次创建报告 | ❌ 全量 | 需要 Phase 0-5 设计系统 |
+| Sprint 完成 | ✅ 增量 | 时间线 + KPI + 进度条 |
+| 模块合并/删除 | ✅ 增量 | 改包列表 + KPI + 剩余模块 + 合并注释 |
+
+### 增量更新标准流程（四步法）
+
+```
+Every project data change → apply ALL four steps in order:
+
+Step 1 ── project-report.json
+  - 包列表: architecture.layers[0].modules[] 增/删/改
+  - KPI: overview_cards[] 数值更新
+  - Stories: epics[].stories[].status 更新
+  - Sprint: sprint_history[] 追加
+
+Step 2 ── PROJECT-PANORAMA.html
+  - KPI cards: 数值与 JSON 保持同步
+  - 包卡片: 增/删/改包名、描述、skills 数
+  - 剩余模块列表: 移除已提取的
+  - Epic 故事网格: 更新状态标签
+  - Sprint 时间线: 追加最新 sprint
+
+Step 3 ── project-state.yaml (if exists)
+  - EPIC story_count / completed_count
+  - Story 状态添加
+  - Sprint 状态
+
+Step 4 ── git commit
+  - git add project-report.json PROJECT-PANORAMA.html project-state.yaml
+  - git commit -m "docs: {变更摘要}"
+  
+🔄 循环: 每次变更重复 1→2→3→4，不可跳过
+```
+
+### cap-pack 项目特殊字段对照表
+
+| JSON 字段 | HTML 对应 | 更新频率 | 典型值示例 |
+|:----------|:----------|:--------:|:----------|
+| overview_cards[2].value | KPI 能力包数 | 每次提取 | 11 → 12 |
+| info_table[3].value | 覆盖百分比 | 每次提取 | "65% (11/17)" |
+| architecture.layers[0].modules[] | 包卡片 grid | 每次提取 | 新增 {name, description} |
+| epics[2].stories[] | Epic 故事网格 | Story 完成 | 追加 {id, status} |
+| sprint_history[] | Sprint 时间线 | Sprint 完成 | 追加条目 |
+
+### 增量更新陷阱
+
+| 陷阱 | 后果 | 解决 |
+|:-----|:------|:-----|
+| 改了 JSON 不改 HTML | HTML 与 JSON 数据不一致 | 每次 JSON 变更 → 立即同步 HTML |
+| 忘了更新 project-state.yaml | project-state.py status 报错 | 将 state.yaml 加入增量三件套 |
+| 只改 KPI 卡片不改包列表 | 报告自相矛盾 | 所有关联字段必须同步更新 |
+| JSON 括号错误导致无效 | git hook 拒绝提交 | 改完立即 python3 -c 验证 |
 
 ---
 
@@ -538,3 +628,4 @@ send_message(
 | 版本 | 日期 | 变更 |
 |:-----|:-----|:------|
 | 1.0.0 | 2026-05-14 | 初始创建。五阶段创作工作流 + 三层循环门禁 + HTML 手工定制方法论 |
+| 1.1.0 | 2026-05-14 | 新增 Phase 6: 增量更新模式 + cap-pack 数据字段参考 |

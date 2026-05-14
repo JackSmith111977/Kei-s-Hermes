@@ -1,7 +1,7 @@
 ---
 name: learning-workflow
 description: "所有学习/研究任务的强制流程拦截器。通过状态机+文件标志物实现防跳过机制。v5.0 重大更新：循环真正落地——learning-state.py 新增 regress/reject/loop-status 命令，reflection-gate.py 实现 R1/R2/R3/Quality Gate 自动化检查，子代理裁判打破自评自判。"
-version: 5.5.0
+version: 5.5.1
 triggers:
   - 学习
   - 研究
@@ -663,6 +663,10 @@ before_step2 = ["step0_map", "step1_search"]
 | 多任务冲突 | 用 task_id 区分，不影响其他任务的状态 |
 | skill-creator 依赖检查失败 | 停止流程，先解决依赖问题再继续 |
 | 自动学习触发失败 | 写入 gap_queue，下次 Review 重试 |
+| **核心脚本被意外覆盖** | **脚本文件 (learning-state.py, reflection-gate.py, skill_finder.py) 可能因文件系统操作被覆盖为 91 字节 stub 文件（内容只剩 `print(f'{script_name} OK')`）。检测: 检查文件大小是否 < 100 字节。恢复: `cp ~/.hermes/profiles/*/skills/learning-workflow/scripts/*.py ~/.hermes/skills/learning-workflow/scripts/`。预防: 对这些关键脚本做 git 版本管理，write_file 操作前确认路径是否正确。** |
+| pre_flight SDD 门禁阻塞学习任务 | learning-workflow 的触发词（学习/研究/调研）不被 pre_flight.py 识别为 SDD 跳过条件。解决方法：运行 `learning-state.py init "主题"` 直接初始化学习状态，跳过 SDD 门禁。或修改 pre_flight.py 的 `check_sdd_gate()` 增加学习关键词检测。 |
+| 核心脚本被覆盖/损坏 | 学习流程脚本（`learning-state.py`、`reflection-gate.py`、`skill_finder.py`）可能被意外覆盖为桩文件（已验证：被覆盖为 91 字节的无效 Python 代码）。检测：检查文件行数是否 ≥ 100。恢复：`cp ~/.hermes/profiles/experiment/skills/learning-workflow/scripts/<script>.py ~/.hermes/skills/learning-workflow/scripts/<script>.py`。建议：每次学习开始前运行 `wc -l ~/.hermes/skills/learning-workflow/scripts/learning-state.py` 确认完整性。 |
+| R1 门禁对源码分析/研究型任务误判 | R1 的来源数量检查只识别 web URL（如 https://...），不识别本地源码文件路径（如 tools/file_tools.py）。当主要研究手段是直接分析本地代码时，R1 评分会异常偏低（实测：源码分析得 30/100，而实际研究质量很高）。缓解 A：在 reading_notes 中记录源码文件路径作为来源引用（格式 [file:path:line]）。缓解 B：纯代码分析任务直接跳过 R1 门禁进入 STEP 2。 |
 
 ---
 

@@ -67,6 +67,21 @@ metadata:
 > 但 HTML 创作层已替换为更灵活、更高质量的 Skill 驱动模式。
 > **详见 [新方案对照表](#新方案与旧方案的对比)**。
 
+## 强制门禁：每次文档变更后必须更新 HTML 报告
+
+> **🚨 铁律**: 任何修改 `project-report.json` / 文档结构 / 模块体系 / Story 状态的操作，**必须** 在 git commit **前** 执行 Phase 1.1 → 1.2 → 1.3。
+>
+> **违反后果**: HTML 报告与项目实际状态不同步 → 全景报告成为「一次性快照」而非「持续对齐仪表盘」
+>
+> **合规流程**:
+> ```bash
+> # 1. 修改 project-report.json（Phase 1.1）
+> # 2. 重新生成 HTML 报告（Phase 1.2）
+> # 3. 运行 --verify 确认零漂移（Phase 1.3）
+> # 4. git add 数据文件 + HTML 报告 + 代码变更
+> # 5. git commit
+> ```
+
 ## Phase 0: 分析前对齐 — Reality Check 🔍
 
 > **P0 门禁**: 在任何「分析项目现状」或「读取项目文档」之前，先执行此阶段。
@@ -279,6 +294,29 @@ git commit -m "docs: init project report"
 
 然后按 skill 中的 Phase 0 → 1 → 2 → 3 → 4 顺序执行。每次报告都从零创作，设计系统/叙事结构/HTML 代码全部手工定制，无模板替换。
 
+### 1.2a 浏览器预览验证（强制）
+
+HTML 创作完成后，**必须**用浏览器实际预览验证，不能仅凭代码判断：
+
+```bash
+# 1. 浏览器导航到本地 HTML 文件
+browser_navigate(url="file:///path/to/PROJECT-PANORAMA.html")
+
+# 2. 检查渲染结果中的关键元素（通过返回的 snapshot 确认）
+#    - 标题是否正确
+#    - KPI 卡片数字是否正确
+#    - 所有章节是否渲染
+#    - 表格/卡片/时间线是否完整
+
+# 3. 如有视觉异常 → 回到 1.2 修正后再预览
+```
+
+**常见失败模式**:
+- ❌ HTML 标签未闭合 → 页面空白或截断
+- ❌ CSS 类名拼写错误 → 样式不生效
+- ❌ JS 变量未定义 → Chart.js 不渲染
+- ❌ 路径错误 → 图片/外部资源 404
+
 ### 1.3 运行验证
 
 ```bash
@@ -434,6 +472,8 @@ python3 ~/.hermes/scripts/generate-project-report.py \
 | `references/ac-audit-methodology.md` | AC 审计方法论—五层根因模型 + 三重加固工作流 + 可验证信号速查 | 理解文档漂移根因 + 实施 AC 自动审计 |
 | `references/cap-pack-implementation.md` | hermes-cap-pack 项目实战记录 — project-report.json 完整数据示例 | 新项目初始化时的参考蓝本 |
 | `references/panorama-template-design.md` | **10 章节全景报告模板设计**（基于 arc42 + CODITECT）— 含每节规格、数据源矩阵、HTML 模板技术 | 设计/重写项目全景报告时使用 |
+| `references/version-alignment-automation.md` | **版本号自动对齐** — bump-version.py sync 实现原理 + 扩展指南 | 文档版本号不同步时的一键修复方案 |
+| `references/merge-annotation-pattern.md` | **模块合并标注模式** — `[^n]` 脚注工作流 + 全文档交叉引用清单 + 变更原因标注规范 | 合并/重命名/废弃模块时的全文档对齐操作，含实战可复用的 checklist |
 ## Phase 4: 全景报告模板重设计
 
 > **前置条件**: 当用户指出当前项目报告"缺乏模板/内容不全面/无法做文档对齐"时，走此流程。

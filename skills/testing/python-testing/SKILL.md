@@ -1,7 +1,7 @@
 ---
 name: python-testing
 description: Python 测试最佳实践、反模式诊断与修复指南。涵盖测试污染、fixture 隔离、模块级状态管理、pytest 陷阱等。
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [python, testing, pytest, debugging, fixtures]
@@ -308,6 +308,7 @@ python -m pytest tests/ -q
 - `references/test-pollution-real-world.md`: SRA 项目的真实测试污染案例（症状 → 诊断 → 修复全流程）。⚠️ 与 `sra-dev-workflow/references/test-state-pollution.md` 内容重叠——后者是项目级记录，前者是通用知识提取。
 - `references/ci-version-failure-patterns.md`: CI 版本兼容性失败真实案例（PEP 604 union types / Release 版本脱敏）。
 - `references/cli-subprocess-testing.md`: CLI 独立脚本的子进程测试模式 — 当测试对象不可 import 时用 subprocess.run 验证 exit code / stdout / stderr。含路径陷阱、性能考量、真实案例。
+- `references/cli-commands-fixture-testing.md`: CLI 命令函数测试模式 — 用 monkeypatch + tmp_path 模拟项目根目录、pack 目录和已安装状态的 fixture 设计模式。含 5 种测试场景（正常/错误/dry-run/回滚/端到端）及陷阱速查。
 
 ## Overlap Notes
 
