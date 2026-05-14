@@ -1,7 +1,7 @@
 ---
 name: sdd-workflow
 description: "Spec-Driven Development 完整工作流 — 从 Spec 创建到代码实现的自动化生命周期管理。含状态机(spec-state.py)、门禁检查(spec-gate.py)、模板库、技术版本规约。任何涉及 SDD/规范驱动/Story 开发的任务自动触发。"
-version: 3.3.0
+version: 3.6.0
 triggers:
   - sdd
   - spec-driven
@@ -41,6 +41,11 @@ triggers:
   - 分解方案
   - story拆分
   - 实施路线
+  - project report
+  - panorama
+  - 项目报告
+  - html报告
+  - 生成报告
 author: Emma (小玛)
 license: MIT
 depends_on:
@@ -49,6 +54,9 @@ depends_on:
   - test-driven-development
   - doc-alignment
   - commit-quality-check
+  - sdd-research
+  - unified-state-machine
+  - project-state-machine
 metadata:
   hermes:
     tags:
@@ -72,14 +80,16 @@ metadata:
 
 ```
 CLARIFY ──→ RESEARCH ──→ CREATE ──→ QA_GATE ──→ REVIEW ──→ APPROVED
- 需求澄清     技术调研      写 Spec      质量检查     主人审阅     批准
-                                                                  ↓
-                                                          ARCHITECT ──→ PLAN ──→ IMPLEMENT
-                                                           架构设计      实现计划     技术实现
-                                                                                        ↓
-                                                                                  COMPLETED ──→ ARCHIVED
-                                                                                   完成          归档
-```
+ 需求澄清    sdd-research 结构化调研   写 Spec      质量检查     主人审阅     批准
+ +Reality                                                                    ↓
+ +Check                                                            ARCHITECT ──→ PLAN ──→ IMPLEMENT
+                                                                   架构设计      实现计划     技术实现
+                                                                        +doc-alignment      +
+                                                                        Phase 0            Phase 1
+                                                                                           ↓
+                                                                                     COMPLETED ──→ ARCHIVED
+                                                                                      完成      +doc-alignment
+                                                                                      +Phase 2  Phase 3
 
 **九个状态，八个转换门禁，每个门禁必须通过才能进入下一状态。**
 **新增**: ARCHITECT（架构设计）、PLAN（实现计划）、IMPLEMENT（技术实现）三阶段替代原 IN_PROGRESS。
@@ -126,6 +136,8 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py status "STORY-1-1"
 python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 ```
 
+> **⚠️ project-state.yaml 同步**: 每次执行 spec-state.py 的**变更命令**（create/submit/approve/architect/plan/implement/complete/archive/reject/reset）前，**必须先运行** `python3 /home/ubuntu/projects/hermes-cap-pack/scripts/project-state.py verify` 验证项目状态完整性；变更后**必须运行** `python3 /home/ubuntu/projects/hermes-cap-pack/scripts/project-state.py sync` 将最新状态同步至 project-state.yaml。
+
 ### 状态转换规则
 
 | 当前状态 | 允许的操作 | 下一状态 | 门禁条件 |
@@ -137,8 +149,8 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 | approved | `architect` | architect | 无（主人已批准，开始架构设计）|
 | **architect** | `plan` | **plan** | 架构文档完整 + ADR 记录完成 |
 | **plan** | `implement` | **implement** | 实施计划完整 + 任务分解可执行 |
-| implement | `complete` | completed | pytest 通过 + AC 验证通过 |
-| completed | `archive` | archived | doc-alignment + HTML对齐 通过 |
+| implement | `complete` | completed | pytest 通过 + AC 验证通过 + doc-alignment Phase 1-2 完成 |
+| completed | `archive` | archived | doc-alignment Phase 3 验证通过 (--verify 漂移=0) + HTML 已生成 |
 ### 8.3 未来自动化的 qa-gate.py
 
 设计中的 `scripts/qa-gate.py` 将实现一键三检：
@@ -228,6 +240,37 @@ Phase 门禁验证通过后 → 进入下一 Phase
 
 cap-pack 项目中 SPEC-004（适配器方案）的完整分解过程见：
 `references/spec-decomposition-cap-pack-example.md`
+
+---
+
+## ⚠️ 已知陷阱与解决方案
+
+### 工具超时陷阱
+
+| 工具 | 场景 | 问题 | 解决方案 |
+|:-----|:------|:------|:---------|
+| `skill-lifecycle-audit.py --audit` | 全量审计 200+ skill | 耗时 > 30s，cron 场景下不可用 | 改用 `skill-tree-index.py --json` 获取统计（< 5s） |
+| `skill-quality-score.py --audit` | 全量评分 | 同上 | 单 skill 评分用直接参数，全量用 `skill-tree-index.py --json` 的 SQS 字段 |
+| `skill-lifecycle-audit.py --audit --json` | json 输出 200+ skill | 超时且 json 可能不完整 | 避免全量 audit，改用 `tree-index --json + lifecycle status` 组合 |
+
+**通用原则**: 需要全量技能统计时，优先用 `skill-tree-index.py --json`（< 5s），避免 `lifecycle-audit --audit`（> 30s）。
+
+### 工具输出格式陷阱
+
+| 工具 | 格式假设 | 实际格式 | 陷阱 |
+|:-----|:---------|:---------|:------|
+| `skill-tree-index.py --json` | 预期 `{"meta": {...}, "tree": [...]}` | 实际是 **list**（每个模块一个元素） | 不要索引 `data["meta"]`，直接遍历 list |
+| `generate-project-report.py` | module_table 通用格式 | **必须**用 `module`/`file`/`desc`/`methods` 字段 | 使用 `id`/`name`/`path`/`lines` 会报 KeyError |
+| `skill-tree-index.py --health` | 预期含 "SQS" 或 "分数" | 实际无 SQS，只有 "总数/未分类/健康" | 检查字符串用 "健康" 或 "总数" |
+
+### consolidate 模式 Bug（已修复）
+
+`sdd-workflow` v3.6.0 修复了 `skill-tree-index.py --consolidate` 的一个关键 Bug：
+
+- **根因**: `build_tree()` 中未分类 cluster 缺少 `count` 字段，但 `print_tree()` 直接访问 `cluster['count']`
+- **症状**: `--consolidate` 模式下 KeyError: 'count'
+- **修复**: 在 `build_tree()` 的 unclassified 分支添加 `"count": len(unclassified)`
+- **验证**: `--consolidate` 不再崩溃，正常输出合并建议
 
 ---
 
@@ -327,14 +370,31 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
 ```text
 [任务开始]
     ↓
-1. 🔍 Reality Check（验证代码现实 vs 文档声明）
+1. 🔍 Reality Check（验证代码现实 vs 文档声明）— 加载 doc-alignment Phase 0
+   │
+   ├── git log --oneline -30 | head -15           # 看代码最近做了什么
+   ├── python -m pytest tests/ --collect-only -q   # 看测试是否真的通过
+   ├── python3 ~/.hermes/scripts/generate-project-report.py --data docs/project-report.json --verify
+   │   └── 如果项目有 project-report.json → --verify 检测漂移
+   ├── 检查关键文件是否存在（文档所称 vs 实际）
+   ├── 检查版本号一致性（文档 vs 代码）
+   └── 决策：
+       ├── ✅ 完全一致 → 信任文档，继续分析
+       ├── ⚠️ 轻微差异 → 以代码为准，分析中注明
+       └── 🔴 重大差异 → 先同步文档，再继续
+    ↓
+1.5 📊 项目状态检查
+   ├── python3 /home/ubuntu/projects/hermes-cap-pack/scripts/project-state.py status
+   └── 确认当前项目状态正常后继续
     ↓
 2. 🛑 pre_flight.py 检查
     ↓
 3. 📡 skill_finder.py 发现相关 skill
     ↓
-4. 📋 SDD Spec 门禁 ← 🔴 本 skill 核心
-   ├── spec-gate.py enforce "<task_description>"
+4. 📋 SDD 门禁
+   ├── python3 scripts/validate-sdd-naming.py --dir .  # 命名规范门禁
+   │   └── 违规时 exit 1 → 先修正命名再继续
+   ├── python3 scripts/spec-gate.py enforce "<task_description>"  # Spec 门禁
    ├── PASS → 继续
    └── BLOCKED → 创建 Spec → 等主人批准 → 再回来
     ↓
@@ -382,12 +442,37 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
     ↓
 9. ✅ 验证
    ├── pytest（全量测试）
-   ├── doc-alignment（文档漂移检测）
    ├── commit-quality-check（提交前检查）
-   ├── 🌐 HTML 报告对齐
-   │   ├── 如有 project-report.json → `generate-project-report.py` 自动同步
-   │   └── 如无 → 手动更新 HTML 状态表
-   └── 🔴 **版本合规检查（新增）**
+   ├── 📋 **doc-alignment — HTML 报告对齐协议**
+   │   │
+   │   ├── Phase 1: 更新数据文件
+   │   │   ├── 修改 docs/project-report.json（如有）：
+   │   │   │   ├── Story 完成 → epics[].stories[].status = "completed"
+   │   │   │   ├── 新增模块/Tests → architecture/tests 字段更新
+   │   │   │   ├── 版本升级 → project.version 更新
+   │   │   │   └── Sprint 完成 → sprint_history[] 新增条目
+   │   │   └── 如无 project-report.json → 创建标准 JSON（模板见 doc-alignment references/）
+   │   │
+   │   ├── Phase 2: 重新生成 HTML
+   │   │   ├─ 运行命令：
+   │   │   │
+   │   │   │   ```bash
+   │   │   │   # ❌ 旧方案: python3 ~/.hermes/scripts/generate-project-report.py 已废弃 (主人明确否定模板脚本)
+   # ✅ 新方案: 加载 project-report-generator skill 实现五阶段 LLM 驱动创作
+   #     skill_view(name='project-report-generator')
+   #     skill_view(name='web-ui-ux-design')
+   #     skill_view(name='visual-aesthetics')
+   │   │   │       --data docs/project-report.json \
+   │   │   │       --output PROJECT-PANORAMA.html
+   │   │   │   ```
+   │   │   │
+   │   │   └─ 确保 HTML 与 docs/project-report.json 同 commit
+   │   │
+   │   └── Phase 3: 验证
+   │       ├── python3 ~/.hermes/scripts/generate-project-report.py --data docs/project-report.json --verify
+   │       └── 漂移数 = 0 → ✅ | 漂移数 > 0 → 🔴 修复后再提交
+   │
+   ├── 🔴 **版本合规检查（新增）**
        ├── 读取 `docs/tech-spec/{story_id}.md` 版本清单
        ├── 检查 lock 文件（requirements.txt / poetry.lock）版本是否匹配
        ├── 检查代码中使用的 API 是否与声明的版本一致
@@ -408,13 +493,17 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
 
 | Skill | 集成点 | 触发时机 |
 |:------|:-------|:---------|
+| `sdd-research` | RESEARCH 阶段结构化调研方法论 | 进入 RESEARCH 阶段时 |
 | `development-workflow-index` | 决策树中 SDD 路径 | 任务开始时 |
 | `architecture-diagram` / `mermaid-guide` | 架构图生成 | ARCHITECT 阶段 |
 | `writing-plans` | 将 Spec 的 AC 转化为原子任务 | PLAN 阶段 |
 | `generic-dev-workflow` | 7 步标准开发实施 | IMPLEMENT 阶段 |
 | `test-driven-development` | RED-GREEN-REFACTOR 循环 | IMPLEMENT 阶段 |
 | `subagent-driven-development` | 子代理并行 + 双阶段审查 | IMPLEMENT 阶段（可选） |
-| `doc-alignment` | Spec 变更后的文档同步 | 任何变更后 + COMPLETED |
+| `doc-alignment` | HTML 报告全生命周期管理与文档漂移检测 | 任何变更后 + COMPLETED + ARCHIVED |
+| | ├─ Phase 0: Reality Check | CLARIFY 阶段（任务开始前） |
+| | ├─ Phase 1: 更新数据文件 + 生成 HTML | COMPLETED 时（验证步骤中） |
+| | └─ Phase 2-3: 验证漂移 + 发布前检查 | ARCHIVED 门禁（漂移=0 才能归档） |
 | `commit-quality-check` | 提交前一致性检查 | COMPLETED → ARCHIVED |
 | `sra-dev-workflow` | SRA 项目的 SDD 门禁增强 | Phase 1.6 |
 
@@ -441,7 +530,7 @@ v1.1 (短期) — 质量门禁先行
   └── 更新 spec-state.py：新增 clarify/research/qa_review 状态
 
 v1.2 (中期) — 需求澄清强化
-  ├── 新增 RESEARCH 阶段：自动触发 learning-workflow
+  ├── 新增 RESEARCH 阶段：自动触发 sdd-research skill（多轮搜索 + 来源验证）
   └── 需求澄清模板 + 检查清单
 
 v2.0 (长期) — 飞书交互卡片
@@ -475,7 +564,9 @@ v2.0 (长期) — 飞书交互卡片
     ├── sdd-research.md              ← SDD 深度研究
     ├── sdd-lifecycle.md             ← 六阶段生命周期指南
     ├── real-world-usage-sra-004-01.md ← SRA 项目实战记录
-    └── sdd-known-gaps-and-roadmap.md ← 已知缺口与改进路线图
+    ├── sdd-known-gaps-and-roadmap.md ← 已知缺口与改进路线图
+    ├── batch-rename-pitfalls.md     ← 批量重命名陷阱与安全替换模式
+    └── sdd-doc-alignment-integration.md ← SDD × doc-alignment 集成协议 v1.0（2026-05-14）
 ```
 
 > ⚠️ **历史**: 2026-05-13 之前 spec-state.py 和 spec-gate.py 仅在文档中描述但未实现。2026-05-13 在 hermes-cap-pack 项目中重建实现。如果在现有安装中找不到脚本，运行以下命令检验：
@@ -489,6 +580,8 @@ v2.0 (长期) — 飞书交互卡片
 - **`references/sdd-lifecycle.md`** — 六阶段完整生命周期指南（CREATE→ARCHIVE 每个阶段的详细操作）
 - **`references/real-world-usage-sra-004-01.md`** — 在 SRA 项目中完整走通 SDD 全流程的实战记录
 - **`references/sdd-known-gaps-and-roadmap.md`** — 当前流程审计、飞书卡片交互研究、质量检查框架、v2.0 设计草案
+- **`references/batch-rename-pitfalls.md`** — 批量文档重命名陷阱（字符串包含问题）与安全替换模式
+- **`references/cap-pack-naming-migration.md`** — CAP Pack 项目命名迁移实战记录（含完整检查清单）
 
 ## 🚀 使用示例
 
@@ -502,9 +595,16 @@ v2.0 (长期) — 飞书交互卡片
 # 产出: docs/req_clarification/{task_id}.md
 # 方式: clarify 工具或飞书交互卡片
 
-# Step 1: RESEARCH — 技术调研（如需）
-# 对不确定的领域走 learning-workflow
-# python3 learning-state.py init "调研领域"
+# Step 0.5: Reality Check — 加载 doc-alignment Phase 0
+# ❌ 旧: python3 ~/.hermes/scripts/generate-project-report.py --verify 已废弃
+# ✅ 新: 由 project-report-generator skill Phase 4 的门禁自行验证
+# ✅ 新: 用 project-report-generator skill 五阶段创作 HTML
+#     --data docs/project-report.json --verify
+# ⚠️ 如项目有 project-report.json → 必须在此步验证文档与代码一致性
+
+# Step 1: RESEARCH — 技术调研（sdd-research 结构化调研）
+# 加载 sdd-research skill → 多轮搜索 + 来源验证 + MECE 分析
+# 产出: docs/research/{spec-id}.md 调研笔记 → 输入 SPEC CREATE
 # 产出: 调研笔记
 
 # Step 2: CREATE — 创建 Story Spec
@@ -540,8 +640,29 @@ python3 spec-state.py implement "STORY-1-1"
 
 # Step 8: COMPLETE — 完成归档
 pytest tests/ -q
-doc-alignment --verify
-# HTML 报告对齐检查
+
+# doc-alignment Phase 1: 更新数据文件
+# 编辑 docs/project-report.json → 更新 Story 状态/版本号/Tests
+
+# doc-alignment Phase 2: 重新生成 HTML
+# ❌ 旧: python3 ~/.hermes/scripts/generate-project-report.py --verify 已废弃
+# ✅ 新: 由 project-report-generator skill Phase 4 的门禁自行验证
+# ✅ 新: 用 project-report-generator skill 五阶段创作 HTML
+#     --data docs/project-report.json \
+#     --output PROJECT-PANORAMA.html
+
+# doc-alignment Phase 3: 验证漂移
+# ❌ 旧: python3 ~/.hermes/scripts/generate-project-report.py --verify 已废弃
+# ✅ 新: 由 project-report-generator skill Phase 4 的门禁自行验证
+# ✅ 新: 用 project-report-generator skill 五阶段创作 HTML
+#     --data docs/project-report.json --verify
+# 漂移数 > 0 → 修复后再提交
+
+# AC 审计
+python3 scripts/ac-audit.py check docs/EPIC-*.md
+python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply
+
+# 状态机完成
 python3 spec-state.py complete "STORY-1-1"
 python3 spec-state.py archive "STORY-1-1"
 ```
@@ -575,6 +696,7 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 | 5 | **Spec 过期时间不得超过 7 天** | 代码已变但 Spec 未更新 → 漂移 |
 | 6 | **Story 完成时自动同步 Epic AC** | Story Spec 完成 → 运行 ac-audit sync 更新 Epic 文档中对应 AC |
 | **7** | **文档命名统一为层级归属格式：`EPIC-{n}` / `SPEC-{epic}-{seq}` / `STORY-{epic}-{spec}-{seq}`** | 跨项目无法对齐、工具链解析失败、混淆 |
+| **8** | **每次 Spec 状态变更后必须同步 project-state.yaml — `python3 /home/ubuntu/projects/hermes-cap-pack/scripts/project-state.py sync`** | project-state.yaml 与 Spec 状态不同步 → 项目全景报告不准确 |
 
 ### 7.1 统一文档命名规范详解
 
@@ -661,12 +783,7 @@ EPIC-001
 
 #### 7.1.8 迁移要求
 
-迁移后需同步更新：
-- 文件内部 `story_id` 字段（Story 文件）
-- SPEC 文件的 `epic` 引用
-- 所有交叉引用（Epic 列表、Spec 范围、其他 Story 文件内的引用）
-- EPIC 交付物清单中的对应行
-- pre_flight.py / spec-gate.py 等脚本中的搜索路径
+迁移后需同步更新所有交叉引用（详见 7.1.11 变更检查清单）。
 
 #### 7.1.9 脚本门禁
 
@@ -700,6 +817,9 @@ Step 5: 复核 → 再跑门禁，确认零违规 → exit 0
 - pre_flight.py / spec-gate.py 等脚本中的搜索路径
 - CI 配置中的文件路径（如存在）
 
+> ⚠️ **批量重命名陷阱**：字符串包含导致的交叉引用损坏（如 `STORY-1-1` 包含在 `STORY-1-10` 中）。
+> 详见 `references/batch-rename-pitfalls.md` — 包含安全替换模式和实战案例。
+
 ---
 
 <div style="border-left: 4px solid #e74c3c; padding-left: 1em; margin: 1em 0;">
@@ -727,8 +847,9 @@ Step 5: 复核 → 再跑门禁，确认零违规 → exit 0
 当需要手动检查文档质量时，按以下顺序执行：
 
 ```bash
-# P0: 结构检查 — 自动
-python3 scripts/spec-gate.py verify "<story_id>"
+# P0: 结构检查 — 自动（两步）
+python3 scripts/validate-sdd-naming.py --dir .    # 命名规范门禁
+python3 scripts/spec-gate.py verify "<story_id>"   # Spec 完整性检查
 
 # P1: 内容检查 — 加载 skill 后 AI 自查
 # 加载 self-review skill 进行内容审查

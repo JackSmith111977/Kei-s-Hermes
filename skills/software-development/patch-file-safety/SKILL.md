@@ -379,3 +379,55 @@ if "error" in result:
 5. **安全替代方案**：当替换涉及代码结构（非纯字符串），且有多处但不同上下文，直接用 `write_file` 重写整个函数/块，避免 patch 的多处替换风险。
 
 **检测方法**：`replace_all` 后立即 `python3 -m py_compile` 检查语法。如果语法正确但缩进可疑，用 `grep -n` 或 `cat -A` 查看每行的前导空格。最彻底的检测：`read_file` 逐一检查所有被替换的位置。此陷阱不会产生错误提示——patch 返回 `success: true`，文件也合法——但生成不正确的缩进的代码。
+
+### 🚩 实战陷阱 7：批量字符串替换时短字符串被长字符串的子串提前匹配
+
+**场景**：批量重命名文档 ID，如把 `STORY-1-10` 统一替换为 `STORY-1-4-3`，同时把 `STORY-1-1` 替换为 `STORY-1-1-1`。用 Python 脚本遍历字典做 `str.replace()`：
+
+```python
+# ❌ 危险方式：按字典顺序替换
+replacements = {
+    'STORY-1-1': 'STORY-1-1-1',   # 先替换短字符串
+    'STORY-1-10': 'STORY-1-4-3',  # 后替换长字符串
+}
+
+for old, new in replacements.items():
+    content = content.replace(old, new)
+```
+
+处理后，`STORY-1-10` 变成了 `STORY-1-1-10`（因为 `STORY-1-10` 中包含了 `STORY-1-1` 子串，被提前匹配变成了 `STORY-1-1-10`，然后 `STORY-1-10` 已不再存在，后一轮替换轮空）。
+
+**表现形式**：
+- `STORY-1-10` → `STORY-1-1-10` ❌（本应是 `STORY-1-4-3`）
+- `test_version_2` → 被 `test_version` 提前替换
+- `SPEC-001` → 被 `SPEC-0` 子串匹配
+
+**根因**：`str.replace()` 不做「最长匹配优先」。短字符串如果是长字符串的前缀，长字符串会在短字符串的替换中被破坏，导致后续再也无法匹配。
+
+**预防措施**：
+
+```python
+# ✅ 安全方式1：按字符串长度降序排列（最长优先）
+replacements = {
+    'STORY-1-10': 'STORY-1-4-3',   # 长字符串先替换
+    'STORY-1-9': 'STORY-1-4-2',
+    'STORY-1-1': 'STORY-1-1-1',    # 短字符串后替换
+}
+
+for old, new in sorted(replacements.items(), key=lambda x: -len(x[0])):
+    content = content.replace(old, new)
+
+# ✅ 安全方式2：用正则的词边界确保完整词匹配
+import re
+for old, new in replacements.items():
+    content = re.sub(r'\b' + re.escape(old) + r'\b', new, content)
+```
+
+**检测方法**：替换后检查结果中是否有异常模式：
+
+```bash
+# 检查是否出现了不该出现的组合
+grep -n 'STORY-1-1-1[0-5]' output.md
+```
+
+**铁律**：批量字符串替换时，**永远按字符串长度降序排列**。或者使用带词边界检测的正则替换。替换后必须做**反向验证**——检查目标格式中是否混入了不应该出现的源模式。

@@ -285,5 +285,30 @@ FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑
 | **Kagurabachi** | 2027年4月 | Cypic | 动作/超自然 | Jump新生代旗舰，制作人竹内哲也+佐々木啓悟 |
 | **THE ONE PIECE (Netflix重制)** | **2027年2月** | **Wit Studio** | 冒险 | East Blue 50章→7集300min |
 | **Cardfight!! Vanguard 新系列** | 2027年 | Kinema Citrus | 卡片对战 | 伊藤彰原案，接续Divinez最终季 |
-| **Re:Zero S4** | 待定 | White Fox | 异世界 | MAL Top 5，RT mid-90s好评 |
+| **Re:Zero S4** | 待定(Recapture Arc 8月12日) | White Fox | 异世界 | MAL Top 5，RT mid-90s好评 |
 | **Dungeon Meshi S2** | 待定 | Trigger | 奇幻/美食 | 原作完结 |
+
+---
+
+### 🔥 5月10-13日 重大追加新闻
+
+#### 🏢 大友克洋创立 Oval Gear 动画工作室 (May 12)
+- 大友克洋（AKIRA）创立 Oval Gear Animation Studio（东京武藏野）
+- 首部作品预计为 Orbital Era（轨道纪元）——近未来空间殖民地冒险
+- 正值招募中间帧动画师，不限经验，需日语会话
+
+#### 🦾 Ghost in the Shell (2026 TV版) — 7月7日开播 (May 10)
+- Science SARU 制作，导演 Mokochan（Dandadan原画）
+- 2026年7月7日 Prime Video 全球独占
+- 安纳西电影节6月先行上映前2集
+- 完全重述原著，草薙素子 vs 傀儡师
+
+#### 🔥 VOTOMS 新作剧场版 — 押井守监督 (May 12)
+- 15年ぶり完全新作：装甲騎兵ボトムズ - ザ・グレイ・ウィッチ
+- Part 1: 2026年11月20日
+- 监督：押井守 | 原作监修：高桥良辅 | 音乐：川井宪次
+- Sunrise 50周年纪念 + Production I.G 协力
+
+#### 🌟 Re:ZERO S4 Recapture Arc 8月12日开播
+- 年中排名：Frieren S2 与 JJK S3 并列 Winter 2026 #1
+- Witch Hat Atelier 领跑 Spring 2026

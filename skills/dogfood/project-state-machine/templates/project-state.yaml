@@ -1,0 +1,151 @@
+# 📊 {project-name} 统一状态机管理中枢
+#
+# 这是项目的状态真相来源 (Source of Truth)。
+# 每次状态变更必须通过 project-state.py 操作，不得手动编辑！
+#
+# 快速开始:
+#   1. 搜索替换 {project-name}, {version}, {phase} 为实际值
+#   2. 修改 entities 段：添加你的 Epics/Specs/Stories
+#   3. 运行 python3 scripts/project-state.py verify
+
+project:
+  name: {project-name}
+  version: {version}
+  current_phase: {phase}
+  overall_state: draft
+  created: {YYYY-MM-DD}
+  updated: {YYYY-MM-DD}
+
+workflow:
+  sdd:
+    state_machine:
+      - name: CLARIFY
+        description: 需求澄清 — 理解问题、确认范围
+      - name: RESEARCH
+        description: 深度调研 — 结构化调研、交叉验证
+      - name: CREATE
+        description: 文档创作 — 编写 Spec/Story
+      - name: QA_GATE
+        description: 质量门禁 — 结构+内容+体系三层检查
+      - name: REVIEW
+        description: 主人审阅 — 等待批准或驳回
+      - name: APPROVED
+        description: 已批准 — 可进入设计开发
+      - name: ARCHITECT
+        description: 架构设计 — ADR、数据模型
+      - name: PLAN
+        description: 实现计划 — 原子任务分解
+      - name: IMPLEMENT
+        description: 技术实现 — TDD RED-GREEN-REFACTOR
+      - name: COMPLETED
+        description: 完成 — 测试通过、AC验证
+      - name: ARCHIVED
+        description: 已归档 — 漂移=0
+    transitions:
+      - from: "(none)"
+        to: draft
+        gate: create
+        checks: []
+      - from: draft
+        to: review
+        gate: submit
+        checks: [file_exists, fields_complete]
+      - from: review
+        to: approved
+        gate: approve
+        checks: [owner_approved]
+      - from: review
+        to: draft
+        gate: reject
+        checks: [reason_recorded]
+      - from: approved
+        to: architect
+        gate: architect_start
+        checks: [adr_recorded]
+      - from: architect
+        to: plan
+        gate: plan_start
+        checks: [plan_file_exists]
+      - from: plan
+        to: implement
+        gate: implement_start
+        checks: [tasks_defined]
+      - from: implement
+        to: completed
+        gate: complete
+        checks: [pytest_passes, ac_verified, doc_alignment]
+      - from: completed
+        to: archived
+        gate: archive
+        checks: [drift_zero, html_generated]
+
+  gates:
+    pre_flight:
+      description: 通用守门员
+      script: ~/.hermes/scripts/pre_flight.py
+      severity: blocking
+    naming:
+      description: 命名规范门禁
+      script: python3 scripts/validate-sdd-naming.py
+      severity: blocking
+    tests:
+      description: 测试门禁
+      script: python3 -m pytest tests/ -q
+      severity: blocking
+    state_sync:
+      description: 状态同步门禁
+      script: python3 scripts/project-state.py verify
+      severity: blocking
+
+entities:
+  epics:
+    EPIC-001:
+      title: 示例 Epic
+      state: draft
+      spec_count: 0
+      story_count: 0
+      completed_count: 0
+      priority: P0
+      qa_gate_date: null
+      review_date: null
+  specs:
+    SPEC-1-1:
+      state: draft
+      epic: EPIC-001
+      stories: []
+  stories: {}
+
+sprints:
+  sprint-1:
+    title: 首个迭代
+    state: planning
+    stories_planned: 0
+    stories_completed: 0
+    start: null
+    end: null
+
+quality:
+  sqs:
+    avg: 0
+    target: 70
+    dimensions:
+      s1_structure: 0
+      s2_content: 0
+      s3_freshness: 0
+      s4_association: 0
+      s5_discoverability: 0
+  tests:
+    count: 0
+    passing: 0
+    target: 80
+  low_score_skills: 0
+  high_score_skills: 0
+
+history:
+  - date: {YYYY-MM-DD}T00:00:00
+    entity: system
+    from: null
+    to: created
+    action: init
+    reason: 初始化统一状态机管理中枢
+    gate: null

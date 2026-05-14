@@ -35,6 +35,8 @@ depends_on:
   - self-review
   - doc-alignment
   - commit-quality-check
+  - unified-state-machine
+  - project-state-machine
 ---
 
 # 🛠️ 通用开发工作流 v1.0
@@ -214,7 +216,14 @@ skill_view(name="doc-alignment")
 skill_view(name="commit-quality-check")
 # 执行安全检查 + 一致性检查
 
-# 7.4 Git 提交
+# 7.4 项目状态同步 (unified-state-machine skill)
+```bash
+cd /home/ubuntu/projects/hermes-cap-pack
+python3 scripts/project-state.py sync
+python3 scripts/project-state.py verify
+```
+
+# 7.5 Git 提交
 git add -A
 git commit -m "type(scope): description"
 ```
@@ -243,6 +252,7 @@ git commit -m "type(scope): description"
 | 3 | **没有自检就不准汇报** | 主人发现遗漏→信任下降 |
 | 4 | **代码改了文档必须同步** | 下次决策基于过时信息 |
 | 5 | **每个原子 Task 独立 git commit** | 无法回滚、无法追溯 |
+| 6 | **每次开发完成后同步 project-state.yaml** | 状态机与开发实际脱节 (unified-state-machine skill) |
 
 ---
 

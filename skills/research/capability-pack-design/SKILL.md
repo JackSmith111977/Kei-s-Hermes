@@ -4,7 +4,7 @@ description: >-
   Agent 能力模块化与跨平台复用方法论。涵盖能力包(Capability Pack)格式设计、
   模块分割决策、生命周期管理、迭代进化闭环、跨 Agent 适配层架构。
   适用于将单体 Agent 能力拆分为可移植、可组合、可进化的模块化能力单元。
-version: 2.2.0
+version: 2.3.0
 author: boku (Emma/小玛)
 license: MIT
 tags:
@@ -634,10 +634,13 @@ python3 ~/projects/hermes-cap-pack/scripts/sra-discovery-test.py --json
 |:-----|:------|:------|
 | `extract-pack.py` | `~/projects/hermes-cap-pack/scripts/extract-pack.py` | 从 `~/.hermes/skills/<name>` 提取完整 skill 到 cap-pack 格式（含 linked files） |
 | `validate-pack.py` | `~/projects/hermes-cap-pack/scripts/validate-pack.py` | 验证能力包完整性：manifest 格式 + 文件存在 + 交叉引用 |
-| `install-pack.py` | `~/projects/hermes-cap-pack/scripts/install-pack.py` | 安装能力包到 Hermes Agent（含备份恢复 + hooks 执行） |
+| `install-pack.py` (v2.0) | `~/projects/hermes-cap-pack/scripts/install-pack.py` | **多 Agent 安装工具**。支持 `--target hermes|opencode|auto` 指定目标，auto 模式自动检测可用 Agent。子命令: `status` / `remove` / `verify`。含 `--dry-run` 预览、`--skip-deps` 跳过依赖。详见 `references/install-cli-v2-multi-agent.md`。 |
 | `skill-tree-index.py` | `~/projects/hermes-cap-pack/scripts/skill-tree-index.py` | 三层树状索引生成器 + 合并潜力分析 + 系统健康度审计。`--pack` 查看单包、`--consolidate` 合并建议、`--health` 全量健康度、`--sra` SRA 兼容输出（含 pack/cluster/siblings/avg_sqs） |
-| `skill-quality-score.py` | `~/.hermes/skills/skill-creator/scripts/skill-quality-score.py` | SQS 五维质量评分（结构/内容/时效/关联/发现） |
+| `skill-quality-score.py` | `~/projects/hermes-cap-pack/scripts/skill-quality-score.py` | SQS 五维质量评分（结构/内容/时效/关联/发现）。**v2.0** 新增 SQLite 持久化（`--save`/`--init-db`/`--history <skill>`），`scores`+`score_history` 双表支持历史趋势追踪 |
 | `skill-lifecycle-audit.py` | `~/.hermes/skills/skill-creator/scripts/skill-lifecycle-audit.py` | 生命周期审计 + deprecate/revive 管理 |
+| `health-dashboard.py` | `~/projects/hermes-cap-pack/scripts/health-dashboard.py` | Chart.js 健康趋势仪表盘生成器。从 SQS DB 读取数据，生成 HTML（折线图/雷达图/低分排行/退化检测）。`--cron` 静默模式配合 `health-report.py` 每周联动 |
+| `merge-suggest.py` | `~/projects/hermes-cap-pack/scripts/merge-suggest.py` | 合并建议引擎。内容相似度分析（difflib SequenceMatcher）+ 分组优化（按 name prefix 分组避免 O(n²)，见 `references/content-comparison-optimization.md`）。支持 --yaml/--json 导出、--apply 备份执行 |
+| `sqs-sync.py` | `~/projects/hermes-cap-pack/scripts/sqs-sync.py` | SQS → SRA 质量分同步器。每 6 小时 cron 同步 200 个 skill 的 SQS 分到 `~/.sra/data/sqs-scores.json`。`--dry-run` 预览、`--no-quality` 禁用加权 |
 
 ### 健康诊断工具
 
@@ -664,3 +667,305 @@ python3 scripts/health-check.py                    # 人类可读报告
 python3 scripts/health-check.py --json             # 机器解析（CI/CD 用）
 python3 scripts/health-check.py --gate && echo "✅" # 门禁模式
 ```
+
+---
+
+## 十一、适配器验证门禁模式 (Verification Gate Pattern)
+
+> **2026-05-14 新增** — 基于 HermesAdapter 实战总结的验证门禁设计模式
+
+### 11.1 问题
+
+能力包安装后，如何确保安装结果是可用的？安装引擎可能成功复制了文件，但：
+- skill 的 SKILL.md 缺少 YAML frontmatter（无效技能）
+- 脚本文件没有可执行权限（无法运行）
+- 依赖包未安装（运行时失败）
+- 引用文件缺失（经验丢失）
+
+传统的「安装成功 = 文件复制完成」定义过于脆弱。
+
+### 11.2 方案：四层验证门禁
+
+在安装流程中插入 **验证门禁步骤**，在 tracking 之前、post_install 之后：
+
+```text
+Step 0:  依赖检查（非阻塞警告）
+Step 1:  创建快照（用于回滚）
+Step 2-5: 安装各项组件（skills/scripts/references/MCP）
+Step 6:  post_install 执行
+Step 7:  ⚠️ 验证门禁 ← 新增
+         ├── ① SKILL.md 存在 + YAML frontmatter 完整性
+         ├── ② 脚本文件存在 + 可执行权限
+         └── ③ 引用文件存在
+         失败 → 自动从快照回滚 + 报错
+Step 8:  记录跟踪
+Step 9:  清理快照
+```
+
+### 11.3 实现模板
+
+```python
+def _verify_installation(self, pack: CapPack) -> dict:
+    """安装后验证门禁
+    Returns: {"passed": bool, "checks": [], "failures": []}
+    """
+    checks, failures = [], []
+
+    # ① 检查 SKILL.md + YAML frontmatter
+    for skill in pack.skills:
+        skill_file = pack.pack_dir / "SKILLS" / skill.id / "SKILL.md"
+        if skill_file.exists():
+            content = skill_file.read_text()
+            if content.startswith("---"):
+                try:
+                    import yaml
+                    parts = content.split("---", 2)
+                    if len(parts) >= 3:
+                        fm = yaml.safe_load(parts[1])
+                        if isinstance(fm, dict) and ("id" in fm or "name" in fm or "description" in fm):
+                            checks.append(f"skill {skill.id}: frontmatter 完整")
+                        else:
+                            failures.append(f"skill {skill.id}: frontmatter 缺 id/name/description")
+                except Exception as e:
+                    failures.append(f"skill {skill.id}: frontmatter 解析失败: {e}")
+            else:
+                failures.append(f"skill {skill.id}: 无 frontmatter (---)")
+        else:
+            failures.append(f"skill {skill.id}: SKILL.md 不存在")
+
+    # ② 检查脚本可执行性
+    manifest = pack.manifest
+    for entry in manifest.get("install", {}).get("scripts", []):
+        dst = Path(entry["target"]).expanduser()
+        if dst.exists():
+            if not os.access(str(dst), os.X_OK):
+                failures.append(f"script {dst.name}: 无可执行权限")
+            else:
+                checks.append(f"script {dst.name}: 可执行")
+        else:
+            failures.append(f"script {dst.name}: 文件不存在")
+
+    return {"passed": len(failures) == 0, "checks": checks, "failures": failures}
+```
+
+### 11.4 集成到 install 流程
+
+```python
+def install(self, pack, dry_run=False, skip_deps=False):
+    result = AdapterResult(success=True, pack_name=pack.name, action="install")
+
+    # Step 0: 依赖检查（非阻塞）
+    missing = self._check_dependencies(pack, skip_deps)
+    if missing:
+        result.warnings.append(f"缺失依赖包: {', '.join(missing)}")
+
+    # Step 1: 快照
+    snapshot_id = SnapshotManager.create(pack.name)
+
+    try:
+        # Step 2-6: 安装各项组件 + post_install
+        ...
+
+        # Step 7: 验证门禁
+        verify = self._verify_installation(pack)
+        if not verify["passed"]:
+            for f in verify["failures"]:
+                result.errors.append(f"验证失败: {f}")
+            # 自动回滚
+            SnapshotManager.restore(snapshot_id)
+            result.warnings.append("验证门禁未通过，已自动回滚")
+            result.success = False
+            return result
+
+        # Step 8: 记录跟踪
+        # Step 9: 清理快照
+    except Exception as e:
+        SnapshotManager.restore(snapshot_id)
+        raise
+```
+
+### 11.5 依赖检查模式
+
+```python
+def _check_dependencies(self, pack, skip_deps=False):
+    """检查包级依赖 — 返回缺失列表（非阻塞）"""
+    if skip_deps or not pack.depends_on:
+        return []
+
+    tracked = self._load_installed()  # 读取 installed_packs.json
+    missing = []
+    for dep_name, dep_info in pack.depends_on.items():
+        if dep_name not in tracked:
+            reason = dep_info.get("reason", "") if isinstance(dep_info, dict) else ""
+            msg = f"{dep_name} ({reason})" if reason else dep_name
+            missing.append(msg)
+    return missing
+```
+
+### 11.6 关键设计决策
+
+| 决策 | 选项 | 选择理由 |
+|:-----|:------|:---------|
+| 依赖检查阻塞 vs 非阻塞 | **非阻塞**（仅警告） | 依赖可能通过其他方式满足，不因缺失依赖阻塞安装流程 |
+| 验证失败阻塞 vs 非阻塞 | **阻塞+回滚** | 安装破损技能比不安装更危险 |
+| 回滚策略 | **快照恢复** | 安装前快照完整状态，失败时原子恢复 |
+| 验证范围 | skill frontmatter + 脚本权限 | 覆盖最常见安装失败模式 |
+| `depends_on` 数据来源 | **CapPack.depends_on 字段** | 与 manifest 分离，适配器直接访问结构化字段 |
+
+### 11.7 实战陷阱
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| 测试 fixture 的 SKILL.md 无 frontmatter | 验证门禁拦截导致全部测试失败 | fixture 必须生成 `---\nid: ...\nname: ...\ndescription: ...\n---\n` 格式 |
+| 验证门禁中检查 source 而非 target 路径 | 永远提示「文件不存在」 | 检查 `install.scripts[].target` 展开后的路径 |
+| tracking 未记录 script_targets | verify() 无法找到脚本文件做可执行检查 | 安装时在 tracking 中保存 `script_targets: [str]` 列表 |
+| `depends_on` 只写在 manifest 未传给 CapPack 构造器 | 依赖检查永远返回空 | 解析 manifest 后显式 `depends_on=manifest.get("depends_on", {})` |
+
+### 11.8 测试模式
+
+验证门禁的核心测试有 4 个覆盖维度：
+
+| 测试 | 验证点 |
+|:-----|:--------|
+| `test_verify_pass` | 正常包 → 验证通过 |
+| `test_verify_no_frontmatter` | 无 frontmatter → 验证失败 |
+| `test_verify_script_not_executable` | 脚本不可执行 → 验证失败 |
+| `test_verify_with_install_flow` | 验证失败 → install 自动回滚 |
+
+参考实现：`scripts/tests/test_hermes_adapter.py` 中的 `TestVerificationGate` 类。
+
+---
+
+## 十二、多 Agent CLI 架构模式
+
+> **2026-05-14 新增** — 基于 install-pack.py v2.0 实战总结的多 Agent 安装 CLI 设计模式
+
+### 12.1 问题
+
+当能力包需要支持多个 Agent 目标时（Hermes / OpenCode / Codex / Claude），单一目标的 CLI 不够灵活。需要一种模式让用户轻松指定目标，且能自动检测可用环境。
+
+### 12.2 方案：Adapter Registry + --target 模式
+
+```text
+                              ┌──────────────────┐
+                              │   CLI (argparse)  │
+                              │  --target hermes  │
+                              │  --target opencode│
+                              │  --target auto    │
+                              └────────┬─────────┘
+                                       │
+                              ┌────────┴────────┐
+                              │  Adapter Registry│
+                              │  name → class    │
+                              └────────┬─────────┘
+                                       │
+                    ┌──────────────────┼──────────────────┐
+                    ↓                  ↓                  ↓
+            HermesAdapter       OpenCodeAdapter     CodexAdapter
+          (is_available ✓)    (is_available ✓)    (is_available ✗)
+```
+
+### 12.3 实现模板
+
+```python
+# ── 适配器注册表 ──
+ADAPTERS = {
+    "hermes": HermesAdapter,
+    "opencode": OpenCodeAdapter,
+}
+
+def get_adapter(name: str):
+    cls = ADAPTERS.get(name)
+    if cls is None:
+        print(f"❌ 未知目标: {name}")
+        sys.exit(1)
+    return cls()
+
+def detect_available() -> list[str]:
+    """自动检测可用的 Agent 环境"""
+    available = []
+    for name, cls in ADAPTERS.items():
+        adapter = cls()
+        if adapter.is_available:
+            available.append(name)
+    return available
+
+def cmd_install(pack_dir, target, dry_run, skip_deps):
+    # 确定目标
+    if target == "auto":
+        targets = detect_available()
+        if not targets:
+            print("❌ 未检测到可用的 Agent 环境")
+            sys.exit(1)
+        print(f"🔍 自动检测到: {', '.join(targets)}")
+    else:
+        targets = [target]
+
+    # 逐个安装
+    for tgt in targets:
+        adapter = get_adapter(tgt)
+        if not adapter.is_available and not dry_run:
+            print(f"   ⚠️  {tgt} 环境不可用，跳过")
+            continue
+        result = adapter.install(pack, dry_run=dry_run, skip_deps=skip_deps)
+        ...
+```
+
+### 12.4 CLI 子命令设计
+
+使用 argparse subparsers 实现 install / status / remove / verify 四个子命令：
+
+```python
+def main():
+    # 兼容旧用法: install-pack.py <pack-dir> [--target ...]
+    if sys.argv[1] not in ("status", "remove", "verify", "-h"):
+        pack_dir = sys.argv[1]
+        # 手动解析 --target, --dry-run, --skip-deps
+        cmd_install(pack_dir, target, dry_run, skip_deps)
+        return
+
+    # 子命令模式
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+    
+    p_status = subparsers.add_parser("status")
+    p_status.add_argument("--target", default="hermes")
+    
+    p_remove = subparsers.add_parser("remove")
+    p_remove.add_argument("pack_name")
+    p_remove.add_argument("--target", default="hermes")
+    ...
+```
+
+### 12.5 Adapter API 统一要求
+
+所有适配器必须接受相同的 install() 签名，确保 CLI 可以透明切换：
+
+```python
+class HermesAdapter:
+    def install(self, pack: CapPack, dry_run: bool = False, skip_deps: bool = False) -> AdapterResult: ...
+
+class OpenCodeAdapter:
+    def install(self, pack: CapPack, dry_run: bool = False, skip_deps: bool = False) -> AdapterResult: ...
+```
+
+| 参数 | 类型 | 说明 |
+|:-----|:------|:------|
+| `pack` | CapPack | 已解析的能力包 |
+| `dry_run` | bool | 预览模式，不实际写入 |
+| `skip_deps` | bool | 跳过依赖检查 |
+
+### 12.6 实战陷阱
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| `install()` 签名不一致 | CLI 调用时报 `unexpected keyword argument` | 所有适配器必须统一 `(pack, dry_run, skip_deps)` 签名 |
+| auto 检测到环境但实际不可写 | 安装到一半失败 | 在 `is_available` 中做完整可写性检查 |
+| 目录不存在时 `mkdir()` 不传 `exist_ok=True` | 多包源目录冲突 → `FileExistsError` | 始终使用 `exist_ok=True` |
+
+### 12.7 参考实现
+
+完整实现见 `~/projects/hermes-cap-pack/scripts/install-pack.py` (v2.0)。
+
+集成测试见 `scripts/tests/test_hermes_adapter.py` 中的 `TestMultiAgentInstall` 类。
+

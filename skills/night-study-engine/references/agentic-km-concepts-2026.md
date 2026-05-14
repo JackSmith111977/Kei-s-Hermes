@@ -163,9 +163,78 @@ AI-Generated Golden Paths: 策展路径 → Agent 运行时动态组合
 | 企业 RAG 失败 (新鲜度问题) | 60% | Zylos |
 | Context Kubernetes TLA+ 验证 | 460 万状态零违规 | arXiv |
 
+---
+
+## 📌 2026-05-14 更新：Agentic KM 深度扩展
+
+### H. Context Kubernetes: 三层权限模型 + Design Invariant 3.8
+**来源**: arXiv:2604.11623 深度阅读 🥇
+- **三审批层级**: T1 Autonomous(无审批) → T2 Soft Approval(UI确认) → T3 Strong Approval(带外2FA/生物识别)
+- **Design Invariant 3.8**: 强审批通道必须：(1) 独立于agent执行环境 (2) agent不可读写 (3) 独立认证因子
+- **产业调研关键发现**: 无任何企业平台(Microsoft/Salesforce/AWS/Google)强制执行Invariant 3.8
+- **支持数据**: 无治理时26.5%查询产生跨域泄漏/冲突; 治理后0%幻影内容
+- **知识编排比容器编排更难四维**: 异质性(H)、语义性(S)、敏感性(S)、学习性(L)
+
+### I. AKU Continuation Paths + Validators 完整规格
+**来源**: arXiv:2603.14805 (Bakal) 深度阅读 🥇
+- **Continuation Paths 三类**:
+  - `success_continuations`: 成功后激活哪些skill
+  - `failure_continuations`: 失败后回退/回滚策略
+  - `escalation_paths`: 什么条件下转人工/高权限agent
+- **Validators 三类**:
+  - `pre_validators`: 执行前检查前置条件 (如 pre_flight.py)
+  - `post_validators`: 执行后验证输出质量 (如 reflection-gate.py)
+  - `invariant_validators`: 始终检查的不变量
+- **Hermes 映射**: SKILL.md frontmatter 可新增 `continuations:` 和 `validators:` 字段
+- **后续开发优先**: Continuation paths 先在 cannon skill/workflow documentation 中试点
+
+### J. OpenEAGO — 企业 Agent 治理开放标准
+**来源**: FINOS OpenEAGO (Feb 2026) 🥈
+- 受监管行业多agent编排标准: Agent Registry + mTLS + CRDT同步 + 确定性路由
+- 层次化状态捕获: session→conversation→agent→task 四层
+- 合规签名信封: 每个消息携带策略包+监管元数据
+- Q1 2026 发布 0.1.0, 核心规范+Agent Registry 参考实现
+
+### K. Orloj — 声明式 Agent 编排运行时
+**来源**: GitHub OrlojHQ/orloj 🥈
+- 纯声明式 YAML: agents/tools/models/memory/policies → orlojd + orlojworker + orlojctl
+- 治理原语: AgentPolicy(模型/工具/token限制), AgentRole(权限角色), ToolPermission/ToolApproval/TaskApproval
+- 架构: REST API + Web Console + 控制器(像K8s operator) + 工作者(任务领取/心跳)
+- 边界agent循环 + 模型路由 + 内存系统 + 消息Passing
+
+### L. SMRITEX 五层企业治理框架
+**来源**: smritex.com 🥈
+- **Layer 1 — Knowledge Asset Classification**: 4层分级(T1权威→T2操作→T3上下文→T4临时)
+- **Layer 2 — Agent Permission Architecture**: 角色×层级×动作 权限矩阵
+- **Layer 3 — Provenance & Audit**: 完整/可追溯/可查询/防篡改
+- **Layer 4 — Continuous Governance**: 治理agents监控其他agents
+- **Layer 5 — Organizational Readiness**: 团队/流程/文化准备
+- **5大漏洞**: Write-Back→Provenance→Accountability→Autonomy→Multi-Agent Blindspot
+
+### M. Zylos KM as Living System
+**来源**: zylos.ai (Mar 2026) 🥈
+- KM = 活系统: 时间有效性 + 多写一致性 + 来源归因 + 访问控制 + Freshness SLA
+- **60% RAG失败归因于新鲜度和一致性**, 非检索质量
+- Zep Graphiti: bi-temporal(双时间戳)知识图谱, 准确率+18.5%, 延迟-90%
+- AWS Bedrock AgentCore Memory GA 2026: 分层命名空间, 提取/合并 ~20-40s
+- 四记忆类型: 情景(Episodic)/语义(Semantic)/程序(Procedural)/工作(Working)
+- 热/温/冷 三层存储架构: Hot(即时) | Warm(跨会话) | Cold(图+SLA+访问控制)
+
+### N. Continuity Layer + ATANT Benchmark
+**来源**: arXiv:2604.17273 🥉
+- 定义: 跨session持续"携带"模型学到的理解, 不被上下文窗口限制
+- ATANT基准: 250故事, 1835验证问题, 7个必需特性, 10检查点方法论, 4合规等级
+- DTCM(Decomposed Trace Convergence Memory): 写入时分批存储, 读取时重构
+- 4层开发弧线: SDK→模型集成→硬件节点→长期人类基础设施
+- **状态**: 概念验证论文, 无实现, 置信度低(0.7)
+
+---
+
 ## 推荐下一步行动
 
 1. **Freshness Manager**: 为 KB 每个概念添加 `expires_at` + `last_verified_at` 字段
-2. **Validators**: 利用 skill_manage 的 pre/post 挂钩实现 AKU Validators 模式
-3. **Continuation Paths**: 在 skill references/ 中实现跨 skill 导航
+2. **Validators**: 在 SKILL.md frontmatter 新增 `validators:` 字段 (pre/post/invariant)
+3. **Continuation Paths**: 在 SKILL.md frontmatter 新增 `continuations:` 字段 (success/failure/escalation)
 4. **AOS Jobs Registry**: kanban-orchestrator 新增 risk_level/data_categories/human_oversight 字段
+5. **AKU 试点**: 在 pre_flight.py / reflection-gate.py 中添加 Validators 标签 (pre/post/invariant)
+6. **Agent Registry**: 调研 OpenEAGO/Orloj 的 Registry 模式在 Hermes skill_manage 中的可借鉴性

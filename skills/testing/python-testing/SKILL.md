@@ -307,6 +307,7 @@ python -m pytest tests/ -q
 
 - `references/test-pollution-real-world.md`: SRA 项目的真实测试污染案例（症状 → 诊断 → 修复全流程）。⚠️ 与 `sra-dev-workflow/references/test-state-pollution.md` 内容重叠——后者是项目级记录，前者是通用知识提取。
 - `references/ci-version-failure-patterns.md`: CI 版本兼容性失败真实案例（PEP 604 union types / Release 版本脱敏）。
+- `references/cli-subprocess-testing.md`: CLI 独立脚本的子进程测试模式 — 当测试对象不可 import 时用 subprocess.run 验证 exit code / stdout / stderr。含路径陷阱、性能考量、真实案例。
 
 ## Overlap Notes
 

@@ -492,19 +492,26 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
     └── night-study-engine/
         ├── SKILL.md                         # 本文件 v3.0
         ├── references/
-│   ├── references/quality-scoring-guide.md     # 质量评分细则（含递进规则）
-│   ├── references/agentic-km-concepts-2026.md # Agentic KM 五大新概念速查（2026-05-11）
-│   ├── references/high-density-domain-strategy.md # 高密度领域边缘狩猎策略（2026-05-12）
-│   ├── cron-tavily-quota-strategy.md # 配额管理策略
-│   ├── references/cron-execution-pattern.md    # 安全扫描器感知的 cron 执行模式（v3.3）
-│   ├── references/multi-topic-broad-search-strategy.md # 多主题广度域并行搜索策略（2026-05-13）
-│   ├── references/domain-selection-cross-validation.md # 领域选择交叉验证——超越调度器的决策层（2026-05-13）
-│   ├── references/cron-tavily-quota-strategy.md
-            ├── select_domain.py             # 自适应调度选择器 v3.0
-            ├── discover_domains.py          # 领域发现器 v3.0
-            ├── update_knowledge_base.py     # 知识库更新器 v3.0（含关系图谱）
-            ├── adaptive_scheduler.py        # 自适应调度引擎 v3.0 新增
-            └── experience_extractor.py      # 经验提取器 v3.0 新增
+│   ├── references/quality-scoring-guide.md          # 质量评分细则（含递进规则）
+│   ├── references/agentic-km-concepts-2026.md       # Agentic KM 概念速查（2026-05-11, 持续更新）
+│   ├── references/high-density-domain-strategy.md   # 高密度领域边缘狩猎策略（2026-05-12）
+│   ├── references/cron-tavily-quota-strategy.md     # Tavily 配额降级策略（2026-05-12）
+│   ├── references/cron-execution-pattern.md         # 安全扫描器感知的 cron 执行模式（v3.3）
+│   ├── references/multi-topic-broad-search-strategy.md # 多主题广度域并行搜索（2026-05-13）
+│   ├── references/domain-selection-cross-validation.md # 领域选择交叉验证（2026-05-13）
+│   ├── references/aku-hermes-skill-evolution.md     # AKU Continuation Paths + Validators 映射（2026-05-12）
+│   ├── references/context-engineering-patterns.md   # Context Engineering 模式库
+│   ├── references/freshness-scoring-four-dimensions.md # 四维新鲜度评分矩阵
+│   ├── references/research-session-patterns.md      # 研究型会话模式（R2 绕过策略）
+│   ├── references/hermes-contextk8s-mapping.md      # Hermes ↔ Context K8s 7 服务映射（2026-05-14）
+│   ├── templates/
+│   │   └── kb-update-pattern.py                     # KB 批量更新 Python 模板
+│   └── scripts/
+│       ├── select_domain.py                         # 自适应调度选择器 v3.0
+│       ├── discover_domains.py                      # 领域发现器 v3.0
+│       ├── update_knowledge_base.py                 # 知识库更新器 v3.0（含关系图谱）
+│       ├── adaptive_scheduler.py                    # 自适应调度引擎 v3.0
+│       └── experience_extractor.py                  # 经验提取器 v3.0
 ```
 
 ---
@@ -679,6 +686,91 @@ STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
       C. Patch 完成后立刻运行 JSON 语法验证命令。若失败，用 `execute_code` + Python dict 重新写入整个文件（而非第二次 patch 修复）。
     - **推荐工作流**：对所有 KB JSON 的结构性修改（添加 session_log、更新 last_updated、批量改概念），优先使用 `execute_code` 执行 Python dict 操作（见 `templates/kb-update-pattern.py`），避免 `patch` 的 JSON 语义损失风险。仅对简单的单一字符串替换（如 notes 内的小改动）使用 `patch`，且每次验证。
     - **和现有红标 #19 的关系**：#19 覆盖 `terminal` 中 CJK Unicode 参数被安全扫描器阻塞的问题（工具调用层面）；本条目覆盖 `patch` 工具的 JSON 语义损失问题（数据完整性层面）。两者是独立且正交的陷阱。
+
+### v4.0 新增 — 实践教训（来自 2026-05-14 实测：Config/KB 配置漂移导致调度器推荐错误）
+
+27. ❌ **Config/KB 配置漂移 — 调度器基于过期配置数据推荐最近刚学过的领域** — `select_domain.py`/`adaptive_scheduler.py` 使用 `night_study_config_v2.json` 中的 `learning_history` 字段计算调度分，但实际学习质量数据存储在 `knowledge_base/{domain}.json` 的 `session_log` 中。当配置未随 KB 同步更新时，调度器会基于错误数据推荐领域。
+
+    **实际案例**（2026-05-14 06:00）：调度器选择 `anime_acg`（调度分 0.315），但该领域 4 小时前（02:06）刚学习过（Q=87，+6 概念）。原因是配置文件中 `anime_acg.learning_history` 仍为 `total_sessions: 0, avg_quality: 0.5`（默认值），而 KB 的 `session_log` 已有 6 条记录（quality 0.72-0.87）。配置从未从 KB 同步过统计数据。
+
+    **根因**：KB 更新脚本（`update_knowledge_base.py` 或手动 `execute_code`）更新了 `session_log` 和 `concepts`，但从未同步 `learning_history` 到配置文件。配置是领域选择的唯一输入，但 KB 是事实来源——两者不同步导致调度混乱。
+
+    **检测命令**（每次学习开始前运行，特别是调度器推荐结果存疑时）：
+    ```bash
+    python3 -c "
+    import json
+    config = json.load(open('$HOME/.hermes/config/night_study_config_v2.json'))
+    for d in config['domains']:
+        uid = d['id']
+        kb_path = f'$HOME/.hermes/night_study/knowledge_base/{uid}.json'
+        import os
+        if not os.path.exists(kb_path):
+            continue
+        kb = json.load(open(kb_path))
+        cfg_sessions = d.get('learning_history', {}).get('total_sessions', 0)
+        kb_sessions = len(kb.get('session_log', []))
+        if cfg_sessions != kb_sessions:
+            print(f'⚠️ {uid}: config sessions={cfg_sessions} vs KB sessions={kb_sessions} (DRIFT)')
+        cfg_quality = d.get('learning_history', {}).get('avg_quality', 0)
+        if kb_sessions > 0:
+            actual_quality = sum(s.get('quality_score', 0) for s in kb.get('session_log', [])) / kb_sessions
+            # normalize if stored as 0-1
+            if actual_quality < 1:
+                actual_quality *= 100
+            if abs(cfg_quality * 100 - actual_quality) > 10:
+                print(f'⚠️ {uid}: config avg_quality={cfg_quality} vs KB actual avg={actual_quality:.1f} (DRIFT)')
+    "
+    ```
+
+    **修正工作流**：
+    1. 检测到漂移时，从 KB 的 `session_log` 重新计算实际统计数据
+    2. 更新 `night_study_config_v2.json` 对应领域的 `learning_history` 字段
+    3. 验证：重新运行 `select_domain.py` 确认调度排序已修正
+
+    **预防**（在 KB 更新流程中嵌入同步步骤）：
+    每次更新 `session_log` 后，同步更新配置文件的 `learning_history`：
+    ```python
+    # 在 KB 更新脚本末尾添加：
+    config_path = Path.home() / ".hermes" / "config" / "night_study_config_v2.json"
+    config = json.load(open(config_path))
+    for d in config["domains"]:
+        if d["id"] == domain_id:
+            sl = session_log  # the updated session_log
+            scores = [s.get("quality_score", 0) for s in sl if s.get("quality_score")]
+            # normalize 0-1 to 0-100
+            scores_norm = [s * 100 if s < 1 else s for s in scores]
+            d["learning_history"]["total_sessions"] = len(sl)
+            d["learning_history"]["avg_quality"] = round(sum(scores_norm) / len(scores_norm) / 100, 2) if scores_norm else 0.5
+            d["learning_history"]["consecutive_failures"] = 0
+            d["freshness_score"] = max(0.5, 1.0 - (len(scores_norm) * 0.05)) if scores_norm else 0.5
+            d["last_updated"] = kb["last_updated"]
+            break
+    json.dump(config, open(config_path, "w"), ensure_ascii=False, indent=2)
+    ```
+
+    **注意**：即使不嵌入同步步骤，定期运行检测命令也可及时发现漂移。`--skip` 参数可临时绕过错误推荐。
+
+### v3.9 新增 — 实践教训（来自 2026-05-14 实测：KB 质量分数格式一致性与历史修复）
+
+26. ❌ **Session log `quality_score` 格式不统一导致 `avg_quality` 计算错误** — 不同轮次的 session 可能将 `quality_score` 存储为 0-1 浮点格式（如 `0.97`，代表 97%）或 0-100 整数格式（如 `90` 或 `88`）。混合格式直接求和平均会产生严重偏差。此问题在 dev_tools KB 中被发现：avg_quality 显示 18.71 而非实际的 ~90。
+    - **影响**：`learning_history.avg_quality` 偏差会破坏自适应调度算法的 `performance_weight` 项，导致领域得分排序错误，且可能误触发 `consecutive_failure_penalty`。
+    - **检测**：
+      ```bash
+      python3 -c "
+      import json
+      kb = json.load(open('~/.hermes/night_study/knowledge_base/{domain}.json'))
+      sl = kb.get('session_log', [])
+      for s in sl:
+          q = s.get('quality_score', 0)
+          print(f'{s.get(\"timestamp\",\"?\")[:16]}: {q} (type={type(q).__name__})')
+      "
+      ```
+    - **修正工作流**（全量修复）：
+      1. 读取全部 session_log，将 `< 1` 的值乘以 100
+      2. 重新计算 `avg_quality = sum(normalized) / len(normalized)`
+      3. 写入 `learning_history.avg_quality`
+      4. 验证：确保 avg 在 0-100 范围内
+    - **预防**：写入新 session 时始终使用 0-100 整数格式（如 `"quality_score": 88`），不使用小数。这是推荐的 KB 标准格式。所有 session_log 中的 quality_score 应该统一为 `int` 类型。
 
 ### v3.8 新增 — 实践教训（来自 2026-05-13 实测：L1 大批量概念复习的并行搜索模式）
 

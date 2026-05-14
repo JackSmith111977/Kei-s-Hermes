@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.12.0
+version: 1.13.0
 triggers:
 - ai trends
 - ai前沿
@@ -215,7 +215,13 @@ metadata:
 | | **Honeycomb Agent Observability** | Honeycomb (2026.05.12) | Agent Timeline(多Agent多Trace统一视图), Canvas Agent(自然语言调查), Canvas Skills(可复用playbook)。OTel GenAI语义协定v1.40.0集成。开源标准无锁定 |
 | | **GPT-5.3-Codex** | OpenAI (2026.02) | 最强Agentic编码模型，25%更快。SOTA: SWE-Bench Pro 56.8%, Terminal-Bench 2.0 77.3%, OSWorld 64.7%。首个High-capability网络安全分类。实时交互协作。内部自改进。$10M API Credits安全防御 |
 | | **AlphaEvolve 2026** | Google DeepMind (2026.05) | Gemini驱动编码Agent年度回顾：DeepConsensus 30%变异检测错误降低；电网可行解14%→88%；灾难预测+5%；Willow量子10x误差降低；Spanner写放大-20%，存储-9% |
+| | **AlphaEvolve 2026** | Google DeepMind (2026.05) | Gemini驱动编码Agent年度回顾：DeepConsensus 30%变异检测错误降低；电网可行解14%→88%；灾难预测+5%；Willow量子10x误差降低；Spanner写放大-20%，存储-9% |
 || **ATOM Report** | Interconnects AI (arxiv 2604.07190) | **开源LLM生态全景**: 20.4亿累计下载(6× YoY)。中国1.15B vs 美国723M。Qwen ~942M最受欢迎, DeepSeek 75.6%推理token份额(OpenRouter)。RAM指标量化动量 |
+| | **Adaption AutoScientist** | Adaption (2026.05.13) | Sara Hooker (ex-Cohere VP AI R)创办。自动化微调工具，**co-optimize数据+模型**，声称2x+ win rates across models。免费使用30天。标志着"AI自我改进"从研究走向产品 |
+| | **Ineffable Intelligence × NVIDIA** | Ineffable (2026.05.13) | David Silver（DeepMind RL之父）创立的RL超级智能公司。$1.1B seed（史上最大种子轮）。NVIDIA工程级合作：Grace Blackwell + Vera Rubin for large-scale RL。'超学习者'范式——系统从经验而非人类数据中学习 |
+| | **OpenAI Daybreak** | OpenAI (2026.05.11) | 公开网络安全AI，直接回应 Anthropic Mythos。客户端: Cloudflare/Cisco/CrowdStrike/Oracle/Zscaler。3阶段: 优先→测试→修复。与 Project Glasswing 形成AI安全双极格局 |
+| | **Meta Incognito Chat** | Meta (2026.05.13) | 端到端加密无日志AI聊天。WhatsApp Private Processing技术。'完全私密'——聊天内容连Meta也无法查看。回应用户隐私诉讼压力 |
+| | **Amazon Alexa for Shopping** | Amazon (2026.05.13) | 替代Rufus，Alexa Plus 整合进Amazon.com。自主购物agent: price alerts/auto-reorder/Buy for Me/price history追踪。'不是副业，是完整的购物体验' |
 
 ### 2026 趋势观察（2026.05 更新）
 
@@ -365,3 +371,4 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-11: **v1.10 更新** — NVIDIA Star Elastic 单检查点多模型嵌套(360× token/53%存储)；Mozilla×Mythos 271漏洞实战数据(180 sec-high, 几乎无假阳性)；ATOM Report 开源模型生态全景(中国1.15B, Qwen 69%衍生份额)；Mythos 条目更新 Firefox 实战数据；趋势观察 #14-#15 新增
 > - 2026-05-12: **v1.11 更新** — Amazon SageMaker AI Agent Experience(5/4, Agentic模型定制)；Twilio Agent Connect GA(5/6, 自托管音视频编排)；IBM Think 2026(5/5, watsonx/Concert/Sovereign Core四支柱)；MCP生态数据更新(13K+服务器/97M+月下载/Streamable HTTP标准/云厂商Gateway对比)；GPT-5.5 API完整规格(1,050K上下文/$5-$30定价/Rate Limits)；趋势观察 #16(企业Agent基础设施三强争霸)
 > - 2026-05-13: **v1.12 更新** — GPT-5.3-Codex 最强Agentic编码(SOTA SWE-Bench Pro 56.8%/Terminal-Bench 77.3%/OSWorld 64.7%/Cybersecurity High-capability)；Microsoft MDASH 100+Agent安全系统(16 CVE/88.45% CyberGym)；OpenAI Workspace Agents(云端Agent自主工作)；AlphaEvolve 2026年度突破回顾；Honeycomb Agent Observability(Agent Timeline/Canvas/Skills)；DeepSeek V4定价经济学(34x比GPT-5.5便宜)；Qwen 3.6 Max-Preview(6项基准#1)；Gemini 3.1 Pro(GPQA 94.3%)/Grok 4.20多Agent辩论；Apple ICLR 2026(ParaRNN 665x/Manzano/SHARP/SimpleFold)
+> - 2026-05-14: **v1.13 更新** — Adaption AutoScientist(Sara Hooker自我改进AI)；Ineffable Intelligence×NVIDIA(David Silver RL超级智能, $1.1B seed)；OpenAI Daybreak(公开网络安全AI, 回应Mythos)；Meta Incognito Chat(端到端加密无日志)；Amazon Alexa for Shopping(agentic商业) |

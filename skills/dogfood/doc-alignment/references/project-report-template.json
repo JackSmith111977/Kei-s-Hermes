@@ -43,7 +43,9 @@
         "direction": null
       }
     ],
-    "module_table": []
+    "module_table": [
+      {"module": "ExampleModule", "file": "path/to/module.py", "desc": "简短描述（支持中文）", "methods": ["method_a()", "method_b()"]}
+    ],
   },
   "api_endpoints": {
     "http_port": 0,

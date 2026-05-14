@@ -37,6 +37,8 @@ depends_on:
   - test-driven-development
   - self-review
   - commit-quality-check
+  - unified-state-machine
+  - project-state-machine
 ---
 
 # 🎯 通用 QA 工作流 v1.0
@@ -244,7 +246,11 @@ assert result is not None
 print(f'✅ Smoke test passed (v{__version__})')
 "
 
-# === 5. CI 状态检查 ===
+# === 5. 项目状态一致性 ===
+echo "=== State ==="
+python3 scripts/project-state.py verify 2>/dev/null || echo "⚠️  project-state.py not available (optional gate)"
+
+# === 6. CI 状态检查 ===
 echo "=== CI ==="
 gh run list --limit 3 --json name,conclusion,headBranch 2>/dev/null || echo "⚠️  gh CLI not available"
 ```

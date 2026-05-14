@@ -27,6 +27,8 @@ metadata:
     category: devops
     skill_type: workflow
     design_pattern: pipeline
+    related_skills:
+      - project-state-machine
 ---
 
 # 🏗️ 项目起步工作流 (PSW) v1.0
@@ -234,6 +236,24 @@ CHG_VER=$(grep -m1 '^\[' CHANGELOG.md | grep -oP '(?<=\[)\d+\.\d+\.\d+')
 
 ---
 
+### Phase 4.5: 状态机初始化 (unified-state-machine)
+
+当项目已有 SDD 文档结构后，使用 `unified-state-machine` 技能初始化统一状态机：
+```bash
+# 创建 project-state.yaml（自动扫描已有文档）
+python3 scripts/project-state.py init
+
+# 填充实体状态
+python3 scripts/project-state.py sync
+
+# 验证一致性
+python3 scripts/project-state.py verify
+```
+
+> 参见 `unified-state-machine` skill 获取完整的状态管理操作指南。
+
+---
+
 ## 📋 项目起步检查清单
 
 ```
@@ -263,6 +283,11 @@ Phase 4: 门禁
   [ ] scripts/pre-push.sh
   [ ] 版本一致性检查
   [ ] 安全红线检查
+
+Phase 4.5: 状态机
+  [ ] docs/project-state.yaml 已创建
+  [ ] 所有实体状态已同步
+  [ ] python3 scripts/project-state.py verify ✅
 ```
 
 ---
@@ -287,3 +312,9 @@ python3 scripts/bump-version.py major  # epic
 bash scripts/pre-push.sh
 git push origin main --tags
 ```
+
+---
+
+## 📚 参考
+
+- `unified-state-machine` — 统一项目状态机管理中枢

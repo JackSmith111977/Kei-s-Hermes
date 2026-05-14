@@ -1,0 +1,1 @@
+/home/ubuntu/projects/hermes-cap-pack/scripts/sqs-sync.py
