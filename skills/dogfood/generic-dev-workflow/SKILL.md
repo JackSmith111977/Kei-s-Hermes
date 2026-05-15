@@ -1,7 +1,7 @@
 ---
 name: generic-dev-workflow
 description: "通用开发工作流 — 项目无关的轻量级开发实施流程。从需求理解到提交的 7 步标准循环。可被任何项目直接加载使用，与 sdd-workflow(Spec管理) 和 development-workflow-index(决策树) 互补。任何涉及开发/实现/编码/修复等任务时自动加载。"
-version: 1.1.0
+version: 1.3.0
 triggers:
   - 开发
   - 实现
@@ -41,6 +41,9 @@ depends_on:
   - commit-quality-check
   - unified-state-machine
   - project-state-machine
+  - generic-qa-workflow
+  - chain-state
+  - sdd-workflow
 ---
 
 # 🛠️ 通用开发工作流 v1.0
@@ -68,14 +71,49 @@ depends_on:
 
 ---
 
-## 📋 7 步开发流程
+## 📋 7 步开发流程（含 Step 0：SDD 门禁）
 
 ```text
-[1] 需求确认 ─→ [2] 环境检查 ─→ [3] 实施计划 ─→ [4] TDD实现 ─→ [5] 验证 ─→ [6] 自检 ─→ [7] 提交
-  理解需求    Reality Check    writing-plans   RED-GREEN   全量测试    self-review  git commit
-                                                                                +
-                                                                          doc-alignment
+[0] SDD 门禁 ─→ [1] 需求确认 ─→ [2] 环境检查 ─→ [3] 实施计划 ─→ [4] TDD实现 ─→ [5] 验证 ─→ [6] 自检 ─→ [7] 提交
+  SDD就绪    理解需求    Reality Check    writing-plans   RED-GREEN   全量测试    self-review  git commit
+                                                                                                    +
+                                                                                              doc-alignment
 ```
+
+### 🔴 Step 0: SDD 定义与文档对齐门禁
+
+**做什么**: 在写任何代码前，先确认 SDD 定义是否完成、文档是否已对齐。
+
+**铁律**: "先在 SDD 工作流中定义，对齐文档，再开始实施"——不要代码先于文档。
+
+```text
+检查清单:
+  □ 当前任务是否有已批准的 Spec/Story？
+      → 加载 sdd-workflow → 运行 spec-state.py list
+      → 如无 → ❌ 先创建 Spec → 主人批准 → 再回来
+  □ 涉及跨项目集成时，目标项目是否有对应文档更新？
+      → 例如：SRA 插件 → INTEGRATION.md / README / EPIC 文档
+      → 如无 → ❌ 先对齐文档 → 再开始实施
+  □ 变更的文件属于哪个 git 仓库？
+      → 源码必须在项目的 git 仓库中管理，不可直接在目标部署目录创建
+      → 安装脚本负责部署，源码版本管理
+```
+
+**实战教训**（2026-05-15 SRA EPIC-004 Phase 0）：
+
+```
+❌ 错误：直接在 ~/.hermes/hermes-agent/plugins/sra-guard/ 下创建文件
+    → 被主人纠正："你怎么不是在projects中的sra中进行啊"
+    → 问题：代码不在 git 仓库中，无法版本管理
+
+❌ 错误：代码写完了才补 SDD 定义和文档对齐
+    → 被主人纠正："先在sdd工作流中定义，对齐文档，再开始实施"
+    → 问题：实施先于定义，导致方向偏差时回退成本高
+
+✅ 正确流程：SDD 定义完成 → 文档对齐 → 实施
+```
+
+**耗时**: ~1 分钟
 
 ### Step 1: 需求确认
 
@@ -249,17 +287,34 @@ fi
 **做什么**: 代码 + 文档 + HTML 报告同一次提交。
 
 ```bash
-# 7.1 文档对齐（如果有 doc-alignment）
+# 7.1 🔴 实施后文档同步（新增强制步骤）
+#     在关闭 Story 前，必须同步更新所有相关文档的状态。
+#     否则会出现"代码已实现、测试全绿、但文档还写着 draft"的漂移。
+#
+#     检查清单：
+#     □ STORY 文件: status: draft → status: completed
+#     □ STORY 文件: 所有 AC 改为 [x]（- [ ] → - [x]）
+#     □ SPEC 文件: status: active/draft → status: completed
+#     □ EPIC 文件: 更新 completed_phases 表格（新增已完成 Phase 行）
+#     □ EPIC 文件: 优先级表格中对应 Phase 标记 ✅
+#     □ project-report.json: 更新 test count / 新增 sprint entry
+#     □ 其他项目级报告（epic-summary, panorama 等）
+#
+#     实战教训（2026-05-15 SRA EPIC-004 Phase 0-3）：
+#     11 个 Story + 3 个 SPEC 全部 status: draft，AC 全未勾选
+#     → 被主人纠正"对齐文档" → 额外花 10 分钟批量修复
+
+# 7.2 文档对齐（如果有 doc-alignment）
 skill_view(name="doc-alignment")
 # 执行 5 步对齐协议
 
-# 7.2 🌐 HTML 报告对齐（如果项目有生命周期 HTML 报告）
+# 7.3 🌐 HTML 报告对齐（如果项目有生命周期 HTML 报告）
 #     检查 reports/lifecycle.html 或 PROJECT-PANORAMA.html
 #     是否反映最新的文档状态（状态表、徽章、AC 进度）
 #     如有 project-report.json → generate-project-report.py 自动同步
 #     如手动维护 → grep/搜索 HTML 中的状态信息对比文档
 
-# 7.3 提交前检查
+# 7.4 提交前检查
 skill_view(name="commit-quality-check")
 # 执行安全检查 + 一致性检查
 
@@ -284,6 +339,10 @@ git commit -m "type(scope): description"
 
 | 陷阱 | 场景 | 解决 |
 |:-----|:------|:------|
+| **代码先于 SDD 定义** | 主人说「开始实现」→ 直接写代码 | 🔴 先执行 Step 0：检查 SDD 定义和文档对齐状态。有 Spec/Story 批准了再写代码 |
+| **实施后文档还在 draft** | 代码写了、测试全绿，但 Story/SPEC 文件仍是 `draft`，AC 未勾选 | 🔴 Step 7.1 新增了「实施后文档同步」清单。每个 Story 结束后立即更新 status + AC，不等最后一起做 |
+| **模块级变量作用域（global）** | 在 Hermes 插件 `__init__.py` 的 hook 函数中写 `_turn_counter += 1`，报 `UnboundLocalError` | Python 函数内对模块级变量的赋值会创建局部变量，遮蔽模块级同名变量。必须用 `global _turn_counter` 声明：<br><br>```python<br>_turn_counter: int = 0  # 模块级<br><br>def my_hook(...):<br>    try:<br>        global _turn_counter  # ✅ 必须声明<br>        _turn_counter += 1    # 否则 UnboundLocalError<br>```<br><br>⚠️ 典型场景：hook 回调函数中使用模块级计数器/缓存状态时最容易踩坑 |
+| **源码创建在部署目标目录** | 插件源码直接创建在 Hermes plugins 目录 | 源码必须在项目的 git 仓库中管理。安装脚本负责部署，源码不直接在目标目录创建 |
 | **CLI 脚本导入失败** | `ModuleNotFoundError: No module named 'scripts'` | CLI 入口和命令模块都需要加 `sys.path.insert(0, ...)` 指向项目根目录。详见 `references/python-cli-pitfalls.md` |
 | **测试路径假设** | 测试从项目根运行没问题，但从子目录运行报错 | 所有路径用 `Path(__file__).resolve().parent` 构造，不用相对路径字符串 |
 | **版本号不同步** | pyproject.toml 的 version 和 CHANGELOG 的版本不一致 | 提交前用 `grep "version"` 交叉检查，或用 `bump-version.py` 统一管理 |
@@ -294,18 +353,19 @@ git commit -m "type(scope): description"
 
 | # | 铁律 | 违背后果 |
 |:-:|:-----|:---------|
-| 1 | **Step 1-7 顺序不可颠倒** | 跳过需求确认就写代码 = 返工 |
+| 1 | **Step 0-7 顺序不可颠倒** — 先 SDD 定义再写代码 | 方向不对白做、主人纠正 → 信任下降 |
 | 2 | **没有测试就不准写代码**（TDD） | 代码不可维护、回归风险 |
 | 3 | **没有自检就不准汇报** | 主人发现遗漏→信任下降 |
-| 4 | **代码改了文档必须同步** | 下次决策基于过时信息 |
+| 4 | **代码改了文档必须同步** — 每个 Story 完成后立即更新其 status 和 AC | 文档漂移 → 下次决策基于过时信息 |
 | 5 | **每个原子 Task 独立 git commit** | 无法回滚、无法追溯 |
-| 6 | **每次开发完成后同步 project-state.yaml** | 状态机与开发实际脱节 (unified-state-machine skill) |
+| 6 | **源码必须在项目 git 仓库中管理**，部署目录通过安装脚本复制 | 代码丢失、无法版本管理 |
+| 7 | **实施后立即更新文档状态** — 不等最后一起做 | 所有 Story 停留在 draft → 需要额外的「对齐文档」步骤 |
 
 ---
 
 ## 🔗 与本 skill 链中其他 skill 的关系
 
-```
+```text
 主人说「开始开发」
     ↓
 development-workflow-index  ← 决策树：选哪条路？
@@ -313,6 +373,7 @@ development-workflow-index  ← 决策树：选哪条路？
 sdd-workflow              ← Spec 门禁：有批准吗？
     ↓ 已批准
 本 skill                  ← 通用开发工作流：7 步实施
+    ├── Step 0: SDD 门禁（先定义，再实施）
     ├── Step 5 自动触发 QA 门禁
     │   └── generic-qa-workflow ← L0-L4 分层检查
     ↓ 完成

@@ -1,7 +1,7 @@
 ---
 name: night-study-engine
 description: "🌙 夜间自习引擎 v3.0 — 自驱动学习系统。融合 learning-workflow v5.x 迭代循环架构 + learning v2.8 经验提取。涵盖三层迭代循环、递进质量评分、概念关系图谱、自适应调度、子代理仲裁、经验提取管线。"
-version: 3.5.0
+version: 3.7.0
 triggers:
   - 夜间学习
   - night study
@@ -141,7 +141,7 @@ metadata:
 ### 1.1 每轮学习流程（集成反射门禁）
 
 ```text
-STEP 0: 选择领域（select_domain.py 自适应调度）
+STEP 0: 选择领域（select_domain.py 自适应调度）→ 先运行 `config-drift-check.py` 验证数据一致性
   ↓
 STEP 1: 知识图谱分析（拆分复杂主题）
   ↓
@@ -288,6 +288,8 @@ domain.score = (
 - 高优先级 + 低新鲜度 → 该学了
 - 低质量分 + 低新鲜度 → 质量差的需要更频繁学
 - 连续失败 → 惩罚权重，避免在困难领域浪费太多轮次
+
+**⚠️ 已知局限**：当前调度算法未考虑「到期概念数」（review backlog pressure）。当某领域有大量到期概念（≥15）而其他领域刚学过时，调度器可能推荐不理想。执行者应在领域选择时交叉检查 KB 到期概念数，必要时用 `--skip` 跳过调度器推荐。详见 `references/review-backlog-scheduling.md`。
 
 **⚠️ 补充：Session 疲劳因子** — 当同一领域在单日内已被学习 ≥2 次时，再次选择的边际收益递减。可在调度器中手动降权（不硬编码，由执行者判断）：
 - 今日已有 2 session → 搜索策略切换到边缘狩猎（见 `references/high-density-domain-strategy.md`）
@@ -494,7 +496,7 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
         ├── references/
 │   ├── references/quality-scoring-guide.md          # 质量评分细则（含递进规则）
 │   ├── references/agentic-km-concepts-2026.md       # Agentic KM 概念速查（2026-05-11, 持续更新）
-│   ├── references/high-density-domain-strategy.md   # 高密度领域边缘狩猎策略（2026-05-12）
+│   ├── references/high-density-domain-strategy.md   # 高密度领域边缘狩猎策略（2026-05-15, 跨会话概念重复坑）
 │   ├── references/cron-tavily-quota-strategy.md     # Tavily 配额降级策略（2026-05-12）
 │   ├── references/cron-execution-pattern.md         # 安全扫描器感知的 cron 执行模式（v3.3）
 │   ├── references/multi-topic-broad-search-strategy.md # 多主题广度域并行搜索（2026-05-13）
@@ -504,6 +506,7 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │   ├── references/freshness-scoring-four-dimensions.md # 四维新鲜度评分矩阵
 │   ├── references/research-session-patterns.md      # 研究型会话模式（R2 绕过策略）
 │   ├── references/hermes-contextk8s-mapping.md      # Hermes ↔ Context K8s 7 服务映射（2026-05-14）
+│   ├── references/review-backlog-scheduling.md       # 复习积压调度信号 — 到期概念数作为调度因子（2026-05-15）
 │   ├── templates/
 │   │   └── kb-update-pattern.py                     # KB 批量更新 Python 模板
 │   └── scripts/
@@ -511,7 +514,8 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │       ├── discover_domains.py                      # 领域发现器 v3.0
 │       ├── update_knowledge_base.py                 # 知识库更新器 v3.0（含关系图谱）
 │       ├── adaptive_scheduler.py                    # 自适应调度引擎 v3.0
-│       └── experience_extractor.py                  # 经验提取器 v3.0
+│       ├── experience_extractor.py                  # 经验提取器 v3.0
+│       └── config-drift-check.py                     # Config-KB 漂移检测+质量分数格式修复 (v3.6)
 ```
 
 ---
@@ -687,6 +691,46 @@ STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
     - **推荐工作流**：对所有 KB JSON 的结构性修改（添加 session_log、更新 last_updated、批量改概念），优先使用 `execute_code` 执行 Python dict 操作（见 `templates/kb-update-pattern.py`），避免 `patch` 的 JSON 语义损失风险。仅对简单的单一字符串替换（如 notes 内的小改动）使用 `patch`，且每次验证。
     - **和现有红标 #19 的关系**：#19 覆盖 `terminal` 中 CJK Unicode 参数被安全扫描器阻塞的问题（工具调用层面）；本条目覆盖 `patch` 工具的 JSON 语义损失问题（数据完整性层面）。两者是独立且正交的陷阱。
 
+### v3.7 新增 — 实践教训（来自 2026-05-15 实测：dev_tools L1 批量复习）
+
+28. ❌ **KB session_log 字段类型不一致导致分析报错** — 当 `execute_code` 分析 KB 的 `session_log` 时，`concepts_updated` 字段在某些条目中存储为 `int`（如 `0`）而非 `list`（如 `[]`），导致 `TypeError: object of type 'int' has no len()`。历史 session 可能因各种原因写入错误类型的数据。
+    - **影响**：分析脚本在遍历 session_log 时崩溃，阻止后续步骤（如 avg_quality 计算、状态报告生成）。
+    - **检测**：在读取 session_log 前做类型防御：
+      ```python
+      cu = s.get("concepts_updated", [])
+      if not isinstance(cu, list):
+          cu = []  # 防御：非 list 视为空
+      ```
+    - **预防**：写入 session_log 时始终使用统一格式：
+      ```python
+      session_entry = {
+          "new_concepts_added": list(new_names),         # 确保是 list
+          "concepts_updated": list(updated_names),        # 确保是 list
+          "quality_score": int(quality_score),            # 统一 int (0-100)
+          # ...
+      }
+      ```
+    - **修正**：遍历所有 KB JSON 的 session_log，找出并修复字段类型不一致的条目。建议一次性修复脚本：
+      ```python
+      for domain_file in kb_dir.glob("*.json"):
+          kb = json.load(open(domain_file))
+          fixed = False
+          for s in kb.get("session_log", []):
+              for field in ["new_concepts_added", "concepts_updated"]:
+                  if field in s and not isinstance(s[field], list):
+                      s[field] = [] if s[field] in (None, 0, "") else [str(s[field])]
+                      fixed = True
+          if fixed:
+              json.dump(kb, open(domain_file, "w"), ensure_ascii=False, indent=2)
+      ```
+
+29. ❌ **调度器忽视「到期概念数」导致推荐过时领域** — `select_domain.py`/`adaptive_scheduler.py` 使用 `priority × freshness_weight × (1-freshness) + (1-perf_weight) × (1-avg_quality)` 公式计算调度分，但未考虑 KB 中到期概念的数量。这导致刚学过的领域（high priority + low freshness since recently consumed）可能被再次推荐，而积压大量到期概念的领域（high freshness = 大部分内容已过时但未被标记）却被跳过。
+    - **实际案例**：2026-05-15 06:00，ai_tech（2h 前学过，Q=88，0 到期）被推荐，dev_tools（22h 前学，30 到期）分数低。
+    - **缓解策略 A（推荐）**：在 KB 更新时将到期概念数同步到配置的 `learning_history` 中，作为人工参考信号。然后在领域选择时辅以经验规则：到期概念 ≥ 15 且 priority ≥ 0.5 的领域应优先于 2 小时内刚学过的领域。
+    - **缓解策略 B**：自主降级调度器推荐——用 `--skip` 跳过推荐领域，选择到期概念更多的领域。
+    - **详细策略**：见 `references/review-backlog-scheduling.md`。
+    - **⚠️ 如果跨域引用已经存在 `due_concepts_count` 缓存字段**（当前 KB JSON 中没有），优先使用缓存值而非全量扫描 KB JSON。否则先 `execute_code` 快速计算到期数。
+
 ### v4.0 新增 — 实践教训（来自 2026-05-14 实测：Config/KB 配置漂移导致调度器推荐错误）
 
 27. ❌ **Config/KB 配置漂移 — 调度器基于过期配置数据推荐最近刚学过的领域** — `select_domain.py`/`adaptive_scheduler.py` 使用 `night_study_config_v2.json` 中的 `learning_history` 字段计算调度分，但实际学习质量数据存储在 `knowledge_base/{domain}.json` 的 `session_log` 中。当配置未随 KB 同步更新时，调度器会基于错误数据推荐领域。
@@ -695,32 +739,13 @@ STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
 
     **根因**：KB 更新脚本（`update_knowledge_base.py` 或手动 `execute_code`）更新了 `session_log` 和 `concepts`，但从未同步 `learning_history` 到配置文件。配置是领域选择的唯一输入，但 KB 是事实来源——两者不同步导致调度混乱。
 
-    **检测命令**（每次学习开始前运行，特别是调度器推荐结果存疑时）：
+    **⚠️ 前置检查：质量分数格式** — 在对比配置和 KB 之前，必须先检查 KB 中 `quality_score` 的格式是否统一。0-1 浮点格式和 0-100 整数格式混合会导致 avg_quality 计算严重偏差（偏差可达 60+ 分）。详见 Red Flag #26。
+
+    **检测命令**（每次学习开始前运行，特别是调度器推荐结果存疑时）：使用专用脚本：
     ```bash
-    python3 -c "
-    import json
-    config = json.load(open('$HOME/.hermes/config/night_study_config_v2.json'))
-    for d in config['domains']:
-        uid = d['id']
-        kb_path = f'$HOME/.hermes/night_study/knowledge_base/{uid}.json'
-        import os
-        if not os.path.exists(kb_path):
-            continue
-        kb = json.load(open(kb_path))
-        cfg_sessions = d.get('learning_history', {}).get('total_sessions', 0)
-        kb_sessions = len(kb.get('session_log', []))
-        if cfg_sessions != kb_sessions:
-            print(f'⚠️ {uid}: config sessions={cfg_sessions} vs KB sessions={kb_sessions} (DRIFT)')
-        cfg_quality = d.get('learning_history', {}).get('avg_quality', 0)
-        if kb_sessions > 0:
-            actual_quality = sum(s.get('quality_score', 0) for s in kb.get('session_log', [])) / kb_sessions
-            # normalize if stored as 0-1
-            if actual_quality < 1:
-                actual_quality *= 100
-            if abs(cfg_quality * 100 - actual_quality) > 10:
-                print(f'⚠️ {uid}: config avg_quality={cfg_quality} vs KB actual avg={actual_quality:.1f} (DRIFT)')
-    "
+    python3 ~/.hermes/skills/night-study-engine/scripts/config-drift-check.py
     ```
+    该脚本同时检查质量分数格式一致性和 Config-KB 漂移，支持 `--fix-format`（只修格式）和 `--fix-all`（全量同步）。
 
     **修正工作流**：
     1. 检测到漂移时，从 KB 的 `session_log` 重新计算实际统计数据

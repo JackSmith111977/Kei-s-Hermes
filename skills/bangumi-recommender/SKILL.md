@@ -1,7 +1,7 @@
 ---
 name: bangumi-recommender
 description: "Bangumi API integration for anime recommendation, calendars, and search."
-version: 1.1.0
+version: 1.2.0
 triggers: ["番剧推荐", "新番", "Bangumi", "Anime", "番组表"]
 metadata:
   hermes:
@@ -33,7 +33,7 @@ metadata:
 
 ## 📅 2026 年新番与 ACG 资讯
 
-> 最后更新：2026-05-08（凌晨自习自动更新）
+> 最后更新：2026-05-15（凌晨自习自动更新）
 
 ### 2026 春季番 (Spring 2026, 4月开播)
 
@@ -278,6 +278,16 @@ FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑
 
 ---
 
+### 🍂 2026 年秋季番 (Fall 2026)
+
+| 作品 | 工作室 | 备注 |
+|------|:------:|:-----|
+| **Dragon Ball Super: Beerus** | 东映动画 | 增强版：新加+重绘镜头、重构叙事，鸟山明原案 |
+| **Jujutsu Kaisen Season 3** | MAPPA | Culling Game 篇（待确认） |
+| **Frieren: Beyond Journey's End Season 2** | Madhouse | 黄金乡篇（待确认） |
+
+---
+
 ### 📅 2027 年重点项目预告
 
 | 作品 | 开播时间 | 工作室 | 类型 | 备注 |
@@ -312,3 +322,41 @@ FromSoftware 与母公司 Kadokawa 公布了 2026 年多个重要企划里程碑
 #### 🌟 Re:ZERO S4 Recapture Arc 8月12日开播
 - 年中排名：Frieren S2 与 JJK S3 并列 Winter 2026 #1
 - Witch Hat Atelier 领跑 Spring 2026
+
+---
+
+### 🔥 5月14-15日 追加新闻
+
+#### 🎬 Mebius Dust — 動画工房原创 7月开播（May 14）
+- **制作**: 動画工房 (Doga Kobo) | **导演**: 岩崎太郎（《一周的朋友》）
+- **系列构成**: 冨田頼子（《更衣人偶坠入爱河》）
+- **原作**: 品川はじめ的 Project ANIMA 大奖作品（2019年'儿童与游戏动画'类别大赏）
+- **声优**: 竹中悠人（阿基拉）、稗田宁宁（ステラ）、佐藤はるか（オルガ）
+- **OP**: Leo Ieiri「Mebius」
+- **首集预告**: YouTube 发布 Episode 1 开场片段
+
+#### 🐉 Dragon Ball Super: Beerus — 秋季增强版（May 2026）
+- **重启形式**: 《Dragon Ball Super: Beerus》——鸟山明原案·角色设计
+- **增强版**: 大量新加和重绘镜头、重构叙事
+- **时间线**: 魔人布欧战后数年，破坏神比鲁斯苏醒
+- **意义**: 龙珠超系列全新开端
+
+#### 📖 Black Clover 漫画正式完结（May 2026）
+- **确认**: 2026年5月《黑色五叶草》漫画正式完结
+- **来源**: Anime News Network 5月新闻汇总确认
+
+#### 🎨 Wistoria: Wand and Sword S2 — 新章'塔'篇（May 11）
+- **Ep18**: 本周日 Crunchyroll 上线
+- **新剧情**: 毕业后的Will踏入塔中——神秘仪式「Blooming」(ブラム)揭示制度真相：无派阀者将作为齿轮终生支撑塔的运作
+- **Staff**: 总监督吉原達矢（链锯人 蕾塞篇）、监督中野英明
+- **动画制作**: BN Pictures × Actas
+
+#### 🌟 Dragon Ball Super: Beerus Added to Fall 2026
+- 鸟山明原案·角色设计的龙珠超增强版《Dragon Ball Super: Beerus》宣布秋季开播
+
+#### 🏆 Witch Hat Atelier — Spring 2026 中季评分官方确认（May 2026）
+- **Crunchyroll**: 4.9 / 5.0（近乎完美）
+- **MyAnimeList**: 8.75 / 10.0
+- **第5话龙之序列**: 社交媒体病毒式传播，成为该季最大话题
+- **Bug Films 幕后**: 耗时4年制作，导演渡边步称其为"鲁莽的挑战"
+- **剧情深化**: Brimmed Caps (つばあり帽) 登场引入意识形态冲突和更高风险

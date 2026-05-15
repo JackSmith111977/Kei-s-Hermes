@@ -507,6 +507,15 @@ terminal(command="tmux send-keys -t frontend 'Here is the API schema from the ba
 # Resume most recent session
 terminal(command="tmux new-session -d -s resumed 'hermes --continue'", timeout=10)
 
+---
+
+## 📚 Reference Files
+
+| 文件 | 内容 |
+|:-----|:------|
+| `references/hermes-plugin-patterns.md` | Hermes 插件开发模式 — 目录结构、register() hook 注册、连字符目录导入、可用 hooks API。创建新 Hermes 插件时参考。 |
+| `references/hermes-hooks-api.md` | Hermes 完整 hooks API — 所有 hook 的回调签名、参数说明、返回值规范。开发插件时查阅具体 hook 参数。 |
+
 # Resume specific session
 terminal(command="tmux new-session -d -s resumed 'hermes --resume 20260225_143052_a1b2c3'", timeout=10)
 ```
@@ -711,3 +720,130 @@ Types: `fix:`, `feat:`, `refactor:`, `docs:`, `chore:`
 - Use `get_hermes_home()` from `hermes_constants` for all paths (profile-safe)
 - Config values go in `config.yaml`, secrets go in `.env`
 - New tools need a `check_fn` so they only appear when requirements are met
+
+---
+
+## Plugin Development
+
+Hermes plugins live in `~/.hermes/hermes-agent/plugins/<name>/`. They are auto-discovered by the plugin manager at startup. Use plugins to add hooks, slash commands, tools, or platform adapters without modifying core code.
+
+### Anatomy of a Plugin
+
+Every plugin needs two files:
+
+```
+plugins/<name>/
+├── plugin.yaml          # Plugin manifest (required)
+├── __init__.py          # Entry point + register(ctx) (required)
+├── client.py            # Optional supporting modules
+└── tests/
+    └── test_plugin.py   # Tests (strongly recommended)
+```
+
+**`plugin.yaml`** — metadata and hook declarations:
+
+```yaml
+name: my-plugin
+version: 1.0.0
+description: "What this plugin does, in one sentence."
+author: "Your Name"
+hooks:
+  - pre_llm_call
+```
+
+**`__init__.py`** — entry point with a module-level `register(ctx)` function:
+
+```python
+from __future__ import annotations
+import logging
+logger = logging.getLogger("my-plugin")
+
+def _on_pre_llm_call(messages, session_id, **kwargs):
+    """Hook callback — return {"context": str} to inject into user_message."""
+    try:
+        if not messages or not isinstance(messages, list):
+            return None
+        last = messages[-1]
+        if not isinstance(last, dict) or last.get("role") != "user":
+            return None
+        text = last.get("content", "")
+        if not text or not isinstance(text, str):
+            return None
+        # Your logic here (e.g., query external service)
+        return {"context": "Injected context"}
+    except Exception:
+        logger.warning("pre_llm_call failed", exc_info=True)
+        return None
+
+def register(ctx) -> None:
+    ctx.register_hook("pre_llm_call", _on_pre_llm_call)
+    logger.info("my-plugin registered (v1.0.0)")
+```
+
+### Available Hooks
+
+Defined in `hermes_cli/plugins.py` → `VALID_HOOKS`:
+
+| Hook | Timing | Callback kwargs | Return value |
+|------|--------|----------------|--------------|
+| `pre_llm_call` | Before each LLM call | `messages, session_id, **kwargs` | `{"context": str}` / None |
+| `pre_tool_call` | Before each tool execution | `tool_name, args, task_id, session_id, tool_call_id` | `{"action": "block", "message": str}` / None |
+| `post_tool_call` | After each tool execution | `tool_name, args, result, task_id, session_id` | None (observer only) |
+| `on_session_start` | When a session starts | `session_id, **kwargs` | None |
+| `on_session_end` | When a session ends | `session_id, **kwargs` | None |
+| `post_llm_call` | After each LLM response | `messages, response, session_id, **kwargs` | None |
+| `pre_api_request` | Before external API call | `provider, model, **kwargs` | None |
+
+Full list: `grep "VALID_HOOKS" ~/.hermes/hermes-agent/hermes_cli/plugins.py`
+
+### Key Patterns
+
+**Context injection** (`pre_llm_call`): Return `{"context": "text..."}` and Hermes injects it into the current turn's user message. The system prompt stays unchanged (preserves prompt cache). Use for SRA recommendations, memory recall, etc.
+
+**Blocking a tool** (`pre_tool_call`): Return `{"action": "block", "message": "reason"}` to prevent a tool from executing. The first blocking return wins. Use for security policies, rate limiting, approval flows.
+
+**Registering slash commands**: Use `ctx.register_command("name", handler=callable, description="...")`. The handler receives parsed argv and returns a string response.
+
+### Testing Plugins
+
+Since plugin directories use hyphens (e.g., `my-plugin`), Python can't import them by name directly. Use `importlib.util.spec_from_file_location()`:
+
+```python
+import importlib.util
+from pathlib import Path
+
+PLUGIN_DIR = Path(__file__).resolve().parents[1]
+
+def _load_plugin():
+    init_path = PLUGIN_DIR / "__init__.py"
+    spec = importlib.util.spec_from_file_location("my_plugin", init_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+class MockContext:
+    def __init__(self):
+        self.hooks = {}
+        self.commands = {}
+    def register_hook(self, name, cb):
+        self.hooks.setdefault(name, []).append(cb)
+    def register_command(self, name, handler, description=""):
+        self.commands[name] = {"handler": handler, "description": description}
+
+def test_register():
+    mod = _load_plugin()
+    ctx = MockContext()
+    mod.register(ctx)
+    assert "pre_llm_call" in ctx.hooks
+```
+
+### Pitfalls
+
+| Pitfall | Symptom | Fix |
+|---------|---------|-----|
+| **Hyphenated directory** | `ModuleNotFoundError` importing plugin | Use `importlib.util.spec_from_file_location()` — never `import module-name` |
+| **Relative imports broken in tests** | `ImportError: attempted relative import beyond top-level package` | Run tests from the plugin directory (`cd plugins/my-plugin && pytest`) or manipulate `sys.path` |
+| **Silent hook failure** | Hook never fires but no error | Check `plugin.yaml` declares the hook in `hooks:` list — without it, the plugin manager doesn't subscribe |
+| **`register()` not called** | Plugin appears in `list_plugins` but hooks don't fire | Verify `register` is a **module-level function** (not a class method) — the plugin manager calls `register(ctx)` on the module |
+| **`httpx` not available** | HTTP calls silently fail in bare `python3` | Always use the Hermes venv: `~/.hermes/hermes-agent/venv/bin/python3` or activate the venv |
+| **Daemon-mode debugging** | Plugins behave differently in gateway vs CLI | Gateway runs in a subprocess — `logger` output goes to `gateway.log`, not stdout. Check logs there. |

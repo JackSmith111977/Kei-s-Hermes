@@ -1,7 +1,7 @@
 ---
 name: sra-dev-workflow
 description: "SRA 项目开发工作流 — 版本管理(setuptools-scm) + CI/CD(GitHub Actions) + Reality Check 门禁 + doc-alignment 全生命周期。SRA 开发任务的强制流程。"
-version: 1.3.0
+version: 1.5.0
 triggers:
   - sra 开发
   - sra 版本
@@ -237,6 +237,71 @@ for s in stories:
 ```
 
 **经验法则**：看到「全部完成」标记时，**必须先验证验收标准完成率**。如果完成率 <80%，这个标记不可信。
+
+### ⚠️ 陷阱 9：跨项目 AC 验证盲区 — 文档标记 ✅ 但代码从未存在
+
+**问题**：EPIC 中某些 AC 涉及「与其他项目的集成」（如「Hermes pre_tool_call hook 集成」）。这类 AC 标记 ✅ 可能只意味着「本项目的代码写完了」，**但目标项目（另一代码库）从未被修改**。
+
+**实际案例（2026-05-15 发现）**：
+```text
+SRA EPIC-003 Story 1 的 AC: "Hermes pre_tool_call hook 集成"
+标记: ✅
+
+实际检查 Hermes 代码库:
+  ❌ plugins/sra-guard/ — 不存在
+  ❌ model_tools.py 中 SRA 引用 — 零
+  ❌ hermes_cli/plugins.py 中 sra hook 注册 — 零
+
+结论: SRA 侧的 /validate 端点写完了，但 Hermes 侧从未创建插件
+```
+
+**根因分析**：
+
+| # | 原因 | 说明 |
+|:-:|:-----|:------|
+| 1 | **AC 审计只检查文档标记** | `ac-audit.py` 扫描 `[x]` 标记统计完成率，无法检测「文档勾了但代码没有」 |
+| 2 | **跨项目 AC 没有责任人** | 集成 AC 涉及两个项目，但谁也不负责验证对方侧是否完成 |
+| 3 | **验收标准不包含外部验证步骤** | 集成 AC 的验收步骤应包含「在外部项目中搜索 / 测试特定代码存在」 |
+| 4 | **`sra install hermes` 是打印语句** | CLI 声称「安装到 Hermes」但实际上只打印说明，不执行任何操作 |
+
+**检测方法**（在开发/提交前运行）：
+
+```bash
+# 方法 1: 检查 EPIC AC 中涉及外部项目的代码存在性
+# 从 AC 文本中提取外部项目引用，在对应项目中搜索
+echo "=== 检查跨项目 AC 实现 ==="
+grep -n "Hermes.*hook\|run_agent\|hermes.*plugin\|sra-guard" docs/EPIC-*.md | while read line; do
+    echo "📄 $line"
+done
+
+# 方法 2: 手动验证关键集成点
+# 对于「Hermes pre_tool_call hook 集成」这种 AC：
+# → 检查 ~/.hermes/hermes-agent/plugins/ 目录是否有 sra-guard
+# → 检查 ~/.hermes/hermes-agent/hermes_cli/plugins.py 中是否有 sra 注册
+
+# 方法 3: 在目标项目中搜索特定 API 调用
+grep -rn "sra\|SRA\|8536\|/validate\|/recommend" ~/.hermes/hermes-agent/ --include="*.py" | head -10
+```
+
+**预防措施**：
+
+1. **AC 验收标准必须包含外部验证步骤**：涉及项目 A→B 集成的 AC，验收标准必须包含「在 B 项目中搜索/验证特定代码存在」
+2. **AC 审计增强为双向检查**：不仅要检查「代码→文档（代码写了但没勾 AC）」，还要检查「文档→代码（AC 勾了但代码不存在）」
+3. **集成测试必须端到端**：不能只测 A 侧能发出请求，必须在 B 侧也验证接收到请求
+4. **`sra install hermes` 必须从 print 升级为真正的安装**：执行实际的文件修改/插件安装
+
+**应对策略**：
+
+```bash
+# 🔴 必做：验收涉及外部项目的 AC 时，逐条在外部项目中验证
+
+# 验证模板：
+# AC: "Hermes pre_tool_call hook 集成"
+# 验证: ls ~/.hermes/hermes-agent/plugins/sra-guard/ 2>/dev/null && echo "✅ 存在"
+# 验证: grep -rn "sra_guard\|SRA.*validate" ~/.hermes/hermes-agent/hermes_cli/ --include="*.py"
+
+# 如果外部项目中没有对应代码 → AC 应标记为 ❌ 未完成
+```
 
 ### 决策矩阵
 
@@ -713,8 +778,10 @@ git push origin v1.4.0
   │
   ├── 🎯 AC 审计 ← 🔴 新增！防止文档漂移
   │   ├── 运行 python3 scripts/ac-audit.py check docs/EPIC-*.md
-  │   ├── 检查是否有「代码已实现但文档未勾选」的 AC
-  │   ├── 如有 → 手动勾选或运行 sync 模式：
+  │   ├── 检查「代码已实现但文档未勾选」的正向漂移
+  │   ├── ⚠️ 还必须检查「文档已勾选但代码未实现」的**逆向漂移**
+  │   │   └── 对每个 ✅ AC，检查对应的代码是否存在（不仅是 SRA 侧，跨项目也要查）
+  │   ├── 如有漂移 → 手动勾选或运行 sync 模式：
   │   │   python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply
   │   └── 确认 dashboard 显示完成率 100%：
   │       python3 scripts/ac-audit.py dashboard docs/EPIC-*.md
@@ -796,6 +863,70 @@ return SkillAdvisor(data_dir=str(tmp_path))  # 没数据，测试无效
 - [ ] 现有测试（`test_matcher.py`、`test_coverage.py`）使用了什么 Fixture 模式？
 - [ ] 是否需要额外从 Hermes 技能中提取新数据？还是现成的 317 个 skill 已足够？
 - [ ] 你的测试是否在本地和 CI 中行为一致？不依赖 `~/.hermes/skills`？
+
+#### ⚠️ 陷阱 11：直接跳进代码，跳过 SDD 定义和文档对齐
+
+**问题**：boku 在 EPIC-004 Phase 0 实施中，写完代码后才被主人纠正「先在 sdd 工作流中定义，对齐文档，再开始实施」。代码已经写完了才补 SDD 文档。
+
+**根因**：
+- 急于产出「可见结果」（代码）而跳过「不可见但重要」的文档工作
+- 认为「分析已经做完了」= 可以直接写代码
+- 低估了「方向对齐」的价值——代码写了如果方向不对，返工成本远高于提前对齐
+
+**后果**：
+- 代码可能做错方向 → 返工
+- 文档与代码脱节 → 下次决策基于过时信息
+- 主人纠正 → 信任下降
+
+**预防规则**：
+```text
+[错误流程]                                   [正确流程]
+    分析报告                                     分析报告
+       ↓                                           ↓
+    ❌ 直接写代码 ← boku 犯的错                 EPIC 文档 ← 先定义
+       ↓                                           ↓
+    主人纠正「先在 SDD 中定义」                  SPEC 文档
+       ↓                                           ↓
+    😓 补文档（滞后，易遗漏）                    Story 文档
+                                                   ↓
+                                                主人批准
+                                                   ↓
+                                                💪 写代码
+```
+
+**自检清单**（开始写代码前问自己）：
+- [ ] 这个任务的 EPIC 文档是否已创建并获批？
+- [ ] 这个任务的 SPEC（Spec）是否已创建并获批？
+- [ ] 这个任务的 Story 是否已创建并获批？
+- [ ] 涉及哪些文档需要同步更新？（INTEGRATION、README、其他 EPIC）
+- [ ] 如果以上任一为「否」→ 🛑 先完成 SDD 定义，再编码
+
+**实例检查**：如果主人说「做了很多但缺文档」或「先在 SDD 中定义」→ 立即停止编码，回头补文档。
+
+### 陷阱 10: 源码直接写入外部项目部署目录
+
+**问题**：boku 在 EPIC-004 Phase 0 实施中，直接将 sra-guard 插件源码创建在 `~/.hermes/hermes-agent/plugins/sra-guard/` 下（即 Hermes 的部署目录），而非 SRA 项目目录 `~/projects/sra/plugins/sra-guard/`。
+
+**后果**：
+- 源码在部署目标中而非项目中 → 无法被 SRA 项目的 git 管理
+- 安装/部署流程不明确 → 别人不知道代码从哪里来
+- Hermes 升级时可能被清理 → 无备份恢复手段
+
+**根因**：开发时只想着「让功能跑起来」而非「源码应该在哪管理」，混淆了「开发位置」和「部署位置」。
+
+**正确做法**：
+```text
+SRA 项目 (源码管理)                →      部署目标 (运行时)
+~/projects/sra/plugins/sra-guard/  →      ~/.hermes/hermes-agent/plugins/sra-guard/
+        ↑                                       ↑
+    git 跟踪                                  install 脚本复制
+```
+
+**预防规则**：
+1. **源码永远在项目目录内** — 项目外的文件只是部署产物，不直接编辑
+2. **部署必须通过脚本** — `bash scripts/install-plugin.sh` 而非手动 cp
+3. **初次创建先问自己**：这个文件应该属于哪个 git 仓库？
+4. **如果已经有代码在部署目录了**：`cp -r` 移回项目目录 → `rm -rf` 清理 → 创建安装脚本 → 通过脚本部署
 
 ### ⚠️ 陷阱：幻觉文件存在
 

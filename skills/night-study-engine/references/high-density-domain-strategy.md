@@ -120,7 +120,47 @@ if mastered >= total * 0.6:
 
 **🆕 开放问题更新**：如果新发现回答了开放问题，在 KB 更新时同步修改 `open_questions` 数组中的对应条目。
 
+### ⚠️ 跨会话概念重复（新增坑 — 2026-05-15 ai_tech 实测）
+
+边缘狩猎可能由多个 cron 轮次独立运行。**概念可能已被同一日的其他会话添加**。本会话中就出现了 `openai_daybreak` 已存在的情况。
+
+| 问题 | 表现 | 影响 |
+|:----|:-----|:-----|
+| **概念重复** | 尝试添加 `openai_daybreak` 但 KB 中已存在（置信度 0.85, monitoring 状态） | `already_exists` — 跳过新增，浪费一次工具调用 |
+| **信息丢失** | 本会话发现的新信息（Daybreak 三层模型、8 家合作伙伴）未合并到已有概念 | 重要信息散落在不同会话中，旧概念 notes 未更新 |
+| **状态不一致** | 旧概念 `monitoring`（未 mastering），但新信息已足够支撑 mastering | mastering 进度被拖延 |
+
+**缓解策略**：
+
+```python
+# 添加概念前检查是否已存在
+if name in kb["concepts"]:
+    # 不跳过 —— 检查是否有新信息需要补充
+    existing = kb["concepts"][name]
+    new_info = {...}  # 你发现的新信息
+    if "关键新信息" not in existing.get("notes", ""):
+        existing["notes"] += "\n[跨会话补充] " + new_info
+        existing["confidence"] = min(1.0, existing.get("confidence", 0.5) + 0.05)
+        print(f"🔄 扩展已有概念: {name}（追加跨会话发现）")
+    else:
+        print(f"⏭️  已有概念 {name} 已包含最新信息")
+else:
+    kb["concepts"][name] = new_concept_data
+```
+
+**根因**：同一领域被多个 cron 轮次调度（如 ai_tech 每 2 小时可调度一次），搜索词可能在不同轮次命中相同的「新发表事件」。第一次添加后，第二次再搜到同一事件时会尝试重复添加。
+
+**预防**：KB 更新前先 `name in kb["concepts"]` 检查，对已存在概念采用「追加 notes」而非「跳过」策略。这样跨会话发现的信息能自然合并到同一个概念条目中。
+
+---
+
 ## 实战验证
+
+### ai_tech 领域 (2026-05-15) — 🆕 跨会话概念重复验证
+- 已有概念: 66, mastered: 85%, 今日 session: 第 1 轮
+- 搜索发现: OpenAI Daybreak（但概念已存在）, Cisco Foundry（新）, SAP+Anthropic（新）, Gemini 3.2 Flash leak（新）, Gemini Omni（新）
+- 处理: 4 新概念 + 4 已存在概念 notes 扩展 + 2 到期复习
+- Q=86, 跨会话重复捕获并正确处理
 
 ### dev_tools 领域 (2026-05-12)
 - 已有概念: 92, mastered: ~60%, 今日 session: 3

@@ -1,6 +1,6 @@
 ---
 name: development-workflow-index
-description: "开发工作流索引 — 整合 BMAD Method(团队级)、Superpowers(开发者铁律)、GSD(极简上下文工程) 三大 SDD 框架的最佳实践。提供自适应流程选择决策树，路由到正确的子 skill。任何涉及开发/实现/编码/重构等任务时自动加载。"
+description: "开发工作流索引 — 整合 BMAD Method(团队级)、Superpowers(开发者铁律)、GSD(极简上下文工程) 三大 SDD 框架的最佳实践。提供自适应流程选择决策树，路由到正确的子 skill。内嵌 Workflow Chain Protocol（SPEC→DEV→QA→COMMIT 四段链式衔接），确保工作流阶段之间不跳过门禁。任何涉及开发/实现/编码/重构/继续/推进等任务时自动加载。"
 version: 2.0.0
 triggers:
   - 开发工作流
@@ -18,6 +18,14 @@ triggers:
   - sdd
   - SDD 框架
   - 索引
+  - 继续
+  - 继续开发
+  - phase
+  - 下一阶段
+  - 推进
+  - 工作流链
+  - workflow chain
+  - chain
 author: Emma (小玛)
 license: MIT
 metadata:
@@ -537,6 +545,7 @@ depends_on:
 | **9** | **没验证代码现实就信文档 → 分析误差** | Hermes SRA | 基于过时断言做计划→方向偏航 |
 | **10** | **没检查已有测试基础设施就写测试 → 碎片化** | Hermes SRA (Sprint 20) | 重复造轮、CI 环境差异、测试数据不真实 |
 | **11** | **没批准 Spec 就写代码 → Vibe Coding** | SDD 元研究 (2026-05-11) | 方向不对白做、上下文丢失、不可审计 |
+| **12** | **阶段间 gate 不通过就推进 → 工作流跳过** | Workflow Chain (2026-05-14) | SPEC未完成就开发 → 无上下文；DEV未测试就QA → 假阳性；QA未通过就提交 → 质量下降 |
 
 > **铁律 #10 详解**: 在任何项目中写新测试前，必须先做「测试模式发现」:
 > 1. 扫描 `tests/` 下已有文件的 Fixture 引用模式（`grep -rn "FIXTURES_DIR\|fixtures/" tests/`）
@@ -829,6 +838,16 @@ depends_on:
 | `doc-alignment` | 文档对齐协议（含 project-report.json 数据驱动管理） |
 | `sprint-planning` | Sprint 规划方法论（Reality Check 是前置步骤） |
 
+## 📚 参考深度阅读
+
+| 文件 | 用途 |
+|:-----|:------|
+| `references/sdd-maturity-guide.md` | SDD 三大框架对比 + 成熟度模型 |
+| `references/sra-audit-recipe.md` | SRA 四层并行审计配方 |
+| `references/python-ci-cd-patterns.md` | CI/CD 配置模式 + 常见问题排查 |
+| `references/skill-finder-recovery.md` | **skill_finder.py 91-byte stub 恢复指南** |
+| `references/workflow-enforcement-research.md` | **业界方案汇总（ToolGuards/MI9/Claude Hooks 等推模式门禁研究）** |
+
 ## 十三、来源与参考 📚
 
 | 框架 | 来源 | 版本 |
@@ -850,8 +869,125 @@ depends_on:
 
 ---
 
+## 十四、Workflow Chain Protocol 🚦 — 工作流链式衔接
+
+> **核心理念**: 三阶段（SDD→DEV→QA）不是孤立的文档，而是**可执行的状态链**。每个阶段之间的 transition 必须通过 gate 检查，防止凭感觉跳过。
+
+### 14.1 链定义
+
+```
+┌──────────┐    Gate: spec    ┌──────────┐    Gate: tests   ┌──────────┐    Gate: QA     ┌────────┐
+│  SPEC    │─── approved ──▶│  DEV     │─── all pass ──▶│  QA      │─── L0-Lx ok ──▶│ COMMIT │
+│  sdd-    │    + chain      │  generic-│    + chain     │  generic-│    + chain     │ 对齐+  │
+│  workflow│    advance      │  dev     │    advance     │  qa      │    advance     │ 提交   │
+│  spec-   │                 │  -work   │                │  -work   │                │        │
+│  state.py│                 │  -flow   │                │  -flow   │                │        │
+└──────────┘                 └──────────┘                └──────────┘                └────────┘
+     ↑                            ↑                           ↑
+  chain-state.py             Step 5 自动                  chain-state.py
+  advance → gate             QA 门禁嵌入                  advance → gate
+```
+
+**实现文件**（项目根目录）:
+| 文件 | 用途 |
+|:-----|:------|
+| `scripts/chain-state.py` | 链状态机 — `start/advance/status/check/reset` |
+| `scripts/chain-gate.py` | 门禁检查器 — `check_spec/check_dev/check_qa/check_commit` |
+| `scripts/phase-gate.py` | Phase 门禁 — 检查 Epic Phase 是否按顺序推进 |
+| `docs/workflow-chain.yaml` | 链定义配置（stages/gates/hooks） |
+| `docs/chain-state.json` | 链状态持久化（chain-state.py 自动管理） |
+
+### 14.2 使用方式
+
+```bash
+# 1. 启动链（从 SPEC 开始）
+python3 scripts/chain-state.py start EPIC-004 SPEC
+
+# 2. 查看链状态
+python3 scripts/chain-state.py status EPIC-004
+
+# 3. 推进到下一阶段（自动跑 gate）
+python3 scripts/chain-state.py advance EPIC-004
+
+# 4. 强制推进（跳过 gate，仅调试用）
+python3 scripts/chain-state.py advance EPIC-004 --force
+
+# 5. 单独检查 gate
+python3 scripts/chain-gate.py check_spec STORY-4-6
+python3 scripts/chain-gate.py check_qa
+
+# 6. 查看所有活跃链
+python3 scripts/chain-state.py list
+
+# 7. Phase 门禁（Epic 内阶段推进）
+python3 scripts/phase-gate.py start EPIC-004 Phase-2
+python3 scripts/phase-gate.py list EPIC-004
+```
+
+### 14.3 自动钩子
+
+| 过渡 | Gate 检查 | 通过后自动 |
+|:-----|:----------|:-----------|
+| SPEC→DEV | Story 已批准 | 加载 `generic-dev-workflow` |
+| DEV→QA  | 测试全绿 + self-review | 加载 `generic-qa-workflow` |
+| QA→COMMIT | 交叉引用 + 项目状态一致 | 加载 `generic-dev-workflow` Step 7 |
+
+### 14.4 铁律
+
+- 🔴 **P0**: 没有通过 gate 就进入下一阶段 = 工作流跳过 = 需回退
+- 🔴 **P0**: SDD 未批准就写代码 = 先创建 Spec 送审
+- 🔴 **P1**: `chain-state.py advance` 必须在每个阶段完成后执行
+- 🔴 **P1**: Phase gate 禁止跳过未完成的 Phase（如 Phase-0 未完成就进 Phase-2）
+
+### 14.5 与 SRA 的关系
+
+SDD/DEV/QA workflows 的 triggers 已补充延续关键词（`继续` `phase` `下一阶段` `continue`），确保用户说「继续」时 SRA 能推荐对应 workflow。如果 SRA 未推荐：
+1. 检查 `sra coverage | grep <skill>` → `covered=true`？
+2. 运行 `sra refresh` 刷新索引
+3. 如果 skill 是新建或刚修改 triggers → 需要 refresh 才能生效
+
+---
+
+## 十五、常见陷阱与恢复模式
+
+### 15.1 91-byte 脚本 Stub 腐败（learned 2026-05-14）
+
+**症状**: `skill_finder.py` 或其他 learning-workflow 脚本仅 91 字节，内容只剩 `print(f'{script_name} OK')`。
+**根因**: `write_file` 或 `patch` 操作目标文件时，意外覆盖了核心脚本。
+**检测**: `wc -c ~/.hermes/skills/learning-workflow/scripts/skill_finder.py` → 若为 91 则 stub。
+**恢复**:
+```bash
+# 从 profile 备份复制
+cp ~/.hermes/profiles/research/skills/learning-workflow/scripts/skill_finder.py \
+   ~/.hermes/skills/learning-workflow/scripts/skill_finder.py
+# 或从其他未损坏的 profile
+cp ~/.hermes/profiles/experiment/skills/learning-workflow/scripts/skill_finder.py \
+   ~/.hermes/skills/learning-workflow/scripts/skill_finder.py
+```
+**预防**: 核心脚本 git commit 后不要未经验证的 `write_file` 或 `cp` 覆盖。
+
+### 15.2 SRA 推荐为空（阶段性关键词缺失）
+
+**当用户说「继续」「下一步」「推进」时 SRA 无推荐**：
+- 检查对应 workflow 的 triggers 是否包含延续类关键词
+- 补充后在 SRA 中运行 `sra refresh` 使新 triggers 生效
+- SRA 四维匹配中词法维度占 40%——triggers 是最高效的匹配改进点
+
+### 15.3 工作流链不一致
+
+**症状**: chain-state.json 中的状态与 project-state.yaml 中的 Story 状态不一致。
+**解决**: 
+```bash
+python3 scripts/chain-state.py reset EPIC-004  # 重置链
+python3 scripts/chain-state.py start EPIC-004 SPEC  # 重新开始
+# 然后 chain-state.py advance 逐步推进，确保每步 gate 通过
+```
+
+---
+
 ## 更新记录
 
 | 版本 | 日期 | 变更 |
-|:-----|:-----|:-----|
+|:-----|:-----|:------|
+| 2.1.0 | 2026-05-14 | 新增 §14 Workflow Chain Protocol + §15 常见陷阱与恢复模式 + P0铁律 #12 |
 | 1.2.0 | 2026-05-11 | 新增 §7 Sprint 规划路径 + `sprint-planning` skill 引用 |

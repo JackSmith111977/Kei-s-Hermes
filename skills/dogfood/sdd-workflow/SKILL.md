@@ -77,6 +77,8 @@ depends_on:
   - commit-quality-check
   - sdd-research
   - unified-state-machine
+  - phase-gate
+  - chain-state
 metadata:
   hermes:
     tags:
@@ -333,6 +335,40 @@ phases:
 
 ---
 
+### AC 审计盲点陷阱：只检 [x] 不验代码存在性
+
+- **问题**：`ac-audit.py` 只检查文档中是否存在 `[x]` 标记，**不验证对应的代码是否真实存在**。例如 EPIC-001 的 AC「Hermes pre_tool_call hook 集成」标记为 ✅，但 Hermes 侧代码从未实现。EPIC-003 中 6 个 AC 同样标记 ✅ 但从未实施。
+- **后果**：文档声称「全部完成」，实际集成从未工作。后续开发者基于虚假信息做决策。
+- **根因**：AC 审计工具只做文本模式匹配（`grep '\[x\]'`），无法理解 AC 的语义对应关系。AC 的完成状态是一种「文档声明」，不是「代码验证」。
+- **解决**：
+  1. AC 标记 ✅ 后，必须附加验证方式说明（如「验证: `grep _query_sra_context run_agent.py`」）
+  2. 跨项目 AC（如「Hermes 侧集成」）必须端到端验证，不能只检单侧代码
+  3. 在 AC 旁添加 `<!-- 验证: <具体命令> -->` 注释，方便后续审计
+  4. 对于「已集成」「已部署」类 AC，必须通过 `curl` / `grep` / `pytest` 实际验证
+- **检查清单**：在标记任何 AC 为 ✅ 前，问自己：
+  - [ ] 这个 AC 描述的是代码行为还是文档行为？
+  - [ ] 如果是代码行为，对应的代码文件是否存在？
+  - [ ] 如果是跨系统集成（SRA↔Hermes），两侧代码是否都已实现？
+  - [ ] 有没有办法用命令验证？（`grep` / `curl` / `pytest -k`）
+- **实战案例**：EPIC-004 分析中发现 EPIC-001/003 共 7 个 AC 标记 ✅ 但实际未实现。详见 `docs/EPIC-004.md` 的问题全景章节。
+
+### 定义→对齐→实施顺序陷阱：代码先于文档
+
+- **问题**：在 SDD 流程中，已经创建了 SPEC 和 Story 并获批准后，boku 有时会**直接开始写代码，跳过「文档对齐」步骤**。例如在 EPIC-004 中，将 Plugin 代码写到 `~/.hermes/hermes-agent/plugins/` 后，被主人纠正「应该在 SRA 项目中管理」。
+- **后果**：
+  - 代码在错误的位置 → 需要移动文件 → 额外工作量
+  - 文档未同步 → 文档与代码脱节 → 下次决策基于过时信息
+  - 测试文件路径错误 → 测试失败
+- **根因**：急于交付代码，低估了「先对齐文档再实施」的价值。认为「代码写对了就行，文档后面再改」— 但文档对齐决定了代码放哪里、测试怎么跑、别人怎么用。
+- **解决**：在实施计划（PLAN）阶段就明确：
+  1. **源码管理位置** — 代码在哪个项目的哪个目录下？（不是部署位置）
+  2. **部署位置** — 代码最终在哪里运行？
+  3. **测试位置** — 测试文件放在哪里？
+  4. **文档同步清单** — 哪些文档需要更新？
+  5. 这三个位置在 PLAN 阶段就写入 Task，**先于编码 Task 执行**
+- **铁律**：在 Task 1「创建文件」之前，先确认「文件在哪里创建」并更新对应文档的结构图。源码位置不确认 → 不写第一行代码。
+- **实战案例**：EPIC-004 Phase 0，plugin 代码先写到 `~/.hermes/hermes-agent/plugins/sra-guard/`，被主人纠正后迁移到 `~/projects/sra/plugins/sra-guard/`。如果先在 SPEC 的架构设计部分确认源码位置，可避免返工。
+
 ### 批量创建陷阱：跳过审阅门禁批量写文档
 
 - **问题**：当一个 Epic 有多个 Phase、多个 SPEC 和多个 Story 时（如 EPIC-004 有 4 个 SPEC + 12 个 Story），一次批量创建所有文档，跳过 SPEC_REVIEW 和 STORY_REVIEW 门禁
@@ -374,10 +410,39 @@ phases:
 
 **实战验证**（2026-05-14 cap-pack EPIC-004）：本恢复路径已在实际项目中被主人要求执行并验证有效。回退步骤完整走通，包括 `git checkout --` 恢复 EPIC/YAML/README 修改 + `rm` 删除 16 个未审阅的 SPEC/Story 文件 → 从 CLARIFY 重新开始 → 主人批准后逐阶段推进 → Phase 0 和 Phase 1 均完整通过 SDD 流程。
 
+### 文档元数据同步陷阱：代码完成 ≠ Story/SPEC 元数据完成
+
+- **问题**：SDD 工作流要求 `spec-state.py complete` 更新状态机，也要求 doc-alignment 更新 `project-report.json`，但 **从不要求更新 Story/SPEC/EPIC 的 markdown 文件自身的元数据**（frontmatter 的 `status` 字段、AC 复选框、完成条件清单）。代码全部完成、测试全绿后，这些文件仍停留在 `status: draft`，AC 全部标记为 `[ ]`。
+- **后果**：下次迭代或新开发者查看文档时，看到的 Phase 状态是「全部未完成」。EPIC-004 Phase 0/1/2 共 11 个 Story + 3 SPEC + EPIC + report 全部漂移，主人纠正后才对齐。
+- **根因**：SDD 流程把「文档对齐」等同于「更新 project-report.json 和 HTML」，忽略了 markdown 文件自身的元数据。`spec-state.py complete` 只更新状态机，不修改 markdown 文件内容。
+- **解决**：
+  1. 在 Step 8 COMPLETE 中增加显式的「元数据同步」步骤（见上方修改后的 Step 8）
+  2. Story/SPEC/EPIC 三个层级的文件都要更新，缺一不可
+  3. 批量更新（10+ 文件）用 `execute_code` + Python 脚本，不要逐个 `patch`
+  4. 运行验证命令确认零残留 `[ ]`
+- **检查清单**：在标记 Phase 完成前，问自己：
+  - [ ] 所有 Story 文件的 `status` 是否为 `completed`？
+  - [ ] 所有 Story 文件的 AC 是否已从 `[ ]` 标记为 `[x]`？
+  - [ ] SPEC 文件的 `status` 和完成条件是否已更新？
+  - [ ] EPIC 文件的 `completed_phases` 是否有当前 Phase？
+  - [ ] project-report.json 的 tests/sprint/module 是否同步？
+- **实战案例**：EPIC-004 Phase 0-2 完成后 16 个文档同步更新。详见 `references/phase-completion-checklist.md`。
+
 ### 沟通陷阱：展示范围时只给部分信息
 - **问题**：当主人问「这个 Epic 是什么」或讨论计划时，如果只展示你当前关注的子集（如「Phase 1 有 3 个模块」），主人会以为这就是全部
 - **后果**：主人纠正你「不是只有这些吧？」，降低信任
 - **解决**：永远先展示**全貌**（完整列表/所有 Phase），再聚焦当前讨论的子集。先给全景地图，再放大局部
+
+### 沟通陷阱：跨项目和跨会话上下文丢失
+- **问题**：
+  - 用户说「启动 sdd 工作流」时，boku 默认展示当前项目（如 cap-pack），但用户可能在说另一个项目（如 SRA）
+  - 用户说「刚刚发现的问题」「回到 XX 方向」引用前序会话，但 session_search 可能未命中
+- **后果**：展示了错误项目的状态 → 用户纠正「回到 XX 项目」；找不到前序上下文 → 来回请求用户重述，降低信任
+- **根因**：CLARIFY 阶段缺乏项目上下文确认步骤；跨会话上下文没有自动检索和优雅降级机制
+- **解决**：
+  1. CLARIFY 阶段先问「哪个项目？」或从对话历史推断
+  2. 用户引用前序工作时，先 session_search 检索。结果为空时诚实告知并请用户补充
+  3. 不要假设「当前项目 = 用户说的项目」
 
 ### 工具超时陷阱
 
@@ -397,7 +462,15 @@ phases:
 | `generate-project-report.py` | module_table 通用格式 | **必须**用 `module`/`file`/`desc`/`methods` 字段 | 使用 `id`/`name`/`path`/`lines` 会报 KeyError |
 | `skill-tree-index.py --health` | 预期含 "SQS" 或 "分数" | 实际无 SQS，只有 "总数/未分类/健康" | 检查字符串用 "健康" 或 "总数" |
 
-### consolidate 模式 Bug（已修复）
+### SRA 触发词陷阱：主人说「继续」但 SDD workflow 没被推荐
+
+- **问题**：当主人说「继续」「下一阶段」「继续做」，SRA 没有推荐 sdd-workflow，因为 triggers 中缺少延续/阶段推进类关键词
+- **根因**：SRA 四维匹配引擎基于词法+语义匹配。一次消息匹配得分 < 40 就不推荐。原有 triggers 只覆盖了创建类（"写 spec""创建 story"），没有延续类（"继续""phase"）
+- **后果**：主人说「继续」→ SRA 无推荐 → boku 不加载 sdd-workflow → 跳过 SDD 流程直接凭感觉做
+- **修复**：已在 SDD workflow triggers 中添加以下延续类关键词：
+  `继续 phase 下一阶段 下一步 继续做 continue next phase next step carry on resume 恢复 往下走 启动 阶段推进 推进`
+- **检查清单**：如果 SRA 没有推荐 SDD workflow，检查 `sra coverage | grep sdd-workflow` 确认 covered=true。如果为 false，说明 triggers 不够覆盖当前对话场景
+- **验证方法**：`sra recommend "继续" --json | grep sdd` 确认返回了推荐
 
 `sdd-workflow` v3.6.0 修复了 `skill-tree-index.py --consolidate` 的一个关键 Bug：
 
@@ -579,7 +652,16 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
    ├── commit-quality-check（提交前检查）
    ├── 📋 **doc-alignment — HTML 报告对齐协议**
    │   │
-   │   ├── Phase 1: 更新数据文件
+   │   ├── Phase 0.5: Story/SPEC/EPIC 元数据同步（⚠️ 关键：代码完成 ≠ 文档完成）
+│   │   代码通过测试后，必须手动同步所有 markdown 元数据，否则下次迭代时
+│   │   文档仍为 draft/active 状态，AC 标记仍为 [ ]，造成系统性文档漂移。
+│   │   ├── Story 文件: status → completed, 所有 AC [ ] → [x]
+│   │   ├── SPEC 文件: status → completed, 完成条件 [ ] → [x]
+│   │   ├── EPIC 文件: 更新 completed_phases, 标记对应 Phase 为 ✅
+│   │   └── 批量操作技巧: 10+ 文件时用 execute_code + Python 脚本
+│   │       (re.sub 批量替换) 比逐个 patch 高效。示例见 references/phase-completion-checklist.md
+│   │
+│   ├── Phase 1: 更新数据文件
    │   │   ├── 修改 docs/project-report.json（如有）：
    │   │   │   ├── Story 完成 → epics[].stories[].status = "completed"
    │   │   │   ├── 新增模块/Tests → architecture/tests 字段更新
@@ -613,9 +695,17 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
        │   └── 示例：tech-spec 声明 FastAPI 0.110 → 代码中不应使用 0.111 API
        └── 如不匹配 → 记录偏差至决策日志，更新 tech-spec 或修复代码
     ↓
-10. 📋 AC 审计 — 确保 Epic AC 与代码同步
+10. 📋 AC 审计 — 确保 Epic AC 与代码同步（含代码存在性验证）
     ├── python3 scripts/ac-audit.py check docs/EPIC-*.md
     ├── 确认漂移 = 0
+    ├── 🔴 **关键步骤：代码存在性验证**（AC 审计盲点防范）
+    │   ├── `[x]` 标记 ≠ 代码真实存在。必须验证每个标记 ✅ 的 AC 有对应代码。
+    │   ├── 检查方法：grep / curl / pytest 等命令验证
+    │   │   └── 示例：如 AC 说「Hermes pre_tool_call hook 集成」
+    │   │        → `grep -r "pre_tool_call" plugins/sra-guard/`
+    │   │   └── 示例：如 AC 说「端点已实现」
+    │   │        → `curl http://127.0.0.1:8536/health`
+    │   └── 跨系统 AC 必须两侧验证
     └── 如未勾选 → python3 scripts/ac-audit.py sync docs/EPIC-*.md --apply
     ↓
 11. 📝 Spec 状态更新（implement → complete → archive）
@@ -699,6 +789,7 @@ v2.0 (长期) — 飞书交互卡片
     ├── sdd-lifecycle.md             ← 六阶段生命周期指南
     ├── real-world-usage-sra-004-01.md ← SRA 项目实战记录
     ├── sdd-known-gaps-and-roadmap.md ← 已知缺口与改进路线图
+    ├── session-context-recovery.md  ← 跨会话上下文恢复协议（2026-05-15）
     ├── batch-rename-pitfalls.md     ← 批量重命名陷阱与安全替换模式
     ├── sdd-doc-alignment-integration.md ← SDD × doc-alignment 集成协议 v1.0（2026-05-14）
     └── feishu-review-flow.md        ← Spec/Story 飞书审阅工作流与消息模板
@@ -715,10 +806,66 @@ v2.0 (长期) — 飞书交互卡片
 - **`references/sdd-lifecycle.md`** — 六阶段完整生命周期指南（CREATE→ARCHIVE 每个阶段的详细操作）
 - **`references/real-world-usage-sra-004-01.md`** — 在 SRA 项目中完整走通 SDD 全流程的实战记录
 - **`references/sdd-known-gaps-and-roadmap.md`** — 当前流程审计、飞书卡片交互研究、质量检查框架、v2.0 设计草案
+- **`references/session-context-recovery.md`** — 跨会话上下文恢复协议：当用户引用前序会话中的问题/报告但 session_search 未命中时的 4 步恢复流程 + 项目上下文切换协议
 - **`references/batch-rename-pitfalls.md`** — 批量文档重命名陷阱（字符串包含问题）与安全替换模式
 - **`references/cap-pack-naming-migration.md`** — CAP Pack 项目命名迁移实战记录（含完整检查清单）
 
-## 🚀 使用示例
+## 🔗 Workflow Chain Protocol — SDD→DEV→QA 三段链式衔接
+
+SDD 不是终点。Story 完成（COMPLETED）后，应自动链入开发工作流和 QA 门禁。
+
+### 三段链
+
+```
+SDD COMPLETED ──→ DEV ──→ QA ──→ COMMIT
+   │               │        │        │
+   │  gate:        │ gate:  │ gate:  │
+   │ spec 已批准   │ 测试全绿│ 全部   │
+   │               │ self-   │ 门禁   │
+   │               │ review  │ 通过   │
+   ▼               ▼        ▼        ▼
+chain-state.py 自动推进（advance 命令）
+```
+
+### 使用方式
+
+在 cap-pack 项目中：
+
+```bash
+# 1. 启动链（在 SDD CLARIFY 阶段执行）
+python3 scripts/chain-state.py start EPIC-004 SPEC
+
+# 2. 推进到下一阶段（在 Story COMPLETED 后执行）
+python3 scripts/chain-state.py advance EPIC-004
+
+# 3. 查看链状态
+python3 scripts/chain-state.py status EPIC-004
+
+# 4. 强制推进（跳过 gate）
+python3 scripts/chain-state.py advance EPIC-004 --force
+```
+
+### 自动加载
+
+chain-state.py advance 成功后，会自动提示加载下一个阶段的 skill：
+- SPEC → DEV: `skill_view(name='generic-dev-workflow')`
+- DEV → QA: `skill_view(name='generic-qa-workflow')`
+- QA → COMMIT: `skill_view(name='generic-dev-workflow')`（Step 7 提交与对齐）
+
+### 关键文件
+
+| 文件 | 位置 | 用途 |
+|:-----|:------|:------|
+| `chain-state.py` | cap-pack/scripts/ | 链状态机 |
+| `chain-gate.py` | cap-pack/scripts/ | 链门禁检查器 |
+| `workflow-chain.yaml` | cap-pack/docs/ | 链定义配置 |
+| `chain-state.json` | cap-pack/docs/ | 链状态持久化 |
+
+### 铁律
+
+- 🔴 不要在 SDD COMPLETED 后直接开始写代码 — 先 `chain-state.py advance` 进入 DEV 阶段
+- 🔴 不要在 DEV 完成后跳过 QA — Step 5 的嵌入式 QA 门禁会自动加载 generic-qa-workflow
+- 🔴 如果 chain-state.py advance 被 gate 阻止 → 修复 gate 条件再重试，不要 --force
 
 ### 场景 1：新功能开发（含 v3.0 完整流程）
 
@@ -726,7 +873,16 @@ v2.0 (长期) — 飞书交互卡片
 
 ```text
 # Step 0: CLARIFY — 需求澄清
-# boku 输出需求理解 → 主人确认方向正确
+## 子步骤:
+# 0a. 项目上下文确认 — 用户说"启动 sdd 工作流"时，先确认哪个项目
+#     不要默认当前项目，显式询问或从对话历史推断项目上下文
+#     (实战教训: 用户说"启动 sdd 工作流"，boku 展示了 cap-pack → 被纠正"回到 sra 项目")
+# 0b. 会话历史检索 — 搜索 session history 获取近期相关讨论
+#     用户说"刚刚发现的问题""之前讨论过的"等引用前序工作时，主动 session_search
+#     如 session_search 结果为空 → 诚实报告并请用户补充，不要假设
+# 0c. 需求理解输出 — boku 输出项目全貌 + 需求理解
+#     永远先展示全貌(所有 EPIC/Phase)，再聚焦当前讨论的子集
+# 0d. 主人确认 — 主人确认方向正确后，进入下一阶段
 # 产出: docs/req_clarification/{task_id}.md
 # 方式: clarify 工具或飞书交互卡片
 
@@ -776,8 +932,22 @@ python3 spec-state.py implement "STORY-1-1"
 # Step 8: COMPLETE — 完成归档
 pytest tests/ -q
 
-# doc-alignment Phase 1: 更新数据文件
-# 编辑 docs/project-report.json → 更新 Story 状态/版本号/Tests
+# 🔴 强制步骤：Story/SPEC/EPIC 元数据同步（代码完成 ≠ 文档完成）
+# 代码通过测试后，必须同步更新所有相关 markdown 文件的元数据。
+# 不执行此步 → 文档仍为 draft → 下次迭代出现文档漂移。
+#
+# 同步清单：
+#   ├── Story 文件: status: completed, 所有 AC [ ] → [x]
+#   ├── SPEC 文件: status: completed, 完成条件 [ ] → [x]
+#   ├── EPIC 文件: 更新 completed_phases, 标记对应 Phase 为 ✅
+#   └── project-report.json: 同下
+#
+# 批量更新技巧（10+ 文件时用）：
+#   execute_code + Python (re.sub / str.replace) 比逐个 patch 高效可靠
+#   示例: 用 execute_code 做 content.replace("- [ ] ", "- [x] ") 批量标记 AC
+
+# doc-alignment Phase 1: 更新数据文件（project-report.json）
+# 编辑 docs/project-report.json → 更新 Story 状态/版本号/Tests 等
 
 # doc-alignment Phase 2: 重新生成 HTML
 # ❌ 旧: python3 ~/.hermes/scripts/generate-project-report.py --verify 已废弃
@@ -832,6 +1002,8 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py list
 | 6 | **Story 完成时自动同步 Epic AC** | Story Spec 完成 → 运行 ac-audit sync 更新 Epic 文档中对应 AC |
 | **7** | **文档命名统一为层级归属格式：`EPIC-{n}` / `SPEC-{epic}-{seq}` / `STORY-{epic}-{spec}-{seq}`** | 跨项目无法对齐、工具链解析失败、混淆 |
 | **8** | **每次 Spec 状态变更后必须同步 project-state.yaml — `python3 /home/ubuntu/projects/hermes-cap-pack/scripts/project-state.py sync`** | project-state.yaml 与 Spec 状态不同步 → 项目全景报告不准确 |
+| **9** | **先定义→对齐文档→再实施。PLAN 阶段必须确认源码位置、部署位置、测试位置，先于编码** | 代码在错误目录 → 返工；文档与代码脱节 → 下次决策错误 |
+| **10** | **AC 标记 ✅ 必须附加代码存在性验证，不能仅凭文档声明** | EPIC-001/003 虚假 ✅ → 整个集成方案从未工作 |
 
 ### 7.1 统一文档命名规范详解
 

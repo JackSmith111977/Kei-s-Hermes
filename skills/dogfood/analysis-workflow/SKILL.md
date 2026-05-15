@@ -1,7 +1,7 @@
 ---
 name: analysis-workflow
 description: 大文件分析与数据处理工作流——boku 处理大型文档、数据文件、代码库时的标准分析框架。涵盖分块策略、Map-Reduce 模式、渐进式摘要、内存管理等核心模式。
-version: 1.2.0
+version: 1.3.0
 triggers:
 - 分析大文件
 - 处理大型文档
@@ -17,7 +17,17 @@ triggers:
 - 代码库审计
 - tech debt
 - code review
-- 审计代码
+- 跨项目集成审计
+- 跨项目审查
+- 集成验证
+- 幻影集成
+- 幻影功能
+- 集成审计
+- 代码存在性检查
+- 调用链追踪
+- cross project
+- integration audit
+- phantom integration
 allowed-tools:
 - terminal
 - read_file
@@ -45,7 +55,7 @@ metadata:
 # 大文件分析与数据处理工作流 🧩📊
 
 > **核心铁律：永远不要全量读取大文件到上下文中！分块、流式、渐进处理。**
-> **v1.2.0 新增：§8 并行子代理审计模式 — 代码库四层并行审计**
+> **v1.3.0 新增：`references/cross-project-integration-audit.md` — 跨项目集成审计方法论（五步法：库存清点→代码存在性→调用链→安装检验→AC外延验证）**
 > **v1.1.0 新增：`references/codebase-tech-debt-audit.md` — 代码库技术债审计方法论**
 
 ---
@@ -712,7 +722,8 @@ delegate_task(
 
 ## 八、Skill/Agent 库存扫描（新增）
 
-> **参考文件**: `references/skill-inventory-scan.md` — 完整的 Hermes/Agent skill 扫描方法论
+- `references/skill-inventory-scan.md` — Agent skill 库存扫描方法论
+- `references/cross-project-integration-audit.md` — 跨项目集成审计（五步法：检查宣称 vs 实际的集成链路）
 
 当需要统计 Agent 平台的 skill 总量、分布、归属时，不要用 `ls -d` 只数顶层目录。Skill 可能嵌套在子分类中（如 dogfood 含 20+ 子 skill），导致统计严重低估。
 

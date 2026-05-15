@@ -8,8 +8,8 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-14T06:03:50",
-      "freshness_score": 0.8,
+      "last_updated": "2026-05-15T04:05:04+08:00",
+      "freshness_score": 0.61,
       "review_schedule": {
         "l1": "2026-05-15",
         "l2": "2026-05-17",
@@ -31,10 +31,14 @@
         "Ineffable Intelligence × NVIDIA (David Silver RL superintelligence)",
         "OpenAI Daybreak (public cybersecurity AI)",
         "Meta Incognito Chat (encrypted private AI chat)",
-        "Amazon Alexa for Shopping (agentic commerce)"
+        "Amazon Alexa for Shopping (agentic commerce)",
+        "SAP Anthropic Claude partnership",
+        "Ramp AI Index: Anthropic passes OpenAI in business adoption",
+        "Red Hat AI Factory + NVIDIA OpenShell",
+        "Google I/O 2026: Gemini 3.1 Ultra + Project Astra preview"
       ],
       "learning_history": {
-        "total_sessions": 12,
+        "total_sessions": 14,
         "avg_quality": 0.89,
         "last_loop_count": 1,
         "consecutive_failures": 0
@@ -47,8 +51,8 @@
       "target_skill": "linux-ops-guide",
       "priority": 0.7,
       "schedule_interval_hours": 4,
-      "last_updated": "2026-05-14T08:05:17.788312+08:00",
-      "freshness_score": 0.99,
+      "last_updated": "2026-05-15T06:00:00+08:00",
+      "freshness_score": 0.73,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-21",
@@ -69,8 +73,8 @@
         "TypeScript 7.0 Go 编译器并行控制参数"
       ],
       "learning_history": {
-        "total_sessions": 9,
-        "avg_quality": 0.9,
+        "total_sessions": 10,
+        "avg_quality": 0.89,
         "last_loop_count": 2,
         "consecutive_failures": 0
       }
@@ -82,12 +86,12 @@
       "target_skill": "bangumi-recommender",
       "priority": 0.5,
       "schedule_interval_hours": 8,
-      "last_updated": "2026-05-14T02:06:16.287986+08:00",
-      "freshness_score": 0.98,
+      "last_updated": "2026-05-15T08:00:00+08:00",
+      "freshness_score": 0.79,
       "review_schedule": {
-        "l1": "2026-05-09",
-        "l2": "2026-05-15",
-        "l3": "2026-06-07"
+        "l1": "2026-05-18",
+        "l2": "2026-05-22",
+        "l3": "2026-06-15"
       },
       "knowledge_gaps_filled": [
         "Summer 2026 MAL热度排行",
@@ -104,7 +108,7 @@
         "Möbius Dust 動画工房原创新作"
       ],
       "learning_history": {
-        "total_sessions": 6,
+        "total_sessions": 7,
         "avg_quality": 0.86,
         "consecutive_failures": 0,
         "last_loop_count": 1
@@ -117,12 +121,12 @@
       "target_skill": "memory-management",
       "priority": 0.6,
       "schedule_interval_hours": 6,
-      "last_updated": "2026-05-14T00:00:00+08:00",
-      "freshness_score": 0.98,
+      "last_updated": "2026-05-15T02:04:47+08:00",
+      "freshness_score": 0.94,
       "review_schedule": {
-        "l1": "2026-05-15",
-        "l2": "2026-05-17",
-        "l3": "2026-06-10"
+        "l1": "2026-05-18",
+        "l2": "2026-05-21",
+        "l3": "2026-06-13"
       },
       "knowledge_gaps_filled": [
         "Notion Custom Agents 3.4",
@@ -134,7 +138,7 @@
         "Agentic KM 2026 Architecture Update"
       ],
       "learning_history": {
-        "total_sessions": 13,
+        "total_sessions": 14,
         "avg_quality": 0.88,
         "last_loop_count": 1,
         "consecutive_failures": 0

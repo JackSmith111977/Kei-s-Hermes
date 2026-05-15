@@ -12,6 +12,27 @@
 | 追加日志 | `write_file`（会覆盖历史） | `execute_code` + Python `open(..., 'a')` |
 | 复杂 Python 逻辑 | `terminal` + `python3 -c "..."` | `execute_code(code=...)` |
 
+## 预检门禁：skill_finder.py 崩溃时使用 v2 作为 fallback
+
+Cron 环境中的 `AGENTS.md` 第一步技能发现 (`python3 ~/.hermes/skills/learning-workflow/scripts/skill_finder.py "<query>"`) 可能因 v1 的 `trigger.lower()` 对 dict 类型崩溃而失败（`AttributeError: 'dict' object has no attribute 'lower'`）。
+
+**Cron fallback 流程**：
+```bash
+# 尝试 v1（AGENTS.md 默认），失败后自动回退 v2
+python3 ~/.hermes/skills/learning-workflow/scripts/skill_finder.py "<query>" 2>/dev/null \
+  || python3 ~/.hermes/skills/learning-workflow/scripts/skill_finder_v2.py "<query>"
+```
+
+**注意**：v2 的匹配阈值是 50（v1 是 30），且 v2 支持同义词扩展、TF-IDF 评分和标签匹配，结果质量更高。
+
+**预防**：每次 cron 会话开始前检查 skill_finder.py 是否完整：
+```bash
+wc -l ~/.hermes/skills/learning-workflow/scripts/skill_finder.py
+# 若行数 < 20（被覆盖为 stub），从 profile 恢复：
+cp ~/.hermes/profiles/experiment/skills/learning-workflow/scripts/skill_finder.py \
+   ~/.hermes/skills/learning-workflow/scripts/skill_finder.py
+```
+
 ## 搜索策略（三视角并行法）
 
 ```text
@@ -146,7 +167,7 @@ if next_review and next_review <= today:  # <= 而非 <
 
 **无需干预**，运行 `--update-review` 即可推进所有到期概念的 `next_review`。
 
-## 混合模式执行：广度扫描 + 到期概念同步复习（2026-05-13 新增）
+## 混合模式执行：广度扫描 + 到期概念同步复习（已验证 v2 兼容）
 
 当 cron 执行的 night study 面对 **backlog 领域**（mastered ≤ 60% 且总概念 ≥ 50）时，推荐在单次会话中同时做两件事：
 

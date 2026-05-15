@@ -228,7 +228,52 @@ if raw_word_count <= 2 and lex_score >= 20:
 | 分数偏低 | SQS 惩罚或触发词不够 | 检查 `cat ~/.sra/data/sqs-scores.json` |
 | curl 被安全拦截 | `--noproxy` 未加 | 始终用 `--noproxy '*'` |
 
-## 六、设计原理
+## 七、诊断：SRA 零请求问题
+
+> **实战发现 (2026-05-14)**: SRA 运行 11 小时 `total_requests=0`。Daemon 正常、索引正常、omni 力度已启用，但从未收到请求。
+
+### 7.1 快速诊断
+
+```bash
+# 1. 检查服务状态
+curl -s --noproxy '*' http://127.0.0.1:8536/health
+# → 关注: total_requests, total_recommendations
+
+# 2. 检查集成是否存在
+grep -rn "sra\|8536\|recommend" ~/.hermes/config.yaml
+grep -rn "_query_sra_context" ~/.hermes/hermes-agent/*.py
+
+# 3. Hermes 内置集成可能不存在
+# → _query_sra_context() 在文档但可能未在 run_agent.py 中实现
+# → 当前唯一可靠的调用方式是手动 curl 或通过 pre_flight 集成
+```
+
+### 7.2 根因
+
+| 层 | 问题 | 状态 |
+|:---|:------|:----:|
+| Hermes 核心 | `_query_sra_context()` 不存在于 run_agent.py | ❌ |
+| config.yaml | 无 sra_proxy_url 配置 | ❌ |
+| pre_flight | 未集成 SRA 调用 | ❌ |
+| SOUL.md | 要求「每次消息调 curl」→ 拉模式不可靠 | ⚠️ |
+
+### 7.3 阈值问题：单字延续关键词不满足 40 分门槛
+
+即使手动调 SRA，单字延续关键词（如「继续」「phase」）也无法达到 THRESHOLD_WEAK=40：
+
+```
+trigger 匹配 +25
+  × 词法权重 0.40 = 10
+  × 短查询 boost 1.6 = 16
+  总分 ≈ 16-25 < 40
+  → ❌ 不推荐
+```
+
+**解决方案方向**:
+1. 降低 THRESHOLD_WEAK 到 25 或 30
+2. 为已知 phase 转换词加专用 boost（`if w in CONTINUATION_KEYWORDS: total *= 2.0`）
+3. 通过 pre_flight 自动调 SRA（确保至少收到一些推荐）
+## 八、设计原理
 
 SRA CLI 遵循 **「自带安全」** 原则：
 - CLI 不需要 pipe-to-interpreter，不会被安全扫描器标记
@@ -236,6 +281,3 @@ SRA CLI 遵循 **「自带安全」** 原则：
 - `subprocess.run(["sra", "recommend", q])` 可编程调用
 
 ## 参考
-
-- `references/sra-architecture.md` — 源码深度解析
-- `hermes-message-injection` skill — 消息注入架构 + Hermes 集成

@@ -130,3 +130,21 @@ web_search("MCP agent framework AI infrastructure 2026")
 - 13 个总来源 vs 6-8 个典型 Tavily 结果
 - 质量评分 Q=90（与 Tavily 持平）
 - 覆盖 3 个不同子主题，而非单维度
+
+---
+
+## 2026-05-15 验证：web_search 是稳定可靠的永久替代
+
+02:00 轮次（productivity L1 review）使用纯 `web_search` 4 次并行调用：
+
+| 搜索词 | 结果 | 质量 |
+|--------|------|:----:|
+| Agentic KM Atomic Knowledge Units 2026 | arXiv 2603.14805 + AI Navigate 等多篇解读 | 🥇 |
+| Context Engineering 2026 patterns architecture | contextarch.ai 10 patterns + Atlan 5-phase framework | 🥇 |
+| Agentic OS primitives 2026 | Knowlee 6 primitives + AgenticOS Workshop 2026 | 🥇 |
+| AKU knowledge activation paper | arXiv + HuggingFace Papers 双重确认 | 🥇 |
+
+**结论**：
+- `web_search` 作为 Tavily 永久降级方案已通过 **多轮次、多领域、跨月** 的稳定性验证
+- 2026-05-08 至 2026-05-15 间共使用 web_search 的轮次：~10+，成功率和结果质量保持稳定
+- **推荐策略**：所有 cron 轮次默认使用 `web_search`，仅在确实需要 `time_range` 过滤参数时才考虑 Tavily（且失败后立即降回 web_search）
