@@ -18,6 +18,15 @@ triggers:
 - sra force
 - sra omni
 - sra 力度
+- sra 安装
+- sra 卸载
+- sra 重装
+- sra 配置
+- sra 日志级别
+- sra 护进程
+- sra 启动
+- sra 停止
+- sra 双重安装
 author: boku
 license: MIT
 allowed-tools:
@@ -218,7 +227,132 @@ if raw_word_count <= 2 and lex_score >= 20:
 
 ---
 
-## 五、常见问题
+## 五、安装管理
+
+> **核心要点**：SRA 需安装到 **Hermes 的 venv** 中（`~/.hermes/hermes-agent/venv/`），因为 `sra`/`srad` CLI 命令和 Hermes 的 `sra-guard` 插件都在这个 venv 中运行。
+
+### 5.1 安装位置矩阵
+
+| 安装位置 | Python 版本 | 是否可用 | 说明 |
+|:---------|:-----------:|:--------:|:-----|
+| Hermes venv (`~/.hermes/hermes-agent/venv/`) | 3.11 | ✅ **必须** | sra/srad CLI 在此，插件也在此运行 |
+| 系统 Python (`/usr/bin/python3`) | 3.12 | ⚠️ 可选 | 外部托管环境，需 `--break-system-packages` |
+| `~/.local/bin/` | 3.12 | ❌ 不要 | 与 Hermes venv 冲突 |
+
+### 5.2 🚨 双重安装陷阱（最重要的坑）
+
+**现象**：`sra status` 和 Hermes 插件都正常工作，但版本号始终是旧的 `0.0.0.dev0`，或者修改了源码重启后不生效。
+
+**根因**：`pip install -e .` 可能同时安装在**两个位置**：
+1. 系统 Python 的 `~/.local/lib/python3.12/site-packages/` (editable)
+2. Hermes venv 的 `.../lib/python3.11/site-packages/` (editable)
+
+当系统 Python 的安装优先被找到时，Hermes venv 的 `sra`/`srad` 命令会指向错误的包。
+
+**诊断命令**：
+```bash
+# 检查系统 Python 是否有
+python3 -c "import skill_advisor; print(skill_advisor.__file__)" 2>&1
+# 检查 Hermes venv 是否有
+~/.hermes/hermes-agent/venv/bin/python -c "import skill_advisor; print(skill_advisor.__file__)" 2>&1
+```
+
+**修复**：两个位置都要卸载，然后只安装到 Hermes venv。
+
+### 5.3 全新安装流程
+
+```bash
+# 1. 停止旧版 SRA（如有）
+sra stop 2>/dev/null
+
+# 2. 从系统 Python 卸载（如有残留）
+python3 -m pip uninstall sra-agent -y --break-system-packages 2>/dev/null
+
+# 3. 从 Hermes venv 卸载
+~/.hermes/hermes-agent/venv/bin/python -m pip uninstall sra-agent -y 2>/dev/null
+
+# 4. 清理残留文件（pyc, egg-link, pth 等）
+rm -rf ~/.hermes/hermes-agent/venv/lib/python3.11/site-packages/skill_advisor*
+rm -rf ~/.hermes/hermes-agent/venv/lib/python3.11/site-packages/sra_agent*
+rm -f ~/.hermes/hermes-agent/venv/bin/sra ~/.hermes/hermes-agent/venv/bin/srad
+
+# 5. 安装到 Hermes venv（从本地仓库或 GitHub）
+cd ~/projects/sra  # 本地已有仓库
+~/.hermes/hermes-agent/venv/bin/python -m pip install .
+
+# 或从 GitHub 安装
+~/.hermes/hermes-agent/venv/bin/python -m pip install \
+  "sra-agent @ git+https://github.com/JackSmith111977/Hermes-Skill-View.git"
+
+# 6. 验证
+~/.hermes/hermes-agent/venv/bin/python -c "
+import skill_advisor
+print(f'版本: {skill_advisor.__version__}')
+print(f'路径: {skill_advisor.__file__}')
+"
+```
+
+### 5.4 配置管理
+
+所有配置存储在 `~/.sra/config.json` 中。常用配置项：
+
+| 配置项 | 默认值 | 说明 |
+|:-------|:------:|:-----|
+| `log_level` | `"INFO"` | 日志级别（`"DEBUG"` 为最高级别） |
+| `runtime_force.level` | `"medium"` | 力度等级（`"omni"` 为最高级别） |
+| `http_port` | `8536` | HTTP API 端口 |
+| `auto_refresh_interval` | `3600` | 技能索引自动刷新间隔（秒） |
+
+#### 配置 DEBUG 日志（最高级别）
+```json
+{
+  "log_level": "DEBUG",
+  "runtime_force": {
+    "level": "omni"
+  }
+}
+```
+
+#### 通过环境变量覆盖
+```bash
+# 所有 DEFAULT_CONFIG 中的字段都可以通过 SRA_<KEY> 环境变量覆盖
+export SRA_LOG_LEVEL=DEBUG
+export SRA_HTTP_PORT=8536
+```
+
+配置加载优先级：`环境变量 > 用户配置 > 默认值`。
+
+### 5.5 验证安装完成
+
+```bash
+# 1. 启动
+sra start
+
+# 2. 检查健康状态
+curl -s --noproxy '*' http://127.0.0.1:8536/health | python3 -m json.tool
+# → force_level.level 应为 omni（如果设置了）
+# → 日志中应有 [DEBUG] 消息
+
+# 3. 测试推荐
+curl -s --noproxy '*' -X POST http://127.0.0.1:8536/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"message": "test"}'
+
+# 4. 检查 Socket 通信
+python3 -c "
+import socket, json
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.settimeout(3)
+sock.connect('/home/ubuntu/.sra/srad.sock')
+sock.sendall(json.dumps({'action': 'ping', 'params': {}}).encode('utf-8'))
+print(sock.recv(65536).decode('utf-8'))
+sock.close()
+"
+```
+
+---
+
+## 六、常见问题
 
 | 问题 | 排查 | 解决 |
 |:-----|:------|:------|

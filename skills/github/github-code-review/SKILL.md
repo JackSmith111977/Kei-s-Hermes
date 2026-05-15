@@ -1,7 +1,7 @@
 ---
 name: github-code-review
 description: Review code changes by analyzing git diffs, leaving inline comments on PRs,...
-version: 1.1.0
+version: 1.2.0
 triggers:
 - github code review
 - github-code-review
@@ -23,12 +23,14 @@ metadata:
 
 Perform code reviews on local changes before pushing, or review open PRs on GitHub. Most of this skill uses plain `git` — the `gh`/`curl` split only matters for PR-level interactions.
 
-## Prerequisites
+## Related Skills
 
-- Authenticated with GitHub (see `github-auth` skill)
-- Inside a git repository
+- `pr-review-workflow` — 用于完整的 GitHub PR 审查（5 阶段流程、审查沟通、Token 权限陷阱），本 skill 更适合本地/简单审查。
+- `github-auth` — GitHub 认证设置
 
-### Setup (for PR interactions)
+---
+
+## 使用建议
 
 ```bash
 if command -v gh &>/dev/null && gh auth status &>/dev/null; then
@@ -103,7 +105,19 @@ git diff main...HEAD | grep -in "password\|secret\|api_key\|token.*=\|private_ke
 git diff main...HEAD | grep -n "<<<<<<\|>>>>>>\|======="
 ```
 
-4. **Present structured feedback** to the user.
+4. **🔬 Verify PR claims against actual behavior** — for any PR making performance, accuracy, or correctness claims in its commit message/description:
+
+   ```bash
+   # Install new dependencies the PR introduces
+   grep -A5 "dependencies\|optional-dependencies" pyproject.toml
+   
+   # Reproduce the claimed behavior with the exact examples
+   # See references/detailed.md §"Verify PR Claims Against Actual Behavior" for full technique
+   ```
+   
+   Common findings: commit message examples that don't actually work as described, claimed improvements that don't materialize, or silent degradation paths that swallow errors.
+
+5. **Present structured feedback** to the user.
 
 ### Review Output Format
 

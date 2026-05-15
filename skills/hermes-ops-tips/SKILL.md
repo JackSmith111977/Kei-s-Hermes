@@ -243,29 +243,41 @@ sra dep-check
 ~/.hermes/hermes-agent/venv/bin/sra stop
 
 # 2. 从 Hermes venv 卸载旧版（如有）
-~/.hermes/hermes-agent/venv/bin/python3 -m pip uninstall sra-agent -y
+~/.hermes/hermes-agent/venv/bin/python -m pip uninstall sra-agent -y
 
-# 3. 从 GitHub 克隆最新源码（需要代理）
+# 3. 也从系统 Python 卸载（⚠️ 双重安装陷阱：editable 可能同时在两个位置安装）
+python3 -m pip uninstall sra-agent -y --break-system-packages 2>/dev/null
+
+# 4. 清理残留
+rm -rf ~/.hermes/hermes-agent/venv/lib/python3.11/site-packages/skill_advisor*
+rm -rf ~/.hermes/hermes-agent/venv/lib/python3.11/site-packages/sra_agent*
+rm -f ~/.hermes/hermes-agent/venv/bin/sra ~/.hermes/hermes-agent/venv/bin/srad
+
+# 5. 从 GitHub 克隆最新源码（需要代理）
 export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
 git clone https://github.com/JackSmith111977/Hermes-Skill-View.git ~/projects/sra
 
-# 4. 安装到 Hermes venv
-# ⚠️ 坑1: Hermes venv 的 pip 可能较旧，找不到 setuptools>=61.0（腾讯镜像无此版本）
-#     → 使用 --no-build-isolation 跳过构建隔离，直接用 venv 已有的 setuptools
+# 6. 安装到 Hermes venv（推荐正式安装而非 editable，避免双重安装）
 cd ~/projects/sra
-~/.hermes/hermes-agent/venv/bin/python3 -m pip install --no-build-isolation -e .
+~/.hermes/hermes-agent/venv/bin/python -m pip install .
 
-# 5. 启动新版 SRA Daemon
+# 7. 启动新版 SRA Daemon
 ~/.hermes/hermes-agent/venv/bin/sra start
 
-# 6. 测试新版（注意代理干扰！）
-# ⚠️ 坑2: 如果 http_proxy 环境变量设置了 127.0.0.1:7890，
+# 8. 测试新版（注意代理干扰！）
+# ⚠️ 如果 http_proxy 环境变量设置了 127.0.0.1:7890，
 #     curl 会尝试将 localhost 请求也走代理，导致 502 Bad Gateway
 #     → 必须加 --noproxy '*' 绕过
 curl -s --noproxy '*' -X POST http://127.0.0.1:8536/recommend \
   -H "Content-Type: application/json" \
   -d '{"message": "test"}'
 ```
+
+### 最新安装状态（2026-05-15）
+- 版本：v2.1.2.post2（正式 pip install，非 editable）
+- 安装位置：仅 Hermes venv（`~/.hermes/hermes-agent/venv/lib/python3.11/site-packages/`）
+- 配置：`log_level=DEBUG` + `runtime_force.level=omni`（最高级别）
+- 启动方式：`sra start`（通过 Hermes venv 的 sra 命令）
 
 ### 常见坑
 

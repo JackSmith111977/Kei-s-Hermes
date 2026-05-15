@@ -346,6 +346,9 @@ git commit -m "type(scope): description"
 | **CLI 脚本导入失败** | `ModuleNotFoundError: No module named 'scripts'` | CLI 入口和命令模块都需要加 `sys.path.insert(0, ...)` 指向项目根目录。详见 `references/python-cli-pitfalls.md` |
 | **测试路径假设** | 测试从项目根运行没问题，但从子目录运行报错 | 所有路径用 `Path(__file__).resolve().parent` 构造，不用相对路径字符串 |
 | **版本号不同步** | pyproject.toml 的 version 和 CHANGELOG 的版本不一致 | 提交前用 `grep "version"` 交叉检查，或用 `bump-version.py` 统一管理 |
+| **`setup.py` 正则解析 `__init__.py` 提取版本号** | `setup.py` 用 `re.search(r'__version__\\s*=\\s*["\\']([^"\\']+)', ...).group(1)` 从 `__init__.py` 读版本号。当版本解析改为函数调用时（如 `__version__ = _resolve_version()`），正则返回 `None` → CI 所有 Python 版本在 `pip install` 阶段全部崩溃 | ❌ 不要在 `setup.py` 中解析 `__init__.py` 提取版本。版本应完全由 `pyproject.toml` + `setuptools-scm` 管理。`setup.py` 仅做最小调用：<br><br>```python<br>from setuptools import setup, find_packages<br>setup(packages=find_packages())<br>```<br><br>📌 实战案例：SRA v2.1.1 CI 全炸，根因为 `__init__.py` 改为函数赋值后正则无匹配 |
+| **`__init__.py` 顶层导入与 `__version__` 循环引用** | `__init__.py` 在顶层 `from .runtime.daemon import X`，但 `daemon.py` 又 `from .. import __version__`。导入时 `__init__.py` 尚未执行到 `__version__` 定义 → `ImportError` | 将模块级导入移到 `__version__` 定义**之后**，加 `# noqa: E402` 抑制 lint：<br><br>```python<br>__version__ = _resolve_version()<br>from .runtime.daemon import X  # noqa: E402<br>```<br><br>📌 实战教训：SRA 重构版本解析后出现循环导入 |
+| **setuptools-scm 配置陷阱（v10+）** | 1) `version_file` 改名为 `write_to`；2) `tag_regex` 在 TOML 中推荐用单引号 literal string 避转义；3) `write_to_template` 缺失则 `_version.py` 不生成；4) `vcs-versioning` 是 setuptools-scm ≥10 的必需依赖 | 推荐配置：<br><br>```toml<br>[tool.setuptools_scm]<br>tag_regex = '^(?:[\\w-]+-)?v?(?P<version>[\\d\\.a-b]{3,}(?:rc\\d+)?)$'<br>version_scheme = "post-release"<br>local_scheme = "no-local-version"<br>write_to = "pkg/_version.py"<br>write_to_template = "__version__ = '{version}'\\nversion = '{version}'\\n"<br>```<br><br>📌 `_version.py` 加入 `.gitignore`。开发环境用 `git describe` 实时解析 |
 
 ---
 
@@ -393,7 +396,8 @@ sdd-workflow              ← 更新 Spec 状态：complete → archive
 ├── SKILL.md                         ← 主入口（7 步流程 + 铁律 + 陷阱）
 └── references/
     ├── scenario-guide.md            ← 场景指南（新功能/修 Bug/重构/快速修复）
-    └── python-cli-pitfalls.md       ← Python CLI 导入路径问题与解决
+    ├── python-cli-pitfalls.md       ← Python CLI 导入路径问题与解决
+    └── version-resolution-architecture.md  ← 版本解析架构（三层降级链 + setuptools-scm 配置 + 陷阱）
 ```
 
 ## 📚 参考深度阅读

@@ -165,6 +165,98 @@ path.iterdir()         # 遍历目录
 
 > 🔍 **## 三、if __name__** moved to [references/detailed.md](references/detailed.md)
 
+## 🪤 模块级变量陷阱：赋值即局部
+
+### 问题：在函数中修改模块级变量时 UnboundLocalError
+
+当你需要在函数中修改模块级变量（计数器、缓存等）时，Python 的变量作用域规则会导致一个经典陷阱：
+
+```python
+# ❌ 错误：UnboundLocalError
+_module_counter = 0
+
+def on_event():
+    _module_counter += 1  # UnboundLocalError！
+    # Python 看到赋值，认为 _module_counter 是局部变量
+    # 但局部变量在赋值前被读取（+= 需要先读后写）
+```
+
+### 根因
+
+Python 在编译时判断变量作用域：
+- **函数内赋值** → 视为局部变量（即使模块级同名）
+- **只读不写** → 视为全局变量（可安全读取）
+
+`+= 1` 是**读写操作**（读取原值 → 加 1 → 写回），所以触发 `UnboundLocalError`。
+
+### 解决方案
+
+**方案 A：`global` 声明（推荐）**
+
+```python
+_module_counter = 0
+
+def on_event():
+    global _module_counter    # 明确告诉 Python：用模块级的那个
+    _module_counter += 1      # ✅ 正确
+```
+
+适用于**简单赋值**（`+=`, `-=`, `=` 等）。
+
+**方案 B：通过模块对象修改**
+
+```python
+import sys
+_module = sys.modules[__name__]
+
+_module._module_counter += 1  # ✅ 绕过作用域检查
+```
+
+适用于需要动态访问的场景。
+
+**方案 C：使用可变对象（不直接赋值）**
+
+```python
+_counter = {"value": 0}
+
+def on_event():
+    _counter["value"] += 1  # ✅ 修改对象属性不是赋值，不触发作用域检查
+```
+
+适用于多个相关状态值需要同时管理。
+
+### 实战案例
+
+EPIC-004 Phase 4（周期性重注入）：
+
+```python
+# __init__.py 模块级
+_turn_counter = 0
+RECHECK_INTERVAL = 5
+
+def _on_pre_llm_call(messages, session_id, **kwargs):
+    try:
+        global _turn_counter   # ← 必须声明！否则 UnboundLocalError
+        _turn_counter += 1
+
+        # ... 业务逻辑 ...
+        if _turn_counter >= RECHECK_INTERVAL:
+            _turn_counter = 0
+    except Exception:
+        ...
+```
+
+### 黄金规则
+
+| 场景 | 需要的声明 | 示例 |
+|:-----|:-----------|:------|
+| 读取模块级变量 | 不需要 | `print(MY_CONSTANT)` |
+| `obj.attr += 1` | 不需要 | `cache[key] += 1` |
+| 直接 `=`, `+=`, `-=` 赋值 | **必须 `global`** | `global x; x += 1` |
+| 函数嵌套再加一层 | **必须 `nonlocal`** | 闭包场景 |
+
+> ⚠️ **特别注意**：`global` 声明必须在函数体内、任何使用该变量之前。通常放在 `try` 块最开头。
+
 ## 📦 2025-2026 Python 生态更新
 
 > 新增库、工具和框架速查：FastMCP、Polars、Pixi、Dramatiq、Google ADK、OpenAI Agents SDK 等。

@@ -333,6 +333,64 @@ phases:
 
 **集成到 SDD 工作流**：进入 Phase N 前，先运行 `phase-gate.py check` 确认前置条件满足。
 
+### 🔄 Phase 完成文档对齐链（v3.9.0 新增）
+
+Phase 完成后的文档更新应遵循固定的**从底向上链**，确保一致性。通过 EPIC-004 5 个 Phase 验证的模式：
+
+```text
+Phase 完成 → 文档对齐链（从底向上）
+                │
+                ▼
+  ╔══════════════════════════════════╗
+  ║  Layer 1: Story 文件 (最底层)    ║  ← 先更新
+  ║  └─ status: draft → completed   ║
+  ║  └─ 所有 AC: [ ] → [x]          ║
+  ╚════════════════╤═════════════════╝
+                   │
+                   ▼
+  ╔══════════════════════════════════╗
+  ║  Layer 2: SPEC 文件              ║
+  ║  └─ status: draft → completed   ║
+  ║  └─ 完成检查清单: [ ] → [x]     ║
+  ╚════════════════╤═════════════════╝
+                   │
+                   ▼
+  ╔══════════════════════════════════╗
+  ║  Layer 3: EPIC 文件              ║
+  ║  └─ completed_phases 追加条目   ║
+  ║  └─ Phase 定义表标记 ✅         ║
+  ║  └─ 优先级表格更新              ║
+  ║  └─ 关联文档状态同步            ║
+  ╚════════════════╤═════════════════╝
+                   │
+                   ▼
+  ╔══════════════════════════════════╗
+  ║  Layer 4: project-report.json    ║  ← 最顶层
+  ║  └─ tests.passing 更新          ║
+  ║  └─ epics[].stories 追加        ║
+  ║  └─ sprint_history 追加         ║
+  ╚══════════════════════════════════╝
+```
+
+**为什么从底向上？**
+- 底层的 Story 文件定义了「做了什么」
+- 中层的 SPEC 汇总了「哪些验收通过了」
+- 顶层的 EPIC 和 project-report 是「项目整体状态」
+- 先更新底层 → 高层引用底层数据 → 不会产生孤立的更新
+
+**实战验证**：EPIC-004 5 个 Phase（0→4），每次按此链更新，最终 19 个 Story 文件和 6 个 SPEC 全部一致，零漂移。详见 `references/phase-completion-checklist.md`。
+
+**完成检查清单**（每个 Phase 完成时必须执行）：
+
+```bash
+# Phase N 完成时 — 从底向上对齐
+□ 1. 更新 Story 文件：status=completed, AC=[x]
+□ 2. 更新 SPEC 文件：status=completed, 完成条件=[x]
+□ 3. 更新 EPIC 文件：completed_phases 追加 Phase N
+□ 4. 更新 project-report.json：tests+epics+sprint
+□ 5. 验证：grep "^status:" docs/stories/STORY-*.md | grep -v completed → 零
+```
+
 ---
 
 ### AC 审计盲点陷阱：只检 [x] 不验代码存在性
@@ -344,6 +402,7 @@ phases:
   1. AC 标记 ✅ 后，必须附加验证方式说明（如「验证: `grep _query_sra_context run_agent.py`」）
   2. 跨项目 AC（如「Hermes 侧集成」）必须端到端验证，不能只检单侧代码
   3. 在 AC 旁添加 `<!-- 验证: <具体命令> -->` 注释，方便后续审计
+     - **已验证的配套脚本**: `scripts/ac-audit-code-check.py`（自动解析 `<!-- 验证: -->` 注释并执行验证命令）
   4. 对于「已集成」「已部署」类 AC，必须通过 `curl` / `grep` / `pytest` 实际验证
 - **检查清单**：在标记任何 AC 为 ✅ 前，问自己：
   - [ ] 这个 AC 描述的是代码行为还是文档行为？
@@ -808,6 +867,7 @@ v2.0 (长期) — 飞书交互卡片
 - **`references/sdd-known-gaps-and-roadmap.md`** — 当前流程审计、飞书卡片交互研究、质量检查框架、v2.0 设计草案
 - **`references/session-context-recovery.md`** — 跨会话上下文恢复协议：当用户引用前序会话中的问题/报告但 session_search 未命中时的 4 步恢复流程 + 项目上下文切换协议
 - **`references/batch-rename-pitfalls.md`** — 批量文档重命名陷阱（字符串包含问题）与安全替换模式
+- **`references/epic-004-multi-phase-pattern.md`** — 多 Phase EPIC 完整实战模式：从 Phase 0 到收尾的 22 Story 完整生命周期管理
 - **`references/cap-pack-naming-migration.md`** — CAP Pack 项目命名迁移实战记录（含完整检查清单）
 
 ## 🔗 Workflow Chain Protocol — SDD→DEV→QA 三段链式衔接

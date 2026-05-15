@@ -61,6 +61,81 @@ git diff main...pr-123
 gh pr checkout 123
 ```
 
+**If the branch can't be fetched** (remote ref not found, force-pushed, or deleted):
+
+```bash
+# Fall back to PR diff only, work from the text diff
+gh pr diff 123 > /tmp/pr-123.diff
+gh pr diff 123 --name-only
+gh pr view 123 --json title,body,state,author,createdAt,additions,deletions,files,commits,reviews
+```
+
+---
+
+### 🔬 Verify PR Claims Against Actual Behavior
+
+**🚨 Don't trust commit messages at face value.** PR descriptions and commit messages may contain inaccurate claims about behavior, performance, or correctness. Always verify by running the actual code path.
+
+#### Step 1: Install any new dependencies introduced by the PR
+
+```bash
+# Check pyproject.toml for new deps
+grep -A5 "dependencies\|optional-dependencies" pyproject.toml
+
+# Install for testing
+pip install jieba requests  # example: whatever the PR adds
+```
+
+#### Step 2: Reproduce the claimed behavior
+
+Take the exact examples from the commit message and run them:
+
+```bash
+# Python example
+python3 -c "
+# Replicate the exact code path from the PR diff
+import re
+
+# Copy the new function/logic from the diff
+# (work from gh pr diff, or use read_file on the changed file)
+
+text = 'example input from commit message'
+result = your_function(text)
+print('Result:', result)
+
+# Assert the claim
+assert 'expected_word' in result, f'PR claims {expected_word} but actual result is {result}'
+"
+```
+
+#### Step 3: Run existing tests with the new code path
+
+```bash
+# Run the full test suite
+python -m pytest tests/ -q --tb=short
+
+# Run specifically relevant tests
+python -m pytest tests/test_indexer.py -v
+
+# If the PR adds an optional dependency, install it before testing
+# to ensure the new code path is exercised
+```
+
+#### Step 4: Document discrepancies found
+
+If the actual behavior differs from what the PR claims:
+
+| PR Claim | Actual Behavior | Severity |
+|:---------|:----------------|:--------:|
+| jieba produces '公众号' | jieba produces '公众' + '号' | 🔴 Inaccurate example |
+| Feature improves X by Y% | Measured improvement is Z% | 🟡 Needs correction |
+
+Reference these findings in your review output. The discrepancy itself is often more valuable than the PR's stated intent.
+
+#### Real-world example (SRA PR #17):
+
+The commit message claimed jieba on "帮我写一篇公众号文章" produces `['帮', '我', '写', '一篇', '公众号', '文章']`. Verification revealed **jieba 0.42.1 with default dictionary** produces `['帮', '我', '写', '一篇', '公众', '号', '文章']` — `公众号` is NOT in jieba's default dictionary. The claim was incorrect, and the fix required `jieba.add_word('公众号')` or a custom dictionary. Without this verification step, the misleading example would have been merged into the commit history.
+
 ### Leave Comments on a PR
 
 **General PR comment — with gh:**

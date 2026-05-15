@@ -59,6 +59,7 @@ metadata:
 
 **📎 参考文件**：
 - `references/proxy-env-setup.md` — **代理环境变量三层配置法**：当应用走不了代理时的排查和解决方案（Python httpx/requests、Hermes vision 工具等）
+- `references/proxy-lifecycle.md` — **代理生命周期管理**：mihomo 完整启停监控流程（start→verify→stop→restart），含 Hermes terminal(background=true) 适配
 
 ---
 
@@ -130,12 +131,21 @@ mihomo -t -f ~/.config/mihomo/config.yaml
 
 ### 4.2 启动 mihomo
 
-```bash
-# 前台启动
-mihomo -f ~/.config/mihomo/config.yaml
+> **⚠️ 坑**：Hermes 环境下，terminal 工具会拦截 nohup/disown/setsid 等 shell 后台包装。请使用 `terminal(background=true)` 代替。
 
-# 后台启动
+```python
+# ✅ Hermes agent 中启动（推荐）
+terminal(command="mihomo -f ~/.config/mihomo/config.yaml",
+         background=True,
+         watch_patterns=["Start initial configuration", "HTTP proxy started", "proxy listening"])
+```
+
+```bash
+# 传统终端（人肉操作）
 nohup mihomo -f ~/.config/mihomo/config.yaml > /tmp/mihomo.log 2>&1 &
+
+# 前台启动（调试）
+mihomo -f ~/.config/mihomo/config.yaml
 
 # 指定工作目录
 mihomo -d ~/.config/mihomo -f config.yaml

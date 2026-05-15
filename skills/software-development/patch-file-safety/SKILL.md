@@ -431,3 +431,72 @@ grep -n 'STORY-1-1-1[0-5]' output.md
 ```
 
 **铁律**：批量字符串替换时，**永远按字符串长度降序排列**。或者使用带词边界检测的正则替换。替换后必须做**反向验证**——检查目标格式中是否混入了不应该出现的源模式。
+
+### 🚩 实战陷阱 8：TOML + regex + patch 工具 = 三重转义地狱
+
+**场景**：用 patch 工具修改 `pyproject.toml` 中的 `tag_regex` 正则表达式。期望 TOML 中的 regex 字符串是 `^(?:[\w-]+-)?v?(?P<version>[\d\.]+)$`（`\w` = 单词字符）。
+
+```python
+# ❌ 危险：在 patch 的 new_string 中写 \w（意图 TOML 中得到 \w）
+patch(
+    path="pyproject.toml",
+    old_string='tag_regex = "^(?:[\\\\w-]+-)?v?(?P<version>[\\\\d\\\\.]+)$"',
+    new_string='tag_regex = "^(?:[\\\\w-]+-)?v?(?P<version>[\\\\d\\\\.]+)$"'
+)
+```
+
+结果：patch 工具对 `\\w` 做了二次转义 → TOML 中得到 `\\\\w`（4 个反斜杠）→ Python regex 编译为 `\\w`（匹配字面量反斜杠 + w）→ **所有 tag 匹配失败**。
+
+**转义链解析（三层地狱）**：
+
+```
+Layer 1: patch 工具的 new_string 参数（Python 字符串）
+  \\\\w  → 文件内容得到 \\w     ← patch 可能二次转义
+
+Layer 2: TOML 解析器解读文件内容
+  \\w    → 字符串得到 \w       ← TOML 解译 \\ → \
+
+Layer 3: Python re.compile() 解读字符串
+  \w     → 单词字符            ← 正确！
+
+问题：如果 patch 工具二次转义 \\\\w → \\\\\w（文件内容变成 4 个反斜杠）
+  TOML 解译: \\\\w → \\w
+  Python regex: \\w → 匹配字面量反斜杠 + w ❌
+```
+
+**诊断方法**（patch TOML regex 后立即执行）：
+
+```python
+import tomllib, re
+with open('pyproject.toml', 'rb') as f:
+    data = tomllib.load(f)
+pattern = data['tool']['setuptools_scm']['tag_regex']
+print(repr(pattern))  # 检查实际字符串
+# 如果看到 \\w → 二次转义了，应为 \w
+
+r = re.compile(pattern)
+print(r.match('v2.1.0'))  # 应为 <re.Match>，不能是 None
+```
+
+**预防方案**（按优先级）：
+
+| 方案 | 操作 | 适用场景 |
+|:----|:-----|:---------|
+| ⭐ **首选** | TOML 单引号字符串 `'...'` 彻底绕过转义 | `tag_regex = '^(?:[\\w-]+-)?v?(?P<version>[\\d\\.]+)$'` |
+| **次选** | `write_file` 完整重写整个 TOML section | 多行改动，避免 patch 的转义干扰 |
+| **备选** | `execute_code` + `hermes_tools.patch` 沙箱执行 | 需要 patch 但受转义困扰时 |
+| **最后** | 手动逐层检查转义正确后 patch | 只有单处小改动 |
+
+**为什么 TOML 单引号字符串（literal string）能根治**？
+
+```toml
+# ❌ 基本字符串（双引号）：\\ 是转义前缀
+tag_regex = "^(?:[\\w-]+-)?..."
+
+# ✅ 字面量字符串（单引号）：无转义，内容原样保留
+tag_regex = '^(?:[\w-]+-)?...'
+```
+
+在 TOML 单引号字符串中，`\w` 保持为 `\w`，被 Python 的 `re.compile()` 正确解读为单词字符。**patch 工具无法「过度转义」单引号字符串，因为 TOML 解析器不会对单引号内容做任何转义。**
+
+**铁律**：在 `pyproject.toml`、`setup.cfg` 等 TOML 格式文件中写入正则表达式时，**永远使用 TOML 字面量字符串（单引号 `'...'`）**。如果该区域需要批量修改，用 `write_file` 完整重写 section，不要用 `patch` 逐段替换。

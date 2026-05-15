@@ -432,7 +432,7 @@ cd ~/projects/repo && git log --oneline -1 && git describe --tags --always
 
 **根因**：setuptools-scm 在 CI 环境中无法正确找到 git tag，导致 fallback 到 `0.0.0.dev0`。
 
-**完整调试记录**见 `references/setuptools-scm-ci-version.md`。
+**完整调试记录**见 `references/setuptools-scm-ci-version.md` 和 `references/setuptools-scm-version-resolution-2026-05-15.md`（2026-05-15 新增：TOML 单引号转义、setup.py 正则断裂、循环导入 + E402）。
 
 **快速定位命令**：
 ```bash
@@ -478,54 +478,146 @@ ls -la dist/
 # 预期: sra_agent-1.4.0-py3-none-any.whl
 ```
 
-### 陷阱 0c: 本地 editable install 后版本显示 0.0.0.dev0（2026-05-12 新增）
+### 陷阱 0c: 本地 editable install 后版本显示 0.0.0.dev0（2026-05-12 更新 → 2026-05-15 扩展）
 
-**现象**：从 GitHub clone 后执行 `pip install -e .`，`sra version` 或 `pip show sra-agent` 显示版本为 `0.0.0.dev0`，但 `git describe --tags` 正确返回 `v2.0.3`。
+**现象**：从 GitHub clone 后执行 `pip install -e .`，`sra version` 或 `pip show sra-agent` 显示版本为 `0.0.0.dev0`，但 `git describe --tags` 正确返回 `vX.Y.Z`。
 
-**根因**：setuptools-scm 在 `pip install -e .`（editable install）模式下，不会自动将版本写入 `version_file` 中指定的文件（如 `skill_advisor/_version.py`）。build 时作为临时依赖安装的 setuptools-scm 不持久化，导致运行时找不到版本信息，fallback 到 `0.0.0.dev0`。
+**根因链**（2026-05-15 完整调试揭示五层断裂）：
 
-**快速诊断命令**：
+| 层级 | 问题 | 影响 |
+|:----:|:-----|:-----|
+| ⚡ 1 | **setuptools-scm 10+ 需 `vcs-versioning` 依赖** | 仅装 `setuptools-scm` 不装 `vcs-versioning` → import 时 `ModuleNotFoundError` → 构建完全 fallback |
+| 🔥 2 | **`tag_regex` TOML 双重转义** | `\\\\w` 经 TOML 解译 + patch 二次转义 → 正则中变成 `\\w`（匹配字面量反斜杠）→ **所有 tag 匹配失败** |
+| ⚙️ 3 | **version_scheme 默认 `guess-next-dev`** | 距离 tag 1 commit → 显示 `2.1.1.dev1` 而非正确的 `2.1.0.post1` |
+| 🏗️ 4 | **`version_file` → `write_to` API 变更** | setuptools-scm 10+ 中 `version_file` 兼容但 `write_to` 是新标准。editable install 中 write_to 不触发生成 `_version.py` |
+| 🔗 5 | **`__init__.py` 版本解析链优先级颠倒** | 旧链: `_version.py` (层级 1) → `importlib.metadata` (层级 2) → `git describe` (层级 3)。但 `_version.py` 被 git 跟踪固化在 `2.0.3` 跨越 3 个版本未更新 |
+
+**完整诊断命令**（比对 `git describe` vs `pip show` vs `_version.py`）：
+
 ```bash
-# 1. 检查 git tag 是否正确
-git describe --tags --long          # 预期: vX.Y.Z-N-g<SHA>
+# 1. 三重版本号对比
+echo "git describe:    $(git describe --tags --long 2>/dev/null || echo 'N/A')"
+echo "pip show:        $(pip show sra-agent 2>/dev/null | grep '^Version:' | awk '{print $2}')"
+echo "_version.py:   $(cat skill_advisor/_version.py 2>/dev/null | grep version | head -1 || echo 'N/A')"
+echo "__init__:       $(python3 -c 'import skill_advisor; print(skill_advisor.__version__)' 2>/dev/null)"
 
-# 2. 检查 _version.py 是否存在
-cat skill_advisor/_version.py       # 预期: __version__ = 'X.Y.Z'
+# 2. 检查 setuptools-scm 和 vcs-versioning 是否都安装了
+pip3 list 2>/dev/null | grep -iE "scm|version" | awk '{print $1, $2}'
 
-# 3. 检查 setuptools-scm 能否正确提取版本
-python3 -c "from setuptools_scm import get_version; print(get_version())"
-# 如果 ModuleNotFoundError → 先安装 setuptools-scm
-```
-
-**修复方案（已验证可行）**：
-```bash
-# Step 1: 安装 setuptools-scm（editable 时仅 build 依赖，不持久化）
-pip install setuptools-scm
-
-# Step 2: 测试 setuptools-scm 能否正确解析版本
-python3 -c "from setuptools_scm import get_version; print(get_version())"
-# 预期输出: X.Y.Z（如 2.0.3）
-
-# Step 3: 手动生成 _version.py
+# 3. 检查 tag_regex 实际解析
 python3 -c "
-from setuptools_scm import get_version
-v = get_version()
-with open('skill_advisor/_version.py', 'w') as f:
-    f.write(f'__version__ = {v!r}\n')
-    f.write(f'version = {v!r}\n')
+import tomllib, re
+with open('pyproject.toml', 'rb') as f:
+    data = tomllib.load(f)
+p = data['tool']['setuptools_scm']['tag_regex']
+print('实际 regex:', repr(p))
+r = re.compile(p)
+for t in ['v2.1.0', 'v2.0.4', 'foo-v2.0.0', 'v1.0.0rc1']:
+    m = r.match(t)
+    print(f'  {\"✅\" if m else \"❌\"} {t} → {m.group(\"version\") if m else \"no match\"}')
 "
 
-# Step 4: 强制重新安装 editable 模式
-pip install -e . --force-reinstall --no-deps
-
-# Step 5: 验证
-sra version  # 预期: SRA — Skill Runtime Advisor vX.Y.Z
+# 4. 检查 version_scheme 和 write_to
+python3 -c "
+import tomllib
+with open('pyproject.toml', 'rb') as f:
+    data = tomllib.load(f)
+scm = data['tool']['setuptools_scm']
+print('version_scheme:', scm.get('version_scheme', 'default=guess-next-dev'))
+print('write_to:', scm.get('write_to', scm.get('version_file', 'NOT SET')))
+print('local_scheme:', scm.get('local_scheme', 'default=node-and-date'))
+"
 ```
 
-**⚠️ 关键点**：
-- `pip install -e . --force-reinstall --no-deps` 是必要步骤——仅生成 `_version.py` 不够，pip 的 egg-info metadata 缓存了旧版本号
-- 如果在非 SRA 项目（包名不同）遇到同样问题，原理相同：找到 `version_file` 对应的路径，手动生成即可
-- CI 中不会出现此问题（CI 用 `python -m build` 完整构建，setuptools-scm 在隔离环境中正常工作）
+**修复方案（已验证可行于 v2.1.1）**：
+
+```bash
+# Step 1: 确保 setuptools-scm 和 vcs-versioning 都安装
+pip3 install setuptools-scm vcs-versioning
+
+# Step 2: 修复 pyproject.toml — 用 TOML 单引号写 tag_regex，配置 version_scheme
+# [tool.setuptools_scm]
+# tag_regex = '^(?:[\w-]+-)?v?(?P<version>[\d\.a-b]{3,}(?:rc\d+)?)$'
+# version_scheme = "post-release"
+# local_scheme = "no-local-version"
+# write_to = "skill_advisor/_version.py"
+# write_to_template = "__version__ = '{version}'\nversion = '{version}'\n"
+
+# Step 3: 修复 __init__.py 版本解析链
+# 新链（已验证）: git describe → importlib.metadata → _version.py
+# 参考实现: skill_advisor/__init__.py 的 _resolve_version() 函数
+
+# Step 4: 移除 git 跟踪的旧 _version.py
+git rm --cached skill_advisor/_version.py 2>/dev/null || rm -f skill_advisor/_version.py
+echo "skill_advisor/_version.py" >> .gitignore
+
+# Step 5: 重新安装
+rm -f skill_advisor/_version.py
+pip3 install -e . --no-build-isolation --force-reinstall --no-deps
+
+# Step 6: 验证
+python3 -c "import skill_advisor; print('版本:', skill_advisor.__version__)"
+# 预期: v2.1.0（精确 tag 匹配）或 v2.1.0-1-gXXXXXX（tag 后有 commit）
+```
+
+**关于新版本解析链**（2026-05-15 设计）：
+
+```python
+def _resolve_version() -> str:
+    """三层版本解析（从源头到 fallback）：
+    1. git describe（开发环境 / editable install——有 .git 就准确）
+    2. importlib.metadata（pip install 正式安装——发行版）
+    3. _version.py（生成的 build artifact——最后 fallback）
+    """
+    # 找 .git 位置（从 __file__ 向上）
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _project_root = os.path.dirname(_here)  # skill_advisor/../
+
+    # 层级 1
+    git_dir = os.path.join(_project_root, ".git")
+    if os.path.isdir(git_dir) or os.path.isfile(git_dir):
+        try:
+            tag = subprocess.check_output(
+                ["git", "describe", "--tags", "--dirty=.dirty", "--always"],
+                cwd=_project_root, stderr=subprocess.DEVNULL, timeout=5,
+            ).decode().strip().lstrip("v")
+            if "-" not in tag:  # 精确 tag 匹配
+                return tag
+            return tag  # 带距离信息: "2.1.0-1-g5c513fe"
+        except Exception:
+            pass
+    # 层级 2: importlib.metadata
+    try:
+        from importlib.metadata import version as _v
+        return _v("sra-agent")
+    except Exception:
+        pass
+    # 层级 3: _version.py（如果存在）
+    try:
+        from ._version import version as _v
+        if _v:
+            return _v
+    except Exception:
+        pass
+    return "0.0.0-dev"
+```
+
+**特征**：
+- 有 `.git` → 从 `git describe` 实时获取（开发/editable install）
+- 无 `.git`（如 PyPI site-packages）→ `importlib.metadata` 返回安装版本
+- `_version.py` 作为 build artifact 的最后保障
+
+**附注标签 vs 轻量标签**（2026-05-11 发现，在此一并更新）：
+仅附注标签（`git tag -a`）对 setuptools-scm 可靠。轻量标签（`git tag`）在 `git describe --tags` 能找到，但 setuptools-scm 的某些版本或 vcs-versioning 的行为可能不同。**始终用附注标签**。
+
+**额外检查清单（当版本号仍不对时）**：
+- [ ] `pip3 list | grep -iE "scm|version"` — setuptools-scm 和 vcs-versioning 都安装了？
+- [ ] `python3 -c "from setuptools_scm import get_version; print(get_version())"` — setuptools-scm 能拿到版本？
+- [ ] `tomllib.load` 解析 `tag_regex` 后 `re.compile()` 匹配 `vX.Y.Z`？— 检查双转义
+- [ ] `pip show sra-agent` 的 `Version:` 字段 — editable 时可能缓存旧版
+- [ ] `_version.py` 是否存在、内容是否与 git tag 一致？
+- [ ] `__init__.py` 的 `_resolve_version()` 函数的层级顺序是否正确？
+- [ ] Git 历史：`_version.py` 是否曾被提交到 git（`git log -- skill_advisor/_version.py`）？
 
 ### 陷阱 0d: 模块名从 `sra_agent` 变更为 `skill_advisor`（2026-05-12 新增）
 
@@ -643,12 +735,14 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml')); 
 
 ## 🔄 版本管理
 
-**核心原则**: 版本号从 git tag 提取，但不在构建时依赖 setuptools-scm 的 `git describe`（CI 中不可靠）
+**核心原则**: 版本号优先从 git describe 实时获取（开发/editable install），其次从 importlib.metadata（pip install 的安装 metadata），最后从 _version.py build artifact。
 
-`__init__.py` 中的 `__version__` 由三层层级推导：
-1. `_version.py`（built 包的 setuptools-scm 生成物）
-2. `importlib.metadata`（pip install 后的 metadata）
-3. `git describe --tags`（开发环境 fallback）
+`__init__.py` 中的 `__version__` 由 _resolve_version() 函数三层降级推导：
+1. `git describe --tags`（开发环境 + editable install——源头活水）
+2. `importlib.metadata`（pip install 安装后——发行版 metadata）
+3. `_version.py`（setuptools-scm write_to 生成物——最后 fallback）
+
+> ⚠️ 2026-05-15 更新：旧版链是 `_version.py → importlib.metadata → git describe`，但 `_version.py` 在 git 中跨越 3 个版本未更新，导致版本号永远停滞。新版链将 `git describe` 设为最高优先级——只要 `.git` 存在，版本号自动跟随 tag。
 
 **⚠️ CI 发布流程**: 不再依赖 setuptools-scm 自动检测 tag，改为三重保险（见下方「CI/CD 常见陷阱 > 陷阱 0」）：
 - 写 `skill_advisor/_version.py`
@@ -1138,5 +1232,6 @@ python -m pytest tests/test_b.py tests/test_a.py -q  # 顺序颠倒运行
 | `references/setuptools-scm-ci-version.md` | 🏷️ setuptools-scm 在 CI 中版本号解析失败排错 |
 | `references/concurrent-testing-patterns.md` | 🧵 并发安全测试模式实战记录 |
 | `references/test-state-pollution.md` | 💥 测试文件间全局状态污染调试记录 |
+| `references/install-script-pitfalls.md` | 📦 install.sh 安装脚本已知陷阱（Python 版本比较 bug + PEP 668） |
 | `../../testing/python-testing/` | 🐍 通用 Python 测试反模式指南（含版本兼容性、模块污染等） |
 | `scripts/set_version.py` | 🔧 CI 构建前将 pyproject.toml 动态版本替换为静态版本的脚本 |
