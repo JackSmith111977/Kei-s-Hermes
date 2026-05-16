@@ -152,6 +152,61 @@ else:
 
 **预防**：KB 更新前先 `name in kb["concepts"]` 检查，对已存在概念采用「追加 notes」而非「跳过」策略。这样跨会话发现的信息能自然合并到同一个概念条目中。
 
+### 🆕 定向 developing 概念并行搜索模式（2026-05-16 新增）
+
+当高密度领域的 developing/new 概念积压（≥5 个）且需要更新时，不要逐个顺序搜索——使用**批量并行**搜索模式：
+
+#### 适用条件
+| 条件 | 阈值 |
+|:----|:----:|
+| mastered 占比 | ≥ 60%（高密度领域） |
+| developing/new 概念数 | ≥ 5 |
+| 今日已有 session 数 | < 2 |
+
+#### 流程
+
+```text
+[边缘狩猎开始]
+  │
+  ├─ ① 从 KB 读取所有 developing/new 概念列表
+  │
+  ├─ ② 按主题聚类（如「Google 系」「Anthropic 系」「架构论文」「MCP 生态」）
+  │
+  ├─ ③ 每聚类发起 1 次并行 web_search（最多 4-5 个并行请求）
+  │     搜索词 = "{概念名} 2026 latest update"
+  │
+  ├─ ④ 综合分析搜索结果
+  │     ├─ 有显著新信息 → 升级状态（developing→mastered）
+  │     ├─ 部分新信息 → 扩展 notes，提升置信度
+  │     └─ 无新信息 → 保持原状，推进复习日期
+  │
+  └─ ⑤ 批量更新 KB（一次 execute_code 完成所有更新）
+```
+
+#### 执行示例（2026-05-16 ai_tech）
+
+| 搜索轮次 | 聚类 | 并行数 | 命中 | 结果 |
+|:-------:|:----:|:------:|:----:|:----:|
+| 第 1 轮 | Adaption/Cisco | 2 | 5/5 ✅ | AutoScientist GA, Foundry OSS |
+| 第 2 轮 | Gemini 系列 | 2 | 5/5 ✅ | 3.2 Flash leak, Omni leak |
+| 第 3 轮 | SubQ/MCP 生态 | 2 | 5/5 ✅ | SubQ launch, Bifrost v1.4.0 |
+| 第 4 轮 | Anthropic/Zyphra | 2 | 5/5 ✅ | NEC/PwC deals, ZAYA1-8B |
+
+**结果**: 9 个概念全部更新，8 个 developing→mastered 升级。4 批搜索共 ~38 来源，Q=92。总工具调用 ~15 次（9 搜索 + 4 提取 + 2 KB 更新），而非逐个概念搜索的 20+ 次。
+
+#### 关键技巧
+- **搜索词要精准**：`"{项目名} 2026 latest update"` 避免重温已知知识
+- **先聚类再搜索**：同一公司/生态的概念放一起搜，减少重复结果
+- **批量更新**：所有发现汇总后一次性写入 KB JSON（用 `execute_code` + Python dict），避免多次小 I/O
+- **Tavily 配额管理**：边缘狩猎通常需要 4-8 次搜索。若 Tavily 配额紧张，直接用 `web_search`（本 session 验证：9 次 web_search 全部成功，Q=92）
+
+#### 与其它搜索模式的关系
+| 模式 | 适用 | 概念数 | 每批搜索数 |
+|:----|:----|:------:|:---------:|
+| 广度扩张（multi-topic） | mastered ≤ 60% | 3-5 新/轮 | 3-4 并行 × 3 轮 |
+| **定向 developing 并行（本文案）** | mastered ≥ 60% + dev backlog ≥ 5 | 全部 dev 概念 | 4-5 并行 × 1-2 轮 |
+| L1 批量复习（Red Flag #25） | 到期概念 ≥ 15 | 到期概念 | 按主题聚类 2-3 轮 |
+
 ---
 
 ## 实战验证

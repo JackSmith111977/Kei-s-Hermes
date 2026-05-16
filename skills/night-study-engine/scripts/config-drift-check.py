@@ -24,7 +24,6 @@ Exit code: 0 if clean, 1 if drift/issues found (read-only mode), 0 after --fix
 
 import json
 import sys
-import os
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -62,15 +61,33 @@ def fix_quality_format(session_log):
     return count
 
 
+def check_timestamp_format(lu_str, domain_id):
+    """Check last_updated timestamp for format issues. Return list of warnings."""
+    issues = []
+    if not lu_str:
+        return issues
+    if lu_str.count('+') > 1 or lu_str.count('-') > 3:
+        issues.append(f"timestamp format issue: '{lu_str}' (possible double timezone)")
+    try:
+        clean = lu_str.replace('+08:00', '').replace('Z', '')
+        datetime.fromisoformat(clean)
+    except Exception:
+        issues.append(f"timestamp unparseable: '{lu_str}'")
+    return issues
+
+
 def compute_kb_stats(session_log):
-    """Return (total_sessions, avg_quality_0_1) from KB session_log."""
-    scores = [s.get("quality_score", 0) for s in session_log if s.get("quality_score")]
-    total = len(session_log)
-    if not scores:
-        return total, 0.5
-    normalized = [s * 100 if isinstance(s, float) and s < 1 else s for s in scores]
-    avg = round(sum(normalized) / len(normalized) / 100, 2)
-    return total, avg
+    """Return (total_sessions, avg_quality) from KB session_log."""
+    scores = []
+    for s in session_log:
+        q = s.get("quality_score", 0)
+        if isinstance(q, (int, float)):
+            if isinstance(q, float) and 0 < q < 1:
+                q = q * 100
+            scores.append(float(q))
+    n = len(session_log)
+    avg_q = round(sum(scores) / len(scores) / 100, 2) if scores else 0.5
+    return n, avg_q
 
 
 def check_drift(domain_cfg, domain_kb):
@@ -124,14 +141,23 @@ def main():
 
         sl = kb.get("session_log", [])
         fmt_issues = check_quality_format(sl)
+        ts_issues = check_timestamp_format(kb.get("last_updated", ""), uid)
         drift_msgs = check_drift(d, kb)
+        cfg_ts_issues = check_timestamp_format(d.get("last_updated", ""), uid + "_config")
 
-        if not fmt_issues and not drift_msgs:
+        if not fmt_issues and not ts_issues and not drift_msgs and not cfg_ts_issues:
             print(f"OK {uid}: clean")
             continue
 
         any_issue = True
         print(f"\nWARN {uid}:")
+
+        if cfg_ts_issues:
+            for m in cfg_ts_issues:
+                print(f"  config timestamp: {m}")
+            if fix_sync:
+                d["last_updated"] = now_iso
+                print(f"  Fixed config timestamp: set to {now_iso[:19]}")
 
         if fmt_issues:
             print(f"  quality_score format: {len(fmt_issues)} sessions with 0-1 float")
@@ -139,6 +165,10 @@ def main():
                 print(f"    session {idx}: {val}")
             if len(fmt_issues) > 3:
                 print(f"    ... and {len(fmt_issues) - 3} more")
+
+        if ts_issues:
+            for m in ts_issues:
+                print(f"  timestamp: {m}")
 
         if drift_msgs:
             for m in drift_msgs:
@@ -149,7 +179,7 @@ def main():
             print(f"  Fixed {n} quality_score entries")
             json.dump(kb, open(kb_path, "w"), ensure_ascii=False, indent=2)
 
-        if fix_sync and (drift_msgs or fmt_issues):
+        if fix_sync and (drift_msgs or fmt_issues or ts_issues or cfg_ts_issues):
             kb_sessions, kb_avg_q = compute_kb_stats(sl)
             d["learning_history"]["total_sessions"] = kb_sessions
             d["learning_history"]["avg_quality"] = kb_avg_q
@@ -158,13 +188,17 @@ def main():
             d["last_updated"] = now_iso
             print(f"  Synced learning_history: sessions={kb_sessions}, avg_q={kb_avg_q}")
 
+        if ts_issues:
+            kb["last_updated"] = now_iso
+            print(f"  Fixed KB timestamp: set to {now_iso[:19]}")
+
         if fix_sync:
             json.dump(config, open(CONFIG_PATH, "w"), ensure_ascii=False, indent=2)
 
     if any_issue and not fix_format and not fix_sync:
         print("\nRun with --fix-format or --fix-all to auto-repair")
         sys.exit(1)
-    elif any_issue:
+    elif any_issue and (fix_format or fix_sync):
         print("\nIssues fixed")
     else:
         print("All domains clean")

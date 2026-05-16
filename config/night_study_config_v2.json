@@ -8,8 +8,8 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-15T04:05:04+08:00",
-      "freshness_score": 0.61,
+      "last_updated": "2026-05-16T08:01:31+08:00+08:00",
+      "freshness_score": 0.55,
       "review_schedule": {
         "l1": "2026-05-15",
         "l2": "2026-05-17",
@@ -38,7 +38,7 @@
         "Google I/O 2026: Gemini 3.1 Ultra + Project Astra preview"
       ],
       "learning_history": {
-        "total_sessions": 14,
+        "total_sessions": 16,
         "avg_quality": 0.89,
         "last_loop_count": 1,
         "consecutive_failures": 0
@@ -51,8 +51,8 @@
       "target_skill": "linux-ops-guide",
       "priority": 0.7,
       "schedule_interval_hours": 4,
-      "last_updated": "2026-05-15T06:00:00+08:00",
-      "freshness_score": 0.73,
+      "last_updated": "2026-05-16T08:03:21+08:00",
+      "freshness_score": 0.64,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-21",
@@ -73,9 +73,9 @@
         "TypeScript 7.0 Go 编译器并行控制参数"
       ],
       "learning_history": {
-        "total_sessions": 10,
-        "avg_quality": 0.89,
-        "last_loop_count": 2,
+        "total_sessions": 12,
+        "avg_quality": 0.82,
+        "last_loop_count": 1,
         "consecutive_failures": 0
       }
     },
@@ -121,8 +121,8 @@
       "target_skill": "memory-management",
       "priority": 0.6,
       "schedule_interval_hours": 6,
-      "last_updated": "2026-05-15T02:04:47+08:00",
-      "freshness_score": 0.94,
+      "last_updated": "2026-05-16T04:02:51+08:00",
+      "freshness_score": 0.5,
       "review_schedule": {
         "l1": "2026-05-18",
         "l2": "2026-05-21",
@@ -138,7 +138,7 @@
         "Agentic KM 2026 Architecture Update"
       ],
       "learning_history": {
-        "total_sessions": 14,
+        "total_sessions": 15,
         "avg_quality": 0.88,
         "last_loop_count": 1,
         "consecutive_failures": 0

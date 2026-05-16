@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.13.0
+version: 1.14.0
 triggers:
 - ai trends
 - ai前沿
@@ -143,7 +143,7 @@ metadata:
 | **IBM Think 2026** | 2026.05.05 | 🔴 高 | CEO Arvind Krishna 提出企业 AI 运营模型四支柱(Agents/Data/Automation/Hybrid)。watsonx Orchestrate(agentic control plane), IBM Concert(运维平台), IBM Sovereign Core GA(策略级治理). Nestlé PoC: 83%成本节省, 30x性能提升 |
 | **Twilio Agent Connect GA** | 2026.05.06 | 🟡 中 | Model-Agnostic、自托管的 AI Agent 音视频/消息编排平台。架构四支柱: Connect/Orchestrate/Remember/Handoff。70+ 语言翻译、跨 Voice/SMS/WhatsApp 统一上下文 |
 
-**MCP 生态关键趋势**：
+- **Anthropic 企业市场首次超越 OpenAI**（Ramp AI Index, May 2026）：Anthropic 34.4% vs OpenAI 32.3%，12 个月内 Anthropic +26%, OpenAI -1%。OpenRouter 自 Dec 2025 OpenAI 未再超越 Anthropic。双方均成立企业 AI 合资公司（Anthropic $1.5B 与 Blackstone/Goldman Sachs，OpenAI $4B "The Development Company"），采用 Palantir FDE 模式\n- **Anthropic $200B Google Cloud 基础设施锁定**（2026.04）：5 年 $200B（$40B/年），史上最大云支出承诺。Google 追加 $40B 投资（$10B 立即 + $30B 绩效里程碑）。占 Google Cloud 收入积压 40%+。Anthropic 预测收入：2026 $18B → 2027 $55B → 2028 $102B → 2029 $148B。预计 2028 年前不盈利（2026-27 共亏损 $11B）\n- **Anthropic × SpaceX Colossus 1**（2026.05）：300+ MW 容量（220,000+ NVIDIA GPUs），探索"轨道 AI 计算能力"（multigigawatt 级）\n- **MCP/A2A 协议融合**（2026 Q2）：工具层=MCP（97M SDK 月下载，18K+ 服务器），协调层=Google A2A。Linux Foundation 下 AAIF（Agentic AI Foundation）：Anthropic, OpenAI, Google, Microsoft, AWS 等成员。Q3 2026 预期跨协议互操作性规范。**协议战争终结**，三层架构（工具/协调/应用）正式标准化\n- **MCP Code Mode / Bifrost**（2026.05）：代码编排替代 LLM 反复推理。508 工具时输入 tokens 减少 **92.8%**，成本降低 **92.2%**，Pass Rate 100%。MCP Gateway + Code Mode 成为关键架构模式\n- **PwC × Anthropic 战略扩展**（2026.05.15）：Claude Code + Cowork 部署到数十万员工。金融/保险/HR/网络安全等领域全面上线，交付时间缩短最多 70%\n- **MCP 生态关键趋势**：
 - 81% 远程 MCP 服务器已使用 OAuth 2.1 PKCE
 - MCP 公开服务器 **13K+**（增长 407%+），月 SDK 下载 **97M+** (2026.03)
 - Streamable HTTP 取代 SSE 成为主要远程传输协议（70% Streamable HTTP / 30% stdio 生产分布）

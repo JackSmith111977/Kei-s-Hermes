@@ -474,6 +474,7 @@ python3 ~/.hermes/scripts/generate-project-report.py \
 | `references/panorama-template-design.md` | **10 章节全景报告模板设计**（基于 arc42 + CODITECT）— 含每节规格、数据源矩阵、HTML 模板技术 | 设计/重写项目全景报告时使用 |
 | `references/version-alignment-automation.md` | **版本号自动对齐** — bump-version.py sync 实现原理 + 扩展指南 | 文档版本号不同步时的一键修复方案 |
 | `references/merge-annotation-pattern.md` | **模块合并标注模式** — `[^n]` 脚注工作流 + 全文档交叉引用清单 + 变更原因标注规范 | 合并/重命名/废弃模块时的全文档对齐操作，含实战可复用的 checklist |
+| `references/project-report-json-rebuild.md` | **project-report.json 全量重建指南** — 6 数据源收集清单 + 重建流程 + 增量/全量决策树 + 常见陷阱 | 当 project-report.json 出现系统性漂移（版本/模块/Epic/测试多处不一致）时的全量重建操作手册 |
 ## Phase 4: 全景报告模板重设计
 
 > **前置条件**: 当用户指出当前项目报告"缺乏模板/内容不全面/无法做文档对齐"时，走此流程。

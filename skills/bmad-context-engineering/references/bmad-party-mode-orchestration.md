@@ -94,5 +94,3 @@ metadata:
 - ❌ **串行调用**: "等 Agent A 说完，再让 Agent B 说" —— 效率极低且容易同质化。
 - ❌ **全盘传入**: 把几千字的聊天记录塞给新加入的 Agent —— 导致注意力涣散。
 - ❌ **过度总结**: 把 Agent A 精彩的发言总结成一句"Agent A 觉得不错" —— 丢失细节和灵魂。
-
-> 💡 本 skill 已合并到 bmad-context-engineering。请使用 bmad-context-engineering。

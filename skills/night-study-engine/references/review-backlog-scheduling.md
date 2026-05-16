@@ -112,3 +112,16 @@ domain.score = (
 - [ ] 将 `due_concepts_count` 缓存字段集成到 `config-drift-check.py` 的同步逻辑中
 - [ ] 在 `adaptive_scheduler.py` 中可选启用 backlog pressure 因子
 - [ ] 验证 backlog_weight=0.3 在不同规模 KB 上的效果
+
+### 2026-05-16 验证：Backlog 清除后的正常状态
+
+在修复 ai_tech 的 config-KB 漂移后（配置同步从 12→15 sessions），本轮次对 dev_tools 进行了定期学习：
+
+| 指标 | 值 |
+|:-----|:---|
+| 到期概念 | 5/109 (4.6%) — 低压力 |
+| 调度器选择 | dev_tools (ai_tech 1.5h 前学过，已跳过) |
+| 人工校验 | ✅ 到期数低 → 调度器推荐合理 |
+| 结果 | 5 个到期全部 cleared, +1 新概念, Q=92 |
+
+**关键验证**：配置漂移修复后，调度器推荐与人工判断一致。此前（2026-05-15）dev_tools 有 30 个到期概念是因调度器基于过期数据跳过优先级导致的累积。证明：**定期修复配置漂移是解决 backlog 堆积的前提条件**。当漂移存在时，调度器可能推荐刚学过的领域（基于过期 freshness），导致到期概念被忽视；漂移修复后，freshness 恢复正常，且 backlog 压力因子自然降低（因为到期概念已被清理）。

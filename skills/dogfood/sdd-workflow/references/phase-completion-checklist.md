@@ -69,6 +69,8 @@ for fpath in glob.glob("docs/stories/STORY-4-*.md"):
   architecture/module_table: 添加新模块（如有）
 ```
 
+> **⚠️ 漂移程度判断**: 如果 project-report.json 出现系统性漂移（版本落后、模块数不符、缺失完整 Epic、测试文件列表过期），请使用 doc-alignment skill 的 `references/project-report-json-rebuild.md` 执行全量重建，而非增量 patch。
+
 ---
 
 ## 二、验证命令

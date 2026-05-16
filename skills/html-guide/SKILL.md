@@ -43,3 +43,5 @@ metadata:
 </body>
 </html>
 ```
+
+> 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/html-quick-ref.md

@@ -39,3 +39,5 @@ book.add_item(epub.EpubNcx())
 book.add_item(epub.EpubNav())
 epub.write_epub('output.epub', book, {})
 ```
+
+> 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/epub-quick-ref.md

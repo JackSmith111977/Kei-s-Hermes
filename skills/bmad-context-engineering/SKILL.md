@@ -16,6 +16,7 @@ allowed-tools:
 - read_file
 - write_file
 - terminal
+deprecated: []
 metadata:
   hermes:
     tags:

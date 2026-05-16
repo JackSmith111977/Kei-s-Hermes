@@ -146,5 +146,14 @@ web_search("MCP agent framework AI infrastructure 2026")
 
 **结论**：
 - `web_search` 作为 Tavily 永久降级方案已通过 **多轮次、多领域、跨月** 的稳定性验证
-- 2026-05-08 至 2026-05-15 间共使用 web_search 的轮次：~10+，成功率和结果质量保持稳定
+- 2026-05-08 至 2026-05-16 间共使用 web_search 的轮次：~12+，成功率和结果质量保持稳定
 - **推荐策略**：所有 cron 轮次默认使用 `web_search`，仅在确实需要 `time_range` 过滤参数时才考虑 Tavily（且失败后立即降回 web_search）
+
+### 2026-05-16 进一步确认
+
+| Cron 时间 | 尝试 | 结果 |
+|-----------|------|------|
+| **02:00** | Tavily MCP → ❌ `exceeds plan usage limit` + MCP unreachable | 🛑 永久降级激活 |
+| **02:00 (降级)** | **web_search × 5 并行** (K8s/Next.js/OXC/AWS/Python+TS+Go) | **✅ 7 主题全部获得高质量来源, Q=92** |
+
+**关键验证**：即使到月中（month_day=16），Tavily 配额仍无恢复迹象。永久降级策略得到第 12+ 轮次验证。web_search 的 5 个并行搜索在 1 次工具调用回合内全部完成，且结果质量（Q=92）持续稳定。全天时段 `web_search` 默认策略已被证明为正确的长期方案。

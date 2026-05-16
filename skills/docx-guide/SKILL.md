@@ -37,3 +37,5 @@ table.style = 'Table Grid'
 table.cell(0, 0).text = '姓名'
 doc.save('output.docx')
 ```
+
+> 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/docx-quick-ref.md

@@ -44,6 +44,7 @@ depends_on:
   - generic-qa-workflow
   - chain-state
   - sdd-workflow
+  - opencode-dev-workflow
 ---
 
 # 🛠️ 通用开发工作流 v1.0
@@ -182,7 +183,49 @@ Task N: {标题}
 
 ### Step 4: TDD 实现（RED-GREEN-REFACTOR）
 
-**做什么**: 逐个 Task 实现。每个功能 Task 前必须有对应的测试 Task。
+> **有两种实现方式**：手动实现（Hermes 直接写代码）或 **委托 OpenCode 实现（推荐）**。
+> 使用 OpenCode 可以隔离编码上下文、并行处理多任务，且不占用 Hermes 的 context window。
+
+| 方式 | 适用场景 | 优点 |
+|:-----|:---------|:-----|
+| 🧑‍💻 **手动实现** | 简单修改（1-2 个文件） | 直接控制，无需额外工具 |
+| 🤖 **OpenCode 委托** | 复杂功能（3+ 文件），多任务并行 | 隔离上下文，可并行，不撑爆 context |
+
+#### 🤖 方式 A：使用 OpenCode 实现（推荐）
+
+加载 `opencode-dev-workflow` skill 后，按以下模式委托：
+
+```bash
+# 1. Hermes 先将任务拆解为原子 Task（见 Step 3 的计划）
+# 2. 逐个 Task 委托给 OpenCode（或批量委托）
+
+# 单 Task 委托
+opencode run 'Task 1: 在 tests/test_auth.py 添加 test_login_success 测试，然后实现 login() 函数使其通过' \
+  --thinking --dir ~/projects/myapp
+
+# 批量委托（Hermes 提供完整上下文）
+opencode run \
+  '根据以下 plan 实现所有 Task：
+   Task 1: 在 auth.py 中添加 login() 函数...
+   Task 2: 在 tests/ 中添加测试...
+   实现完成后运行 pytest tests/ -q 确认通过。' \
+  --thinking --dir ~/projects/myapp
+
+# 跟踪进度
+process(action="log", session_id="<id>")
+```
+
+
+
+#### 🧑‍💻 方式 B：手动实现（传统方式）
+
+逐个 Task 实现。每个功能 Task 前必须有对应的测试 Task。
+
+```text
+[RED]   写一个会失败的测试 → 确认测试确实失败
+[GREEN] 写最少代码让测试通过 → 确认测试通过
+[REFACTOR] 重构代码 → 确认测试仍然通过
+```
 
 ```text
 [RED]   写一个会失败的测试 → 确认测试确实失败

@@ -61,3 +61,5 @@ fc-list :lang=zh                              # 查看中文字体
 | 代码 | `listings`, `minted` |
 | 数学 | `amsmath`, `amssymb` |
 | 参考文献 | `biblatex`, `natbib` |
+
+> 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/latex-quick-ref.md

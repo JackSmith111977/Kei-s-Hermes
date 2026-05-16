@@ -29,5 +29,3 @@ BMAD 不仅仅是 Prompt，它是基于文件系统的 AI 操作系统。
 ## 4. 开发实践
 - **Artifact 导向**: 所有学习/开发必须产出文件 (Skill/MD)，否则视为无效。
 - **TDD 强制**: 开发 Story 必须先写失败测试 (RED)，再写代码 (GREEN)。
-
-> 💡 本 skill 已合并到 bmad-context-engineering。请使用 bmad-context-engineering。

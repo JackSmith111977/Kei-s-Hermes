@@ -265,6 +265,7 @@ init                — 初始化（交互式创建 project-state.yaml）
 | **文档状态字段格式不统一** | scan 扫不到某些文档的状态 | `get_doc_states()` 兼容 `**状态**:` 和 `**status**:` 两种格式 |
 | **YAML 缩进被 patch 破坏** | YAMLError，lint 失败 | 修改 YAML 后必须 `python3 -c "import yaml; yaml.safe_load(open(...))"` 验证 |
 | **大范围提取只规划部分** | 用户纠正「还有更多没规划」 | 提取/迁移前先做全盘规划（列出全部实体 → 按优先级分组 → 再逐个 Phase 执行） |
+| **孤儿 Story 残留 (`epic: '?'`)** | 部分 Story 的 epic/spec 引用为 `?`，但在 Epic 的 completed_count 中被统计 → project-state.yaml verify 不报错但数据不一致 | 提取模块时清理 project-state.yaml 中的残余条目；发现后手动修复 `epic:` 和 `spec:` 字段。验证命令: `python3 -c \"import yaml; d=yaml.safe_load(open('docs/project-state.yaml')); [print(f'ORPHAN: {k}') for k,v in d['entities']['stories'].items() if v.get('epic')=='?' or v.get('spec')=='?']\"` |
 
 ## 与现有状态机的关系
 

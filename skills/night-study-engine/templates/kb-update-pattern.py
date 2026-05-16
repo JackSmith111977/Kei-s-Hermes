@@ -28,6 +28,13 @@ concepts = kb['concepts']
 today = 'YYYY-MM-DD'
 next_review_3day = add_days(today, 3)
 
+# ⚠️ 字段名自动检测：KB 可能使用 'notes'（str）或 'key_points'（list）
+#    不同的 KB 文件可能使用不同的字段命名约定
+#    不做检测直接硬编码 key_points 会导致 KeyError！
+sample = list(concepts.values())[0] if concepts else {}
+FIELD = 'key_points' if 'key_points' in sample else ('notes' if 'notes' in sample else 'key_points')
+print(f"   Detected field name: '{FIELD}'")
+
 # ==== 2. 添加新概念 ====
 concepts['new_concept_name'] = {
     "status": "new",                         # new / developing / mastering / mastered / exploring
@@ -35,7 +42,7 @@ concepts['new_concept_name'] = {
     "last_reviewed": today,
     "next_review": next_review_3day,
     "review_interval": 3,
-    "key_points": [                          # ⚠️ 使用 key_points 而非 notes
+    FIELD: [                                 # ⚠️ 使用自动检测的字段名（key_points 或 notes）
         "要点1（具体可验证的事实）",
         "要点2（含版本号和发布日期）",
         "要点3（影响和意义）"
@@ -49,9 +56,18 @@ concepts['new_concept_name'] = {
 
 # ==== 3. 更新已有概念（复习/追加） ====
 if 'existing_concept' in concepts:
-    concepts['existing_concept']['key_points'].append(
-        f"[{today} 复习] 新增要点..."
-    )
+    # ⚠️ 根据自动检测的字段名追加内容
+    #    notes 是字符串（追加用 \n\n），key_points 是列表（追加用 append）
+    if FIELD == 'key_points':
+        if FIELD not in concepts['existing_concept']:
+            concepts['existing_concept'][FIELD] = []
+        concepts['existing_concept'][FIELD].append(
+            f"[{today} 复习] 新增要点..."
+        )
+    else:  # notes — 字符串追加
+        prev = concepts['existing_concept'].get(FIELD, '')
+        new_text = f"[{today} 复习] 新增要点..."
+        concepts['existing_concept'][FIELD] = prev + '\n\n' + new_text if prev else new_text
     concepts['existing_concept']['last_reviewed'] = today
 
 # ==== 4. 更新 KB 元数据 ====

@@ -603,6 +603,7 @@ git commit -m "feat: {name} 能力包提取 (N skills)"
 ### 四-D、能力包合并工作流 (Merge Workflow) 🔥
 
 > **2026-05-14 新增** — 当发现两个能力包内容重叠、技能已被另一包吸收、或边界划分不合理时的标准化合并流程。
+> **2026-05-15 扩展** — 新增跨层合并模式 (Hermes 系统 + cap-pack 包) 和技能降级模式 (Skill→Experience)
 > 实战验证: knowledge-base 合并至 learning-engine（8 份文档对齐 + 脚注标注原因）
 
 #### 触发条件
@@ -683,11 +684,91 @@ dependencies:
 | 依赖指向已删除包 | 低 | `validate-pack.py` 会检测断裂依赖 |
 | 分类映射未更新 | 低 | SRA 仍使用旧类别名 → 无错但效率降低 |
 
+### 四-D-α 跨层合并模式 (Cross-Layer Merge) ⚡
+
+> **场景**: 技能存在于 `~/.hermes/skills/`（Hermes 系统）但 **不在** 任何 cap-pack 包中。
+> **例如**: BMAD 系列技能（bmad-context-engineering, bmad-party-mode-orchestration, bmad-context-insights）
+
+| 特征 | 含义 |
+|:-----|:------|
+| 源技能位置 | `~/.hermes/skills/{name}/SKILL.md` |
+| cap-pack 影响 | **无** — 技能不在任何 pack 中 |
+| 操作层级 | 纯 Hermes 系统级 |
+
+**执行步骤**:
+
+```bash
+# 1. 内容分析 → 识别源技能的独有内容
+# 2. 合并内容到目标: 将源 SKILL.md 内容复制到目标 references/
+# 3. 标记源 deprecated: 在源 SKILL.md 末尾追加弃用提示
+# 4. 更新目标 frontmatter: 添加 deprecated: [] 字段
+```
+
+**铁律**:
+- ❌ 不删除原文件 — 只标记 deprecated（保留回溯依据）
+- ✅ 内容合并到 `references/` — 不修改 target 的 SKILL.md 主体
+- ✅ 保留 SQS 高的 skill 作为 target
+
+### 四-D-β 技能降级模式 (Skill→Experience Downgrade) ⚡
+
+> **场景**: 微技能（<50 行，SQS < 60）同时存在于 `~/.hermes/skills/` **和** cap-pack 包中。
+> **例如**: 6 个 doc-engine 微技能（markdown-guide, docx-guide 等）降级为 experiences
+
+| 特征 | 含义 |
+|:-----|:------|
+| 源技能位置 | 双层级: Hermes 系统 + cap-pack `SKILLS/` |
+| cap-pack 影响 | **大** — 需修改 SKILLS/ + EXPERIENCES/ + cap-pack.yaml |
+| 操作层级 | 双层级: 系统级 deprecated + 包级降级 |
+
+**执行步骤**:
+
+```text
+[包级操作]                    [Hermes 系统级操作]
+   ↓                                ↓
+1. 创建 experience 文件         4. 标记源 skill deprecated
+   到 EXPERIENCES/                 在 SKILL.md 末尾追加提示
+   (带 type: experience
+   + description 标注来源)
+   ↓
+2. 从 SKILLS/ 移除源技能目录
+   (rm -rf, git rm)
+   ↓
+3. 更新 cap-pack.yaml
+   - skills[] 移除 ← 注意 skill 数量
+   - experiences[] 新增 ← 标注"从 XX skill 降级"
+```
+
+**cap-pack.yaml 变更示例**:
+```yaml
+# 从 skills 移除:
+# - id: docx-guide
+
+# 在 experiences 新增:
+- id: docx-quick-ref
+  title: Word 文档操作速查
+  description: python-docx 创建/编辑 Word 文档 — 从 docx-guide skill 降级
+```
+
+**验证**:
+```bash
+python3 scripts/validate-pack.py packs/<name>        # 包完整性
+find packs/<name>/SKILLS -name "SKILL.md" | wc -l     # 技能数核对
+grep -r "合并到\|已降级" ~/.hermes/skills/<name>/SKILL.md  # deprecated 标记
+```
+
+**陷阱**:
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| 只改 cap-pack 不改 Hermes 系统 | Hermes 仍推荐已降级的 skill | 两端必须同步 deprecated 标记 |
+| experience 的 description 不标注来源 | 无法追溯降级历史 | 用 `从 XX skill 降级` 格式 |
+| 忘记更新 cap-pack.yaml 的 skill 计数 | 文档与代码漂移 | 运行 `validate-pack.py` 验证 |
+
 #### 相关参考
 
 | 文档 | 说明 |
 |:-----|:------|
 | `references/cap-pack-merge-workflow-example.md` | knowledge-base → learning-engine 实战合并记录（完整对齐清单 + 验证步骤） |
+| `references/phase3-merge-execution-example.md` | **BMAD 跨层合并 + 微技能降级 实战记录** — Hermes 系统 + cap-pack 双层级操作 |
 
 #### 验证命令（提交前运行）
 
@@ -922,6 +1003,7 @@ python3 ~/projects/hermes-cap-pack/scripts/sra-discovery-test.py --json
 | `~/projects/hermes-cap-pack/scripts/health-check.py` | 可复用健康检查脚本 |
 | `~/projects/hermes-cap-pack/scripts/sra-discovery-test.py` | SRA 发现验证脚本（15条测试查询） |
 | `references/doc-engine-sra-test-data.md` | doc-engine 实战 SRA 测试原始数据 |
+| `references/post-extraction-quality-upgrade.md` | **后置质量升级执行模式** — EPIC-004 实战验证的 5 阶段模式 (基线→L2/L3→质量提升→合并→门禁固化), 含工具清单/实战陷阱/基线数据 |
 | `references/layer-validation-pattern.md` | **三层结构验证模式** — validate-layers.py + frontmatter 标准 + CI 集成 |
 | `references/extraction-commands.md` | 能力包提取命令速查（15+ 模块实战） |
 
@@ -1142,7 +1224,7 @@ integration:
 | `skill-quality-score.py` | `~/projects/hermes-cap-pack/scripts/skill-quality-score.py` | SQS 五维质量评分（结构/内容/时效/关联/发现）。**v2.0** 新增 SQLite 持久化（`--save`/`--init-db`/`--history <skill>`），`scores`+`score_history` 双表支持历史趋势追踪 |
 | `skill-lifecycle-audit.py` | `~/.hermes/skills/skill-creator/scripts/skill-lifecycle-audit.py` | 生命周期审计 + deprecate/revive 管理 |
 | `health-dashboard.py` | `~/projects/hermes-cap-pack/scripts/health-dashboard.py` | Chart.js 健康趋势仪表盘生成器。从 SQS DB 读取数据，生成 HTML（折线图/雷达图/低分排行/退化检测）。`--cron` 静默模式配合 `health-report.py` 每周联动 |
-| `merge-suggest.py` | `~/projects/hermes-cap-pack/scripts/merge-suggest.py` | 合并建议引擎。内容相似度分析（difflib SequenceMatcher）+ 分组优化（按 name prefix 分组避免 O(n²)，见 `references/content-comparison-optimization.md`）。支持 --yaml/--json 导出、--apply 备份执行 |
+| `merge-suggest.py` | `~/projects/hermes-cap-pack/scripts/merge-suggest.py` | 合并建议引擎。内容相似度分析 + BMAD 冗余检测 + 微技能识别。⚠️ BMAD/MICRO 标记 `action=inspect` 需手动按 `references/phase3-merge-execution-example.md` 执行，`--apply` 只追加合并标注 |
 | `sqs-sync.py` | `~/projects/hermes-cap-pack/scripts/sqs-sync.py` | SQS → SRA 质量分同步器。每 6 小时 cron 同步 200 个 skill 的 SQS 分到 `~/.sra/data/sqs-scores.json`。`--dry-run` 预览、`--no-quality` 禁用加权 |
 
 ### 健康诊断工具

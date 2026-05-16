@@ -32,3 +32,5 @@ pandoc input.md -o output.docx
 pandoc input.md -o output.html -s
 pandoc input.md -o output.epub
 ```
+
+> 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/markdown-quick-ref.md

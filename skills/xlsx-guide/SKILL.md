@@ -39,3 +39,5 @@ for row in data:
     ws.append(row)
 wb.save('output.xlsx')
 ```
+
+> 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/xlsx-quick-ref.md

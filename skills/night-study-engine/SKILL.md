@@ -1,7 +1,7 @@
 ---
 name: night-study-engine
 description: "🌙 夜间自习引擎 v3.0 — 自驱动学习系统。融合 learning-workflow v5.x 迭代循环架构 + learning v2.8 经验提取。涵盖三层迭代循环、递进质量评分、概念关系图谱、自适应调度、子代理仲裁、经验提取管线。"
-version: 3.7.0
+version: 3.9.0
 triggers:
   - 夜间学习
   - night study
@@ -506,7 +506,8 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │   ├── references/freshness-scoring-four-dimensions.md # 四维新鲜度评分矩阵
 │   ├── references/research-session-patterns.md      # 研究型会话模式（R2 绕过策略）
 │   ├── references/hermes-contextk8s-mapping.md      # Hermes ↔ Context K8s 7 服务映射（2026-05-14）
-│   ├── references/review-backlog-scheduling.md       # 复习积压调度信号 — 到期概念数作为调度因子（2026-05-15）
+│   ├── references/review-backlog-scheduling.md      # 复习积压调度信号 — 到期概念数作为调度因子（2026-05-15）
+│   ├── references/dev-tools-landscape-may-2026.md   # 开发工具生态快照（2026-05-16, 跨8个工具链）
 │   ├── templates/
 │   │   └── kb-update-pattern.py                     # KB 批量更新 Python 模板
 │   └── scripts/
@@ -582,6 +583,14 @@ STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
 1. 小改动（1-2概念，无关系）→ `update_knowledge_base.py` CLI
 2. 大改动（3+概念，有关系，需更新 session_log）→ 复制 `templates/kb-update-pattern.py` 模板到 `execute_code`，修改后执行
 3. 复习推进 → `--update-review`
+
+**📌 字段名自动检测模式（v3.9）**：批量更新时，先检测 KB 使用 `key_points`（list）还是 `notes`（str），再写入。检测方式：
+```python
+sample = list(concepts.values())[0] if concepts else {}
+FIELD = 'key_points' if 'key_points' in sample else ('notes' if 'notes' in sample else 'key_points')
+```
+⚠️ **常见事故**：硬编码 `key_points` 写入实际使用 `notes` 的 KB 会导致 `KeyError`。productivity（notes）和 dev_tools（key_points）使用不同的字段名——先检测再写。
+详见 `templates/kb-update-pattern.py` 中的自动检测实现。
 
 📦 **参考模板**：`templates/kb-update-pattern.py` — 包含完整的 Python dict 操作代码模板（添加概念、建立关系、更新元数据、session_log、learning_history）。复制到 execute_code 后修改 {DOMAIN_ID}、概念内容和质量分即可。
 
@@ -730,6 +739,26 @@ STEP 6: 写入日志: `~/.hermes/logs/night_study_review.log`（追加模式）
     - **缓解策略 B**：自主降级调度器推荐——用 `--skip` 跳过推荐领域，选择到期概念更多的领域。
     - **详细策略**：见 `references/review-backlog-scheduling.md`。
     - **⚠️ 如果跨域引用已经存在 `due_concepts_count` 缓存字段**（当前 KB JSON 中没有），优先使用缓存值而非全量扫描 KB JSON。否则先 `execute_code` 快速计算到期数。
+
+### v3.8 新增 — 实践教训（来自 2026-05-16 实测：Cron 反射门禁不可用性与自检替代）
+
+30. ❌ **`reflection-gate.py` 在 Cron 环境中因无活跃学习任务不可用** — `reflection-gate.py r1` `/` `r2` `/` `r3` `/quality` 命令需要活跃的 learning state（由 `learning-state.py init` 创建）。Cron 自学任务通常不初始化学习状态机，导致所有门禁评分命令返回 `{"error": "无活跃学习任务"}`。这是 #22（状态机步骤编号不对齐）的同一根因的另一种表现。
+    - **根因**：night-study-engine 的流程假设 `reflection-gate.py` 总是可调用，但该脚本是 `learning-workflow` 的子组件——只在交互式学习任务（有用户在线）时才存在活跃学习状态。
+    - **检测**：`reflection-gate.py r1 <task_id>` 返回 `{"error": "无活跃学习任务"}`。
+    - **解决方案**：使用结构化自检替代脚本门禁。包含完整的 R1/R2/R3/L3 自检清单、评分细则和实战验证。见 `references/cron-reflection-gate-self-check.md`。
+    - **不推荐的场景**：交互式学习任务（用户在线时）仍应使用标准 `learning-state.py init` + `reflection-gate.py` 流程。自检模式是 cron 环境下的降级方案。
+    - **与 #20 的关系**：#20（研究型会话 R2 假阴性）是 `reflection-gate.py` 脚本的评分偏差；本条是脚本本身在 cron 环境完全不可用。两者是正交问题，但都可以通过自检模式绕过。叠加使用时，`references/cron-reflection-gate-self-check.md` 的 R2 自检部分自然规避了 #20 的代码块假阴性问题。
+
+### v3.9 新增 — 实践教训（来自 2026-05-16 实测：KB 字段名检测与 timestamp 格式修复）
+
+31. ❌ **批量 KB 更新时未检测 `notes` vs `key_points` 字段名导致 KeyError** — 不同 KB 文件使用不同的字段命名约定（productivity 用 `notes` 字符串，dev_tools/ai_tech 用 `key_points` 列表）。硬编码字段名直接 `concepts[name]['key_points'].append(...)` 会在使用 `notes` 的 KB 上崩溃。
+    - **检测**：在更新前检查第一个概念的字段名：`FIELD = 'key_points' if 'key_points' in sample else 'notes'`
+    - **模式**：新概念写入用 `concepts[name][FIELD] = [...]`；更新用 `append`（list）或 `+= '\\n\\n' + text`（str）
+    - **模板**：`templates/kb-update-pattern.py` v3.9 已内置自动检测
+
+32. ❌ **Config/KB `last_updated` timestamp 出现重复时区** — `"2026-05-16T02:01:24+08:00+08:00"` 的格式虽然 Python 能解析，但不是标准 ISO 8601。多次 `json.dump` + 拼接可能产生此问题。双时区不会触发 config-drift-check 但可能影响外部工具解析。
+    - **检测**：`config-drift-check.py --fix-all` 现在包含 timestamp 格式验证
+    - **修复**：`lu_str.count('+') > 1` 检测重复时区，`json.dump` 替换为单时区格式
 
 ### v4.0 新增 — 实践教训（来自 2026-05-14 实测：Config/KB 配置漂移导致调度器推荐错误）
 
