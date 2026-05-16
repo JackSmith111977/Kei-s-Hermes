@@ -553,6 +553,7 @@ send_message(
 | [cap-pack-merge-pattern](references/cap-pack-merge-pattern.md) | (ref) | 模块合并全流程 7 步 + 文件清单 + 注释模板 |
 | [data-sources-hermes-cap-pack](references/data-sources-hermes-cap-pack.md) | (ref) | cap-pack 项目数据源清单 |
 | [css-patterns](references/css-patterns.md) | (ref) | 可复用的 CSS 布局模式 |
+| [cap-pack-alignment-patterns](references/cap-pack-alignment-patterns.md) | (ref) | cap-pack 项目文档对齐模式 — 三文件六/八检查点 + Epic 漂移修复 + 验证 |
 
 ---
 

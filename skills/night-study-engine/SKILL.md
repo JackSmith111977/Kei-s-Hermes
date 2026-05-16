@@ -1,7 +1,7 @@
 ---
 name: night-study-engine
-description: "🌙 夜间自习引擎 v3.0 — 自驱动学习系统。融合 learning-workflow v5.x 迭代循环架构 + learning v2.8 经验提取。涵盖三层迭代循环、递进质量评分、概念关系图谱、自适应调度、子代理仲裁、经验提取管线。"
-version: 3.9.0
+description: "🌙 夜间自习引擎 v4.0 — 18 领域全覆盖学习系统。映射全部 17 个 cap-pack 包为学习领域，自驱动调度 + 三层迭代循环 + 自适应间隔复习 + 经验提取。融合 BMAD 式声明式依赖 + learning-workflow v5.x 质量门禁。"
+version: 4.0.0
 triggers:
   - 夜间学习
   - night study
@@ -57,15 +57,65 @@ metadata:
     design_pattern: pipeline
 ---
 
-# 🌙 夜间自习引擎 v3.0 — 自驱动学习系统
+# 🌙 夜间自习引擎 v4.0 — 18 领域全覆盖学习系统
 
 > **核心理念**：从被动批处理升级为**主动自驱动学习系统**。每次学习不是孤立事件，而是三层迭代循环中的一环——不断螺旋上升的知识积累。
 >
-> **v3.0 重大升级**：融合 learning-workflow v5.x 的迭代循环架构 + learning v2.8 的经验提取系统 + 概念关系图谱 + 自适应调度 + 子代理仲裁。
+> **v4.0 重大升级**：领域覆盖从 4 个扩展到 **18 个**，映射全部 17 个 cap-pack 包。新增领域自动发现脚本、cap-pack 包同步机制、自适应调度增强（考虑复习积压权重）。
+>
+> **配置生成**: `scripts/generate-night-study-config.py` — 自动生成 v3.0 配置 + KB 骨架，从 `~/Hermes-Cap-Pack/packs/` 读取包结构。
 
 ---
 
-## 〇、系统架构总览（v3.0 升级后）
+## 〇、系统架构总览（v4.0 升级后）
+
+### v4.0 相比 v3.0 的变更
+
+| 维度 | v3.0 | v4.0 |
+|:-----|:-----|:------|
+| 学习领域数 | 4 个 | **18 个** |
+| 覆盖 cap-pack | 无直接映射 | **17 个包全覆盖** |
+| KB 骨架 | 手动创建 | **`generate-night-study-config.py` 自动生成** |
+| 调度算法 | priority × freshness | **+ review_backlog_weight 防止积压** |
+| cap-pack 同步 | ❌ 无 | ✅ `discovery_rules.cap_pack_sync` 自动发现新包 |
+
+### 全部 18 个学习领域
+
+| # | 领域 | 优先级 | 频次 | 映射 cap-pack 包 | Skills 数 |
+|:-:|:-----|:------:|:----:|:----------------|:---------:|
+| 1 | **AI 与前沿技术** | 🔴 0.95 | 2h | learning-engine (部分) | 11+ |
+| 2 | **Agent 编排与集成** | 🔴 0.90 | 3h | agent-orchestration | 8 |
+| 3 | **学习与研究系统** | 🔴 0.85 | 4h | learning-engine + learning-workflow | 12 |
+| 4 | **开发工具与语言** | 🟡 0.85 | 4h | developer-workflow | 16 |
+| 5 | **效率与工作方法论** | 🟡 0.75 | 6h | learning-engine (部分) | — |
+| 6 | **运维与监控** | 🟡 0.70 | 8h | devops-monitor | 10 |
+| 7 | **GitHub 生态与协作** | 🟡 0.70 | 8h | github-ecosystem | 9 |
+| 8 | **消息通信与推送** | 🟡 0.70 | 8h | messaging | 8 |
+| 9 | **质量治理与合规** | 🟡 0.65 | 8h | quality-assurance + skill-quality | — |
+| 10 | **文档生成与排版** | 🟡 0.60 | 12h | doc-engine | 10 |
+| 11 | **元认知与自省** | 🟡 0.60 | 12h | metacognition | 6 |
+| 12 | **安全审计与防护** | 🟡 0.60 | 12h | security-audit | 5 |
+| 13 | **创意与视觉设计** | 🟢 0.50 | 24h | creative-design | 25 |
+| 14 | **网络与代理** | 🟢 0.50 | 12h | network-proxy | 3 |
+| 15 | **二次元与文娱** | 🟢 0.40 | 12h | social-gaming | 4 |
+| 16 | **音视频与媒体** | 🟢 0.30 | 24h | media-processing | 5 |
+| 17 | **金融数据分析** | 🟢 0.30 | 24h | financial-analysis | 1 |
+| 18 | **社交游戏与娱乐** | ⚪ 0.25 | 48h | social-gaming | 4 |
+
+### 领域与 cap-pack 同步机制
+
+每次 `discover_domains.py` 运行时自动检测 `~/Hermes-Cap-Pack/packs/` 目录：
+
+```python
+# 自动检测新包 → 添加到学习领域（如适用）
+cap_pack_dir = Path.home() / "Hermes-Cap-Pack" / "packs"
+existing = {d["id"] for d in config["domains"]}
+for pack_dir in cap_pack_dir.iterdir():
+    if pack_dir.is_dir() and pack_dir.name not in existing:
+        # 自动创建新领域（标记为 auto_discovered）
+        # 由用户决定是否保留
+        pass
+```
 
 ```
 夜间自习引擎 v3.0

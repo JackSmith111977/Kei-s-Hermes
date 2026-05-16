@@ -219,7 +219,40 @@ git push origin prepare-release-vX.Y.Z
 
 ### 4.4 Review 通过后合并到 main
 
-### 4.5 创建 git tag
+### 4.5 发布前预检：确保版本变更已正确标记
+
+> ⚠️ 仅推了版本变更 commit 但没打 tag = 没有发布。
+
+```bash
+# 检查最新 tag → HEAD 之间是否有版本变更
+latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+if [ -n "$latest_tag" ]; then
+  echo "最新 tag: $latest_tag"
+  echo "之后未发布的 commits:"
+  git log --oneline "$latest_tag"..HEAD --grep="v[0-9]\|version\|release" || echo "  (无版本相关 commit)"
+fi
+
+# 检查各个版本配置文件与实际 tag 是否一致
+python3 -c "
+import re
+from pathlib import Path
+p = Path('pyproject.toml')
+if p.exists():
+    v = re.search(r'version\\s*=\\s*\"([^\"]+)\"', p.read_text())
+    if v:
+        import subprocess
+        r = subprocess.run(['git', 'tag', '--sort=-version:refname'], capture_output=True, text=True)
+        tags = r.stdout.strip().split('\\n')[:5] if r.stdout.strip() else []
+        print(f'pyproject.toml 版本: {v.group(1)}')
+        print(f'最近 tags: {tags[:5]}')
+        if tags and v.group(1) in tags[0]:
+            print('✅ 版本号已匹配最近 tag')
+        else:
+            print('⚠️ 版本号与最近 tag 不匹配 — 可能未发布！')
+"
+```
+
+### 4.6 创建 git tag
 
 ```bash
 git checkout main
@@ -263,6 +296,12 @@ git tag --list | grep vX.Y.Z
 # 4. 验证 pip 安装
 pip install --upgrade package-name
 package-name --help
+
+# 5. 验证 GitHub Release 页面可访问
+curl -sI -o /dev/null -w "%{http_code}" https://github.com/owner/repo/releases/tag/vX.Y.Z | grep -q 200 && echo "✅ Release 页面可访问" || echo "❌ Release 页面不可访问"
+
+# 6. 确认最新 Release 在页面顶部可见
+gh release list --limit 1
 ```
 
 ---

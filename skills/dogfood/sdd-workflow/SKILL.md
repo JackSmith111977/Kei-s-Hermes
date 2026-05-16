@@ -1,7 +1,7 @@
 ---
 name: sdd-workflow
 description: "Spec-Driven Development 完整工作流 — 从 Spec 创建到代码实现的自动化生命周期管理。含状态机(spec-state.py)、门禁检查(spec-gate.py)、模板库、技术版本规约。触发「继续」「下一阶段」「phase」「推进」等延续关键词时自动加载，衔接 DEV→QA 工作流链。任何涉及 SDD/规范驱动/Story 开发/阶段推进的任务自动触发。"
-version: 3.7.0
+version: 3.10.0
 triggers:
   - sdd
   - spec-driven
@@ -67,6 +67,11 @@ triggers:
   - 启动
   - 阶段推进
   - 推进
+  - 联合工作流
+  - 全链走通
+  - 跑完整链
+  - 联合工作流
+  - combined workflow
 author: Emma (小玛)
 license: MIT
 depends_on:
@@ -281,11 +286,79 @@ Phase 门禁验证通过后 → 进入下一 Phase
 cap-pack 项目中 SPEC-004（适配器方案）的完整分解过程见：
 `references/spec-decomposition-cap-pack-example.md`
 
+### 9.6 Phase 级别 SPEC 模式（多 Phase EPIC 推荐）🔥
+
+> **实战验证**：EPIC-005 Phase 0 使用此模式——Phase 0 和 Phase 1 各自有独立的 SPEC，分别走完整的 SDD 生命周期。
+
+当一个 EPIC 有多个 Phase 时，**为每个 Phase 创建独立的 SPEC** 比「一个 EPIC 一个 SPEC」更可控：
+
+```text
+EPIC-005 ── 包含 4 个 Phase，每个 Phase 一个 SPEC
+
+  SPEC-5-0 (Phase 0: 标准定义)      ← 自己走完 CLARIFY→...→COMPLETED
+  SPEC-5-1 (Phase 1: 核心引擎)      ← 依赖 Phase 0 完成 → 单独审批
+  SPEC-5-2 (Phase 2: Hermes 集成)   ← 依赖 Phase 1 完成
+  SPEC-5-3 (Phase 3: 多 Agent)      ← 依赖 Phase 2 完成
+```
+
+#### 为什么用 Phase 级别 SPEC？
+
+| 对比 | 一个 SPEC 包所有 Phase | 每个 Phase 独立 SPEC |
+|:-----|:----------------------|:--------------------|
+| 审阅粒度 | 一次性审阅全部 → 认知负担大 | 逐个 Phase 审阅 → 方向可及时纠正 |
+| 变更影响 | 改一个 Story 影响整个 SPEC | 只影响对应 Phase 的 SPEC |
+| 门禁强度 | 无 Phase 级阻断 | Phase N 完成前无法进入 Phase N+1 |
+| 前置依赖表达 | 不清晰 | `requires: [Phase-0]` 显式声明 |
+| 并行度 | 所有 Story 混在一起 | Phase 0 审批期间可准备 Phase 1 调研 |
+
+#### 命名约定
+
+```text
+SPEC-{epic}-0  → Phase 0（标准/基建/前置条件）
+SPEC-{epic}-1  → Phase 1（核心功能）
+SPEC-{epic}-2  → Phase 2（扩展功能）
+SPEC-{epic}-3  → Phase 3（生态/集成）
+```
+
+Phase 0 编号使用 `0` 而非 `1`，语义上标示其为「前置条件」，与 phase-gate 的 `requires: [Phase-0]` 对齐。
+
+#### 状态机管理
+
+每个 Phase 的 SPEC 独立走完整 SDD 生命周期：
+
+```bash
+# Phase 0 SPEC
+spec-state.py create "SPEC-5-0" "标准定义 — Phase 0"
+spec-state.py submit "SPEC-5-0" ...
+spec-state.py approve "SPEC-5-0"
+# ... 创建并完成 3 个 Story ...
+spec-state.py complete "SPEC-5-0"  # ← Phase 0 门禁解除
+
+# Phase 1 SPEC（此时才启动）
+spec-state.py create "SPEC-5-1" "核心引擎 — Phase 1"
+# ...
+```
+
+#### 实战案例
+
+EPIC-005 的完整 Phase 0 → SPEC-5-0 分离模式见 hermes-cap-pack 的 `docs/SPEC-5-0.md` 和 `docs/EPIC-005-skill-governance-engine.md`。
+
 ---
 
 ## ⚠️ 已知陷阱与解决方案
 
-### Phase Gate — Phase 转换门禁（v3.8.0 新增）
+### Phase Gate — Phase 转换门禁（v3.8.0 新增）🔥 新增：Phase 配置注册
+
+**前提条件**: 新创建的 EPIC 没有 Phase 配置，必须先在 `project-state.yaml` 中注册 Phase 结构，否则 `phase-gate.py check` 会报错 `Epic X 没有 Phase 配置`。
+
+```bash
+# 注册 Phase 配置（在 project-state.yaml 的 phases: 字段）
+# 每个 Phase 需要定义：name、title、acceptance_criteria、requires、stories
+# 参见 hermes-cap-pack 的 EPIC-005 实战——创建 NEW EPIC 后,
+# phase-gate.py 会一直失败，直到 Phase 配置写入 project-state.yaml
+```
+
+**Phase schema 配置示例**（位于 `docs/project-state.yaml` 的 `phases:` 字段）：
 
 EPIC 级别的 Phase 化工作流（如 EPIC-004 的 Phase 0/1/2/3/4）需要显示执行 Phase 门禁，禁止跳过未完成的 Phase。
 
@@ -428,6 +501,26 @@ Phase 完成 → 文档对齐链（从底向上）
 - **铁律**：在 Task 1「创建文件」之前，先确认「文件在哪里创建」并更新对应文档的结构图。源码位置不确认 → 不写第一行代码。
 - **实战案例**：EPIC-004 Phase 0，plugin 代码先写到 `~/.hermes/hermes-agent/plugins/sra-guard/`，被主人纠正后迁移到 `~/projects/sra/plugins/sra-guard/`。如果先在 SPEC 的架构设计部分确认源码位置，可避免返工。
 
+### 标准优先顺序陷阱（Standard-First Ordering）
+
+- **问题**：当构建治理/合规/检测类工具时（如 EPIC-005 的合规检查器），boku 先写了检测器设计，却没有先定义被检测的**标准本身**。结果主人问「到底检测什么？」时，合规描述过于模糊。
+- **后果**：
+  - 检测维度模糊 → 主人质疑方向 → 需要回头重新定义标准
+  - 检测器可能针对错误的标准实现 → 返工
+  - SPEC 中的合规描述被评价为「太笼统」
+- **根因**：默认的「实现驱动」思维——认为先有工具才有标准。但对于合规/治理类任务，**标准必须先于检测器存在**。标准是检测器的规范来源，而不是从检测器推导标准。
+- **解决**：
+  1. 合规/治理类 EPIC 的 Phase 0 必须是**标准定义阶段**
+  2. 标准必须文档化（`STANDARD.md`）并包含多层维度 + 量化阈值
+  3. 标准经主人批准后，再构建检测器
+  4. SPEC 中合规相关描述必须写明：检查哪几层、每层什么标准、阈值多少
+- **检查清单**：创建合规相关 SPEC 前，问自己：
+  - [ ] 被检测的标准是否已明确定义？
+  - [ ] 标准是否有分层结构（强制/推荐/最佳实践）？
+  - [ ] 每个维度的阈值是否量化？
+  - [ ] Owner 是否批准了标准？
+- **实战案例**：EPIC-005 Phase 0 被主人纠正为「先制定统一标准」，标准框架（Level 0-3）定义完成后才进入检测器实现。
+
 ### 批量创建陷阱：跳过审阅门禁批量写文档
 
 - **问题**：当一个 Epic 有多个 Phase、多个 SPEC 和多个 Story 时（如 EPIC-004 有 4 个 SPEC + 12 个 Story），一次批量创建所有文档，跳过 SPEC_REVIEW 和 STORY_REVIEW 门禁
@@ -474,6 +567,39 @@ Phase 完成 → 文档对齐链（从底向上）
 - **问题**：SDD 工作流要求 `spec-state.py complete` 更新状态机，也要求 doc-alignment 更新 `project-report.json`，但 **从不要求更新 Story/SPEC/EPIC 的 markdown 文件自身的元数据**（frontmatter 的 `status` 字段、AC 复选框、完成条件清单）。代码全部完成、测试全绿后，这些文件仍停留在 `status: draft`，AC 全部标记为 `[ ]`。
 - **后果**：下次迭代或新开发者查看文档时，看到的 Phase 状态是「全部未完成」。EPIC-004 Phase 0/1/2 共 11 个 Story + 3 SPEC + EPIC + report 全部漂移，主人纠正后才对齐。
 - **根因**：SDD 流程把「文档对齐」等同于「更新 project-report.json 和 HTML」，忽略了 markdown 文件自身的元数据。`spec-state.py complete` 只更新状态机，不修改 markdown 文件内容。
+
+### 三维状态一致性陷阱：spec-state.py ≠ 文件 frontmatter ≠ project-state.yaml
+
+- **问题**：即使 `spec-state.py complete "SPEC-X"` 执行成功，`project-state.py verify` 仍可能报「状态不一致」。这是因为 verify 检查**三个独立的状态来源**是否一致：（1）spec-state.py 状态机、（2）markdown 文件的 `> **status**:` frontmatter 字段、（3）project-state.yaml 中的 state 字段。三者完全独立，任一个不同步都会导致 verify 失败。
+- **后果**：Phase 完成后 verify 报错 → 需要排查三个地方 → 增加不确定性。
+- **根因**：spec-state.py 只管理它自己的 JSON 状态存储；project-state.py sync/verify 从 YAML 和 markdown 文件读取和比对。三个系统各管各的，没有自动同步机制。
+- **解决**：
+  1. `spec-state.py complete` 后，**必须手动同步** markdown 文件的 `> **status**:` frontmatter 字段（设为其真实状态）
+  2. 然后运行 `project-state.py sync` 更新 project-state.yaml
+   4. 最后 `project-state.py verify` 确认 zero drift
+   5. ⚠️ **关键陷阱: `project-state.py sync` 可能回退状态**：sync 命令从 spec-state.py 的 JSON 存储读取数据，但 spec-state.py 对某些实体的记录可能滞后或缺失（如从未通过 spec-state.py create 创建的条目）。结果是 sync 后已完成的状态被**回退到 draft**。
+  **实战案例**（2026-05-16 EPIC-005 Phase 1）：`project-state.py sync` 将 SPEC-5-1 从 completed 回退到 draft。修复方法：patch project-state.yaml 手动修正状态。
+修复三步：
+  1. 先手动更新 markdown 文件 frontmatter 中的 `> **status**:` 字段
+  2. 再运行 `project-state.py sync`
+  3. 最后检查 `project-state.py verify`。如果 sync 回退了状态，patch project-state.yaml 修正
+  4. 三个层级的同步顺序：markdown frontmatter → project-state.yaml → verify
+- **检查清单**：在标记 Phase 完成前，运行以下三维一致性检查：
+  ```bash
+  # 第一维: spec-state.py 状态机
+  python3 ~/.hermes/skills/sdd-workflow/scripts/spec-state.py status "SPEC-X"
+  
+  # 第二维: markdown frontmatter
+  grep "^> \*\*status\*\*:" docs/SPEC-X.md
+  
+  # 第三维: project-state.yaml
+  python3 -c "import yaml; d=yaml.safe_load(open('docs/project-state.yaml')); print(d['entities']['specs']['SPEC-X']['state'])"
+  
+  # 全三维一致 → verify 通过
+  python3 scripts/project-state.py verify
+  ```
+- **实战案例**：2026-05-16 SPEC-5-0 完成时，spec-state.py 显示 completed，但 markdown 文件仍为 `> **status**: \`draft\``，verify 报错。
+- **自动化方向**：`project-state.py sync` 未来可扩展为自动从 spec-state.py 读取状态并同步到 YAML 和 markdown frontmatter。
 - **解决**：
   1. 在 Step 8 COMPLETE 中增加显式的「元数据同步」步骤（见上方修改后的 Step 8）
   2. Story/SPEC/EPIC 三个层级的文件都要更新，缺一不可
@@ -503,7 +629,11 @@ Phase 完成 → 文档对齐链（从底向上）
   2. 用户引用前序工作时，先 session_search 检索。结果为空时诚实告知并请用户补充
   3. 不要假设「当前项目 = 用户说的项目」
 
-### 工具超时陷阱
+### Chain State 多 Phase 陷阱
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| **chain-state.json 只追踪 workflow stage (SPEC→DEV→QA→COMMIT)，不追踪 EPIC Phase (Phase-0→Phase-1→Phase-2)** | Phase 完成 → `chain-state.json` 显示 COMPLETED，但 `phase` 字段未更新 → 下一个 Phase 启动时没有正确的 Phase 上下文 | 每个 Phase 完成后手动更新 `phase` 字段。详见 `references/phase-completion-checklist.md` 的 §5 |
 
 | 工具 | 场景 | 问题 | 解决方案 |
 |:-----|:------|:------|:---------|
@@ -692,7 +822,7 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
    ├── 标注任务依赖顺序（不可并行 vs 可并行）
    └── 产出：实施计划（todo 清单或 `docs/plans/{story_id}.md`）
     ↓
-8. 🏗️ IMPLEMENT — 技术实现（plan → implement）
+# Step 7: IMPLEMENT — 技术实现（plan → implement）
    ├── 加载 `generic-dev-workflow` skill（7 步开发流程）
    ├── 加载 `test-driven-development` skill（RED-GREEN-REFACTOR）
    ├── 🔴 **API 版本对照（新增强制步骤）**
@@ -703,6 +833,11 @@ python3 ~/.hermes/skills/sdd-workflow/scripts/spec-gate.py enforce "<task_descri
    │   ├── 禁止：凭训练数据中的旧 API 知识直接写代码
    │   └── 如版本不确定 → 先 web_search 获取版本对应文档 + 再实现
    ├── 可选：`subagent-driven-development`（子代理并行 + 双阶段审查）
+   ├── **🔄 独立 Story 可并行执行**：Phase 内无依赖关系的 Story，用 `delegate_task` 并行执行
+   │   ├── 条件：两个 Story 无共享资源/文件冲突、无顺序依赖
+   │   ├── 方式：`delegate_task(tasks=[...])` 一次派发多个独立 Story
+   │   ├── 验证：每个 delegate 内部独立完成 → boku 统一汇总 verify
+   │   └── 实战案例：EPIC-005 Phase 0 的 STORY-5-0-2 和 STORY-5-0-3（规则集 + 编排模式，无依赖）并行执行
    ├── 逐个 Task 实现：写测试→写代码→验证→提交
    └── 每个 Task 完成后原子 git commit
     ↓
@@ -851,7 +986,8 @@ v2.0 (长期) — 飞书交互卡片
     ├── session-context-recovery.md  ← 跨会话上下文恢复协议（2026-05-15）
     ├── batch-rename-pitfalls.md     ← 批量重命名陷阱与安全替换模式
     ├── sdd-doc-alignment-integration.md ← SDD × doc-alignment 集成协议 v1.0（2026-05-14）
-    └── feishu-review-flow.md        ← Spec/Story 飞书审阅工作流与消息模板
+    - `references/feishu-review-flow.md`        ← Spec/Story 飞书审阅工作流与消息模板
+    - `references/combined-workflow-epic005-p3.md` ← 联合工作流实战记录：EPIC-005 Phase 3 全链无停顿
 ```
 
 > ⚠️ **历史**: 2026-05-13 之前 spec-state.py 和 spec-gate.py 仅在文档中描述但未实现。2026-05-13 在 hermes-cap-pack 项目中重建实现。如果在现有安装中找不到脚本，运行以下命令检验：
@@ -867,12 +1003,109 @@ v2.0 (长期) — 飞书交互卡片
 - **`references/sdd-known-gaps-and-roadmap.md`** — 当前流程审计、飞书卡片交互研究、质量检查框架、v2.0 设计草案
 - **`references/session-context-recovery.md`** — 跨会话上下文恢复协议：当用户引用前序会话中的问题/报告但 session_search 未命中时的 4 步恢复流程 + 项目上下文切换协议
 - **`references/batch-rename-pitfalls.md`** — 批量文档重命名陷阱（字符串包含问题）与安全替换模式
-- **`references/epic-004-multi-phase-pattern.md`** — 多 Phase EPIC 完整实战模式：从 Phase 0 到收尾的 22 Story 完整生命周期管理
-- **`references/cap-pack-naming-migration.md`** — CAP Pack 项目命名迁移实战记录（含完整检查清单）
+    - `references/epic-004-multi-phase-pattern.md` — 多 Phase EPIC 完整实战模式：从 Phase 0 到收尾的 22 Story 完整生命周期管理
+    - `references/cap-pack-naming-migration.md` — CAP Pack 项目命名迁移实战记录（含完整检查清单）
+    - `references/epic-005-phase0-pattern.md` — Phase 级别 SPEC 模式实战：SPEC-5-0（标准定义）与 SPEC-5-1（核心引擎）分离的 Phase 0 完整生命周期
 
 ## 🔗 Workflow Chain Protocol — SDD→DEV→QA 三段链式衔接
 
 SDD 不是终点。Story 完成（COMPLETED）后，应自动链入开发工作流和 QA 门禁。
+
+### 两种链模式：逐段推进 vs 联合工作流
+
+根据主人的指令密度，有两种链模式：
+
+| 模式 | 触发词 | 行为 | 适用场景 |
+|:-----|:-------|:------|:---------|
+| **逐段推进** (默认) | 「批准」「继续」「推进」 | 每完成一个阶段等待主人确认后进入下一阶段 | 常规开发，主人想随时纠正方向 |
+| **联合工作流** | 「可以进行联合工作流」「跑完整链」「全链走通」 | 一次跑完 SPEC→DEV→QA→COMMIT 全链，最后汇报结果 | Phase 范围已明确、主人信任方向 |
+
+#### 联合工作流流程 (实战验证: EPIC-005 Phase 3)
+
+```text
+主人：「可以进行联合工作流」
+
+boku：
+  1. 创建 SPEC + Story 文档 (一次性全部创建)
+  2. 更新 project-state.yaml 记录新实体
+  3. 按依赖顺序启动 DEV：
+     a. 基础层 Story 先 (如 STORY-5-3-1: 适配器基类)
+     b. 无依赖 Story 并行 (如 STORY-5-3-2 MCP + STORY-5-3-3 适配器)
+  4. QA L0-L2 门禁 (语法→测试→集成验证)
+  5. 一次过更新所有状态追踪文件 (见下方「Phase-end 一次性对齐」)
+  6. COMMIT (一条 commit 包含全链交付)
+  7. 向主人展示结果
+
+关键区别：没有逐阶段 "主人批准？" 的停顿。
+           一次规划 → 一次实施 → 一次验证 → 一次提交。
+```
+
+#### 联合工作流使用条件
+
+✅ Phase 范围已在 EPIC 文档中明确（如 EPIC-005 Phase 3 有 3 个 Story 定义）
+✅ 主人主动说了「联合工作流」「跑完整链」或同类词
+✅ 当前 Phase 的依赖 Phase 全部已完成
+✅ 无需在 DEV 过程中向主人请求架构决策（决策已由主人或 EPIC 文档覆盖）
+
+❌ Phase 范围模糊或 EPIC 文档只有标题没有细节 → 先 CLARIFY，不可用联合工作流
+❌ 主人没有明确说联合工作流 → 默认逐段推进
+❌ 需要主人做架构决策 → 逐段推进
+
+#### Phase-end 一次性对齐技术 (实战验证: EPIC-005 Phase 3)
+
+在联合工作流中，**不要逐个 Story 地更新状态追踪文件**，而是在 Phase end 一次性更新所有文件：
+
+```text
+Phase 实现完成 → 一次性对齐 5+ 文件：
+
+┌─ Layer 1: Story 文件 frontmatter ──────────────┐
+│  status: draft → completed (3+ 文件一次过)        │
+│  用 execute_code + Python 批量 replace, 不逐个 patch│
+├─ Layer 2: SPEC 文件 frontmatter ─────────────────┤
+│  status: draft → completed                       │
+├─ Layer 3: EPIC 文件 ─────────────────────────────┤
+│  Phase AC [ ] → [x], 标记 ✅                     │
+├─ Layer 4: project-state.yaml ────────────────────┤
+│  completed_count 更新, story state 更新           │
+├─ Layer 5: project-report.json ───────────────────┤
+│  stories[].status, sprint_history, epics[] 更新   │
+├─ Layer 6: chain-state.json ──────────────────────┤
+│  phase 字段更新, COMPLETED 标记                   │
+└──────────────────────────────────────────────────┘
+
+# 最后: 一次验证
+python3 scripts/project-state.py verify
+
+批量效率提示：
+- 10+ 文件 frontmatter 更新：execute_code + Python str.replace
+- YAML/JSON 文件更新：patch 或 execute_code + yaml/json 库
+- chain-state.json 的 phase 字段：手动写入最新 Phase 编号
+```
+
+### chain-state.json Phase 追踪陷阱
+
+**问题**: chain-state.json 只追踪 workflow stage (SPEC→DEV→QA→COMMIT)，不自动追踪 EPIC Phase (Phase-0→Phase-1→Phase-2)。chain-state.py advance 只切换 stage，不会更新 `phase` 字段。
+
+**后果**: Phase 完成 → chain-state.json 显示 COMPLETED 但 `phase` 字段仍是旧值 → 下一个 Phase 启动时没有正确的 Phase 上下文。
+
+**解决**: 每个 Phase 完成时，手动更新 chain-state.json 的 `phase` 字段：
+
+```json
+{
+  "EPIC-005": {
+    "epic": "EPIC-005",
+    "current_stage": "COMPLETED",
+    "completed_stages": ["SPEC", "DEV", "QA", "COMMIT"],
+    "phase": "Phase-3",  // ← 手动更新！
+    "gate_history": []
+  }
+}
+```
+
+**检查清单**: Phase 完成时，问自己：
+- [ ] chain-state.json 的 `phase` 字段是否已更新为当前 Phase？
+- [ ] 如果下一个 Phase 是第一个，`phase` 应设为 `Phase-0`
+
 
 ### 三段链
 
@@ -923,8 +1156,9 @@ chain-state.py advance 成功后，会自动提示加载下一个阶段的 skill
 
 ### 铁律
 
-- 🔴 不要在 SDD COMPLETED 后直接开始写代码 — 先 `chain-state.py advance` 进入 DEV 阶段
-- 🔴 不要在 DEV 完成后跳过 QA — Step 5 的嵌入式 QA 门禁会自动加载 generic-qa-workflow
+- 🔴 **不要在 SDD COMPLETED 后直接开始写代码** — 先 `chain-state.py advance` 进入 DEV 阶段。或者更完整的顺序：SDD Story 完成后 → `chain-state.py advance` → 加载 generic-dev-workflow → 开发 → 自行验证 → `chain-state.py advance` → 加载 generic-qa-workflow → QA 门禁 → `chain-state.py advance` → COMMIT。
+  **实战案例**: EPIC-005 Phase 0/1/2 均使用此模式：SDD SPEC/Story 完成后依次 advance 通过 SPEC→DEV→QA→COMMIT，每阶段独立验证门禁。
+- 🔴 **不要在 DEV 完成后跳过 QA** — Step 5 的嵌入式 QA 门禁会自动加载 generic-qa-workflow
 - 🔴 如果 chain-state.py advance 被 gate 阻止 → 修复 gate 条件再重试，不要 --force
 
 ### 场景 1：新功能开发（含 v3.0 完整流程）

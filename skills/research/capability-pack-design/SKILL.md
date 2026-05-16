@@ -4,7 +4,7 @@ description: >-
   Agent 能力模块化与跨平台复用方法论。涵盖能力包(Capability Pack)格式设计、
   模块分割决策、生命周期管理、迭代进化闭环、跨 Agent 适配层架构。
   适用于将单体 Agent 能力拆分为可移植、可组合、可进化的模块化能力单元。
-version: 2.6.0
+version: 3.0.0
 author: boku (Emma/小玛)
 license: MIT
 tags:
@@ -58,6 +58,44 @@ triggers:
   - post-extraction
   - 质量升级
   - 能力包合并
+  - skill 治理
+  - 技能治理
+  - governance engine
+  - 治理引擎
+  - skill quality
+  - skill scanner
+  - skill validator
+  - 治理修复
+  - fix engine
+  - 自动修复
+  - skill-governance fix
+  - 扫描修复闭环
+  - 检测修复
+  - 治理修复引擎
+  - governance fix
+  - cross-agent 挂载
+  - 跨 Agent 挂载
+  - 不碰原生技能
+  - 挂载层
+  - mount layer
+  - AI 友好 README
+  - readme for ai
+  - 适配器指南
+  - adapter guide
+  - 批量修复
+  - batch fix
+  - 修复后对齐
+  - post-fix
+  - skill to cap-pack
+  - 转换为能力包
+  - skill转换
+  - convert skill
+  - cap-pack converter
+  - skill extract
+  - 技能提取
+  - 技能转包
+  - hermes skill 转换
+  - skillkit
 depends_on:
   - sdd-workflow
   - deep-research
@@ -87,6 +125,29 @@ skill_type: methodology
 | 🔌 **MCP 配置** | 外部工具连接 — **可以调什么服务** | 文档转换服务 MCP、OCR 服务 |
 
 三者运行时配合：**经验**告诉 Agent「这种情况该用 WeasyPrint 而非 ReportLab」，**技能**告诉它操作步骤，**MCP** 告诉它能调什么外部服务。
+
+### 核心原则：cap-pack 是挂载层，不是改造层
+
+> **2026-05-16 关键设计纠正**：cap-pack 的目标不是改造任何 Agent 的原生技能库，而是提供一个标准化挂载层。
+
+```
+Agent A 原生技能       Agent B 原生技能
+     ↕                    ↕
+┌──────────────────────────────────┐
+│       Cap-Pack 挂载层              │
+│  install / uninstall / list       │
+│  (通过各 Agent 适配器操作)          │
+└──────────────────────────────────┘
+     ↕                    ↕
+  合规扫描 + 自动修复        ← 治理引擎确保包质量
+  README + Adapter Guide   ← 让任意 Agent 5 分钟上手
+```
+
+**设计铁律**：
+- ❌ 不改造 Agent 原生技能目录（不碰 `~/.hermes/skills/` 原生内容）
+- ✅ Agent 自有技能和 cap-pack 安装的技能共存
+- ✅ cap-pack 安装到约定的挂载路径（如 `~/.hermes/skills/` 下以包名为前缀的新目录）
+- ✅ 卸载时只删除挂载路径下的文件，不影响 Agent 原生技能
 
 ---
 
@@ -583,6 +644,34 @@ git commit -m "feat: {name} 能力包提取 (N skills)"
 | ⑤ 对齐 | 更新 project-report + HTML + state | 项目报告反映新包 | 5min |
 | ⑥ 提交 | `git commit` | SDD complete | 2min |
 
+### 四-B-1 自动转换方向 — Hermes Skill → Cap-Pack（待实现）
+
+> **2026-05-16 新增** — 以上 SOP 是**手动**流程。治理引擎当前**不包含**从 `~/.hermes/skills/` 自动转换到 Cap-Pack 格式的能力。
+> **现状**: `extract-pack.py` 只做单 skill 文件复制（不生成 manifest），`CapPackAdapter.suggest()` 做匹配但不自动执行。
+> **完整差距分析**: `references/hermes-to-cap-pack-converter.md`
+
+**需要新增的模块**: `skill_governance/converter/`
+
+| 文件 | 用途 |
+|:-----|:------|
+| `converter/extractor.py` | 核心提取逻辑（文件解析+复制+manifest 生成） |
+| `converter/manifest_builder.py` | cap-pack.yaml 生成器（从 SKILL.md frontmatter 构造） |
+| `converter/grouping.py` | 智能分组引擎（按 tag/domain/classification 聚类） |
+
+**CLI 示例**（规划中）:
+```bash
+skill-governance extract pdf-layout --pack doc-engine     # 单 skill
+skill-governance extract --all --auto-group                # 全量
+```
+
+**可复用资产**（无需重写）:
+- `CapPackAdapter.suggest()` → 自动匹配合适 pack
+- `_parse_frontmatter()` → 解析 SKILL.md
+- `find_skill_dir()` / `list_skill_files()` → 文件操作
+- `validate-pack.py` + schema → 验证输出
+
+---
+
 ### 四-B-α 批量操作模式（"继续"工作流）
 
 > **实战验证**: 从 cap-pack-operations 吸收——当用户对已建立的工作流只说"继续"时，进入批量高效模式。
@@ -882,6 +971,129 @@ python3 scripts/project-state.py verify
 
 ---
 
+---
+
+## 十六、三层 Cap-Pack 管理体系 (Three-Layer Cap-Pack Management System) 🔥
+
+> **2026-05-16 新增** — 基于 EPIC-007 深度设计 (本地 Cap-Pack 管理系统) 的经验沉淀。能力包不是只放在 GitHub 上就行了——需要「远程官方包 ↔ 本地工作副本 ↔ Hermes 原生技能」三层管理体系来支撑日常开发与发布。
+
+### 16.1 三层架构
+
+```
+┌─────────────────────────────────────────────┐
+│  Layer 1: 远程仓库 (GitHub)                  │
+│  🏛️ 官方能力包 — 发布态                      │
+│  经过治理引擎认证的稳定版本                    │
+│  (只读, 通过 release 更新)                   │
+├─────────────────────────────────────────────┤
+│         ↕ sync (存在性 + 版本变更)           │
+├─────────────────────────────────────────────┤
+│  Layer 2: 本地 Cap-Pack 管理                 │
+│  📦 本地工作副本 — 开发态                    │
+│  ~/.cap-pack/packs/                         │
+│  从官方拉取 · 本地修改 · 治理验证 · 推回官方  │
+│  支持自建包（仅本地，不推远程）               │
+├─────────────────────────────────────────────┤
+│         ↕ convert (Hermes 原生 → Cap-Pack)  │
+├─────────────────────────────────────────────┤
+│  Layer 3: Hermes 原生技能目录                │
+│  📝 ~/.hermes/skills/ — 日常运行态          │
+│  主 Agent 使用的扁平原生技能库                │
+└─────────────────────────────────────────────┘
+
+🧠 经验积累系统 (跨层横向)
+任务出错 → 标记经验 → 路由 → 改良技能包 / 记忆存档
+```
+
+### 16.2 各层职责
+
+| 层 | 路径 | 读写 | 治理门禁 | 同步方向 |
+|:--|:-----|:----:|:---------|:---------|
+| **Layer 1** 远程 | GitHub `packs/` | 🏛️ 只读（官方） | L0-L4 全量 | ↓ pull |
+| **Layer 2** 本地 | `~/.cap-pack/packs/` | ✏️ 读写（开发） | push 前 L0-L1 | ↑ push |
+| **Layer 3** 原生 | `~/.hermes/skills/` | ✏️ 读写（日常） | convert 前 SQS | → convert |
+
+### 16.3 两种同步模式
+
+#### 存在性同步 (Existence Sync)
+
+检测本地 vs 远程的**包的有无**，新增或缺失：
+
+```text
+本地      远程      状态      操作
+✅        ✅        同步      —
+✅        ❌        仅本地    push 或标记自建
+❌        ✅        缺失      pull
+```
+
+#### 版本变更同步 (Version Sync)
+
+检测**版本号 + 文件 hash**的差异：
+
+| 本地版本 | 远程版本 | 本地 Hash | 远程 Hash | 状态 | 操作 |
+|:--------:|:--------:|:---------:|:---------:|:-----|:-----|
+| 2.0.0 | 2.0.0 | abc | abc | ✅ 同步 | — |
+| 2.0.0 | 2.0.0 | abc | def | 🔄 远程变更 | pull |
+| 2.0.0 | 2.0.0 | def | abc | 🔄 本地修改 | push |
+| 2.0.0 | 2.0.1 | — | — | ⬇️ 可更新 | pull |
+| 2.0.1 | 2.0.0 | — | — | ⬆️ 未推送 | push |
+
+**推送前门禁**: `cap-pack push` 自动执行 L0-L1 治理扫描 + schema 验证，失败则拦截。
+
+### 16.4 经验积累：不在转换阶段生成
+
+**关键设计决策**: EXPERIENCES/ 不在 `convert` 阶段自动生成。改为：
+
+```
+技能包完成任务 → 出问题 → 标记经验 (cap-pack experience mark)
+                                      ↓
+                              ┌───────┴───────┐
+                              ↓               ↓
+                     改良技能包 (学习回路)   记忆存档 (仅供参考)
+```
+
+本层只搭架子（记录格式 + 标记命令），路由和反馈回路留给后续 EPIC。
+
+### 16.5 本地管理体系 CLI
+
+```bash
+# 同步
+cap-pack pull              # 拉取官方包
+cap-pack push              # 推送（自动治理门禁）
+cap-pack status            # 本地 vs 远程差异
+cap-pack sync              # 一键双向
+
+# 转换
+cap-pack convert            # Hermes 原生 → Cap-Pack
+cap-pack convert --all      # 批量
+
+# 管理
+cap-pack list / --remote / --unpacked
+cap-pack init               # 初始化 ~/.cap-pack/
+
+# 经验积累（架子）
+cap-pack experience mark --type pitfall
+cap-pack experience list
+```
+
+### 16.6 与已有架构的关系
+
+```text
+EPIC-005 (治理引擎) ── 三层每层的质量门禁
+    ↓
+EPIC-006 (修复引擎) ── push 前自动修复
+    ↓
+EPIC-007 (本地管理) ── 三层 sync + convert + 管理 CLI
+    ↓
+EPIC-008 (经验路由) ── 未来: 经验反馈回路
+```
+
+### 16.7 实战参考
+
+- `docs/EPIC-007-skill-to-cap-pack-converter.md` — 完整 EPIC 设计 (5 Phases · 16 Stories)
+- `docs/project-report.json` — 7 EPIC 状态追踪 (EPIC-007: draft, 0/16 stories)
+
+
 ## 六、能力包健康诊断与量化测试方法论
 
 > **2026-05-13 新增** — 基于 doc-engine 实战验证的包级健康测量体系
@@ -1001,8 +1213,10 @@ python3 ~/projects/hermes-cap-pack/scripts/sra-discovery-test.py --json
 | `~/projects/hermes-cap-pack/packs/doc-engine/health-gate.yaml` | 质量门禁配置示例 |
 | `~/projects/hermes-cap-pack/packs/doc-engine/transformation-report.md` | 改造前后对比报告 （含 SRA 测试数据） |
 | `~/projects/hermes-cap-pack/scripts/health-check.py` | 可复用健康检查脚本 |
-| `~/projects/hermes-cap-pack/scripts/sra-discovery-test.py` | SRA 发现验证脚本（15条测试查询） |
-| `references/doc-engine-sra-test-data.md` | doc-engine 实战 SRA 测试原始数据 |
+| `references/ci-failure-recovery.md` | CI 失败恢复步骤（15+ 模块实战）
+| `references/doc-engine-sra-test-data.md` | doc-engine 实战 SRA 测试原始数据
+| `references/governance-fix-strategies.md` | 治理驱动修复策略 — 扫描→修复闭环设计（确定性+LLM 混合方案） |
+| `references/standard-phase-transition-pattern.md` | **标准优先过渡模式** — EPIC 多 Phase 中标准阶段→实现阶段的标准化过渡流程，含 Phase 0→1 实战案例 |
 | `references/post-extraction-quality-upgrade.md` | **后置质量升级执行模式** — EPIC-004 实战验证的 5 阶段模式 (基线→L2/L3→质量提升→合并→门禁固化), 含工具清单/实战陷阱/基线数据 |
 | `references/layer-validation-pattern.md` | **三层结构验证模式** — validate-layers.py + frontmatter 标准 + CI 集成 |
 | `references/extraction-commands.md` | 能力包提取命令速查（15+ 模块实战） |
@@ -1172,6 +1386,14 @@ integration:
 | **降级微技能后未确认 SRA 不再推荐** | 用户仍被引导到低质技能 | 改造后运行 `scripts/sra-discovery-test.py --json` 验证推荐列表已更新 |
 | **合并 PDF 技能后旧技能文件未标记退役** | 新旧并存，SRA 两个都推荐 | 旧 skill 标记 `deprecated` 或移入 `_archived/` 目录。SRA 扫描时自动剔除 |
 
+### 文档排版约定
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| **使用 ASCII 字符画替代图示** | 主人明确纠正「不要使用 asc 字符画，使用 mermaid 画 uml 图」。ASCII art 在 markdown 中无法在 GitHub 等平台渲染、不可缩放、不易维护 | 所有架构图/流程图/序列图使用 **Mermaid** (` ```mermaid`) 而非 ASCII 字符画。Mermaid 支持 `flowchart` / `sequenceDiagram` / `classDiagram` / `stateDiagram` 等类型。 |
+| **README CLI 命令参考表不加前缀** | 用户看到 `install <pack>` 可能直接输入 `install` 而非 `cap-pack install`，造成「command not found」错误。主人明确纠正「readme的cli命令参考建议使用完整命令」 | CLI 命令参考表必须使用**完整命令前缀**。如 `cap-pack install <dir>`，不能只写 `install <dir>`。可在表前加提示说明 alias 和完整入口。 |
+| **README 项目身份表信息过时** | CLI 入口、Schema 版本、依赖列表等字段随项目演进但未同步更新 | 每次 EPIC/Spec 完成后检查 `项目身份` 表的 7 个字段：CLI 入口 / Schema 版本 / Python 版本 / 依赖 / 仓库 / 作者 / 目的 |
+
 ### 迭代阶段
 
 | 陷阱 | 后果 | 预防 |
@@ -1179,6 +1401,13 @@ integration:
 | 更新通知轰炸 | 主人厌烦 | PATCH 级别静默更新，MAJOR 才通知 |
 | 跨模块级联更新不回滚 | 部分 Agent 更新成功部分失败 | 用 `on_deactivate` + 备份实现原子性 |
 | 经验与技能脱节 | 经验说 A 但技能步骤已是 B | SKILL.md 中加 `experience_ref` 字段显式关联 |
+
+### 标准优先顺序陷阱
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| **构建合规检测器时先写检测器再定义标准** | 检测维度模糊、标准与检测逻辑不一致、Owner 质疑「你到底在检测什么」 | **标准必须定义在检测器之前**。合规检测需要明确的判定基准（level/维度/阈值），这些必须在编写检测器之前以文档形式锁定。先写 `STANDARD.md` → Owner 批准 → 再构建检测器。参见 §13.6 统一标准框架。 |
+| **SPEC 中合规描述过于概括**（如仅写「检查合规性」而无具体维度） | Owner 无法判断检测范围、实现过程需要反复澄清 | 合规相关 SPEC 必须写明「检查哪几层、每层什么标准、阈值多少」。参见 SPEC-5-1 的教训。 |
 
 ---
 
@@ -1553,4 +1782,649 @@ class OpenCodeAdapter:
 完整实现见 `~/projects/hermes-cap-pack/scripts/install-pack.py` (v2.0)。
 
 集成测试见 `scripts/tests/test_hermes_adapter.py` 中的 `TestMultiAgentInstall` 类。
+
+---
+
+## 十三、行业生态与差距分析 (Industry Landscape & Gap Analysis)
+
+---
+
+## 十四、治理修复引擎架构 (Governance Fix Engine Architecture) 🔥
+
+> **2026-05-16 新增** — 基于 EPIC-006 深度设计和代码库分析的经验沉淀。  
+> **核心问题**: 治理引擎能「发现问题」后，如何「自动修复问题」？  
+> **核心决策**: 确定性脚本 vs LLM workflow vs **混合方案**的选择框架和架构模式。
+
+### 14.1 问题背景
+
+EPIC-005 交付的治理引擎能对能力包进行 L0-L4 四层扫描，但 **不能自动修复**。跨包扫描结果显示：
+
+| 指标 | 值 | 目标 |
+|:-----|:---|:----|
+| 平均合规分 | 79.6 | ≥ 90 |
+| 100% 出现的问题 | 4 项 | 0 |
+| 自动修复覆盖 | 0% | ≥ 80% |
+
+手动修复 18 个包的问题需要 3+ 小时。需要一条 `skill-governance fix` 命令来闭环检测→修复循环。
+
+### 14.2 方案选择框架
+
+构建修复引擎时面临一个核心决策：**用确定性脚本还是 LLM workflow**？以下框架帮助选择：
+
+#### 步骤 1: 按修复类型分类
+
+每条规则的可自动化程度决定了最适合的方式：
+
+| 修复类型 | 特征 | 示例规则 | 推荐方式 |
+|:---------|:-----|:---------|:---------|
+| 🟢 **确定性** | 修复动作唯一，可模板化 | 创建缺失文件、填充空字段 | **脚本** |
+| 🟢 **算法性** | 可用数学/统计方法解决 | Jaccard 聚类、相似度匹配 | **脚本** |
+| 🟡 **启发式** | 需一定上下文推断但可建模 | 从名称/描述推分类 | **脚本 + 简单规则** |
+| 🧠 **LLM 辅助** | 需语义理解才能正确修复 | 推断 skill 用途、验证链接有效性 | **LLM** |
+
+#### 步骤 2: 量化评估
+
+```text
+评估维度:
+  - 可自动化比例: 70%+ → 优先脚本
+  - 准确率要求: 100% → 脚本; 可接受 80-90% → LLM
+  - 执行频率: 每天多次 → 脚本; 偶尔 → LLM
+  - 成本敏感: 高 → 脚本; 低 → LLM
+
+最终选择:
+  ✅ 确定性问题的修复不值得 LLM 调用
+  ✅ 混合方案= 脚本处理 70% + LLM 处理 30%
+  ❌ 纯 LLM workflow = 90 次 LLM 调用/全量修复 → 过度设计
+  ❌ 纯脚本 = 无法处理语义问题 (classification推断, 断链修复)
+```
+
+#### 步骤 3: 分层修复架构
+
+```text
+┌─────────────────────────────────────────────────────┐
+│              CLI: skill-governance fix <pack>         │
+│  --dry-run (预览) / --apply (执行) / --llm-assist    │
+├─────────────────────────────────────────────────────┤
+│            Fix Dispatcher (策略路由)                   │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ 确定性修复  │  │ 算法修复      │  │ LLM 辅助修复  │   │
+│  │ FixRule    │  │ Algorithmic  │  │ LLMFixRule  │   │
+│  │ (模板生成)  │  │ (Jaccard聚类) │  │ (语义推断)    │   │
+│  └──────────┘  └──────────────┘  └──────────────┘   │
+├─────────────────────────────────────────────────────┤
+│          基础设施层 (复用已有扫描器/适配器)               │
+│  Scanner · CapPackAdapter · 规则集 · dry_run/apply   │
+└─────────────────────────────────────────────────────┘
+```
+
+### 14.3 FixRule 架构模式
+
+核心数据模型是 **FixRule 抽象基类 + FixDispatcher 路由**：
+
+```python
+@dataclass
+class FixAction:
+    rule_id: str              # 对应扫描规则的 ID
+    action_type: str          # create / modify / delete
+    target_path: str          # 目标文件路径
+    old_content: str          # 原内容（用于 diff）
+    new_content: str          # 新内容（用于 diff）
+    description: str          # 人工可读描述
+
+@dataclass
+class FixResult:
+    rule_id: str
+    dry_run: bool
+    applied: int = 0          # 成功修复数
+    skipped: int = 0          # 已合规跳过（幂等）
+    errors: list[str] = field(default_factory=list)
+    actions: list[FixAction] = field(default_factory=list)
+
+class FixRule(ABC):
+    rule_id: str
+    description: str
+    severity: str
+    
+    @abstractmethod
+    def analyze(self, pack_path: str, scan_result: dict) -> FixResult:
+        """分析包，生成修复计划（dry_run 模式）"""
+    
+    @abstractmethod
+    def apply(self, pack_path: str, scan_result: dict) -> FixResult:
+        """执行修复"""
+    
+    def _backup(self, path: str) -> str: ...
+    def _is_already_fixed(self, pack_path: str) -> bool: ...
+
+class FixDispatcher:
+    """Rule ID → FixRule 路由"""
+    def register(self, rule: FixRule): ...
+    def get_rule(self, rule_id: str) -> Optional[FixRule]: ...
+    def dispatch(self, report: dict, rules_filter: list[str]=None) -> list[FixResult]: ...
+```
+
+### 14.4 代码库分析模式（为修复引擎做设计时）
+
+在构建修复引擎前，必须系统化分析现有代码库，确定哪些可以复用、哪些需要新建。分析五步法：
+
+#### 第 1 步：扫描基础设施分析
+
+| 需要回答的问题 | 检查内容 |
+|:--------------|:---------|
+| 扫描结果是什么格式？ | `ScanReport.to_dict()` → 含 `layers[].checks[].rule_id/details/suggestions` |
+| 扫描如何触发？ | `_build_report()` 在 CLI 中，CLI 外无直接入口 |
+| 已失败的检查是什么格式？ | `CheckResult` dataclass → `details` 字典含修复所需上下文 |
+
+#### 第 2 步：适配器/编辑器分析
+
+| 需要回答的问题 | 检查内容 |
+|:--------------|:---------|
+| 已有适配器的 suggest/dry_run/apply 能力？ | CapPackAdapter: 扫描+Jaccard+写入能力 |
+| 哪些模式可以直接复用？ | `_parse_frontmatter()`, `_jaccard_similarity()`, `PackManifest.from_file()` |
+| 哪些模式需要新建？ | 对不同文件的读写；修复而不是安装的 apply |
+
+**关键问题**：适配器是用于安装的，修复引擎需要的是**编辑**能力——两者相似但不同。修复引擎复用适配器的数据提取和写入模式，但逻辑是修改现有文件而非安装新文件。
+
+#### 第 3 步：已有修复脚本分析
+
+| 脚本 | 可复用模式 |
+|:-----|:----------|
+| `fix-pack-metadata.py` | YAML 读/修改/写模式；幂等性检查 |
+| `fix-low-score-skills.py` | Frontmatter 正则注入；YAML 有效性验证 |
+| `fix-l2-frontmatter.py` | 启发式类型检测；内容关键词推断 |
+
+**提取通用模式**：
+1. YAML RMW: `read → yaml.safe_load() → modify → yaml.dump() → write`
+2. Frontmatter regex: `^(---\\n)(.*?)(\\n---\\n)` + re.DOTALL
+3. Idempotency: `if already_fixed: skip`
+4. Heuristics: keyword → classification mapping
+
+#### 第 4 步：CLI 分析
+
+| 问题 | 答案 |
+|:-----|:------|
+| CLI 命令注册方式？ | `@app.command()` in Typer |
+| 现有命令？ | `scan`, `watcher`, `rules` |
+| fix 命令放哪？ | **cli/main.py 新增** `@app.command("fix")` |
+| 复用哪些函数？ | `_load_skills_from_pack()`, `_build_report()` |
+
+#### 第 5 步：依赖与测试分析
+
+| 问题 | 答案 |
+|:-----|:------|
+| 需要新增 pip 依赖？ | **零新增** — pyyaml + typer + rich + 标准库足够 |
+| 测试 fixture 模式？ | `tmp_path` + `monkeypatch` 创建模拟包结构 |
+| 测试位置？ | **包内 `tests/`** 而非 `scripts/tests/` |
+
+### 14.5 分阶段实施模式
+
+修复引擎推荐按 4 个 Phase 渐进实施：
+
+```text
+Phase 0: 基础设施 (3 Stories, ~4h)
+  FixRule 抽象层 + Dispatcher + CLI fix 子命令 + 报告格式
+  → 产出: fixer/base.py, fixer/dispatcher.py, CLI 扩展
+
+Phase 1: 确定性修复 (4 Stories, ~6h)
+  F001 SKILL.md 生成 + F007 triggers 提取 + H001/H002 树簇优化 + F006 启发式分类
+  → 产出: fixer/rules/ 下 5 个 fix 规则
+  → 覆盖: ~70% 的扫描规则有对应修复
+
+Phase 2: LLM 辅助修复 (3 Stories, ~4h)
+  LLM 辅助修复框架 + E001/E002 SRA 元数据 + E005 断链修复
+  → 产出: fixer/llm_assist.py + 3 个 LLM 规则
+  → 覆盖: ~95% 的规则有对应修复
+
+Phase 3: 批量工作流 (2 Stories, ~2h)
+  fix --all 批量执行 + 修复前后对比报告
+  → 产出: fixer/batch.py
+```
+
+### 14.6 修复引擎代码库分析五步法 🔥
+
+> **2026-05-16 新增** — 在构建修复引擎前必须系统化分析现有代码库。以下五步法确保找到所有可复用资产，避免重复造轮子。
+
+在创建新的 FixRule 前，按此五步法分析代码库：
+
+#### 第 1 步：扫描基础设施分析
+
+| 需要回答的问题 | 检查内容 |
+|:--------------|:---------|
+| 扫描结果是什么格式？ | `ScanReport.to_dict()` → 含 `layers[].checks[].rule_id/details/suggestions` |
+| 扫描如何触发？ | `_build_report()` 在 CLI 中，CLI 外无直接入口 |
+| 已失败的检查是什么格式？ | `CheckResult` dataclass → `details` 字典含修复所需上下文 |
+
+#### 第 2 步：适配器/编辑器分析
+
+| 问题 | 检查内容 |
+|:-----|:---------|
+| 已有适配器的 suggest/dry_run/apply 能力？ | CapPackAdapter: 扫描+Jaccard+写入能力 |
+| 哪些模式可以直接复用？ | `_parse_frontmatter()`, `_jaccard_similarity()`, `PackManifest.from_file()` |
+| 哪些需要新建？ | 对不同文件的读写；修复（编辑现有文件）而非安装（新建文件） |
+
+**关键区别**：适配器用于安装（新建文件），修复引擎需要编辑（修改现有文件）。两者复用数据提取和写入模式，但逻辑不同。
+
+#### 第 3 步：已有修复脚本分析
+
+逐个分析项目中已有的 `fix-*.py` 脚本，提取通用模式：
+
+```text
+YAML 读/修改/写模式:  read → yaml.safe_load() → modify → yaml.dump() → write
+Frontmatter 正则:     ^(---\\n)(.*?)(\\n---\\n) + re.DOTALL
+幂等性检查:           if already_fixed: skip（否则反复跑产生重复修改）
+启发式推断:           keyword/keyphrase → classification mapping
+```
+
+#### 第 4 步：CLI 分析
+
+| 问题 | 答案 |
+|:-----|:------|
+| CLI 命令注册方式？ | `@app.command()`（Typer）或 `parser.add_parser()`（argparse） |
+| 新命令放哪？ | 与现有命令同文件（如 `cli/main.py`），复用包加载/扫描函数 |
+| 复用哪些函数？ | `_load_skills_from_pack()`, `_build_report()` 等基础设施 |
+
+#### 第 5 步：依赖与测试分析
+
+| 问题 | 答案 |
+|:-----|:------|
+| 需要新增 pip 依赖？ | **尽量零新增** — 标准库 + 项目已有依赖通常足够 |
+| 测试 fixture 模式？ | `tmp_path` + `monkeypatch` 创建模拟场景 |
+| 测试位置？ | 包内 `tests/` 优先于独立脚本目录 |
+
+**实战案例**：EPIC-006 的深度代码库分析使用了此五步法，发现 7 个关键可复用资产、零新增 pip 依赖。详见 `docs/research/SPEC-6-1-research.md`。
+
+| 陷阱 | 后果 | 预防 |
+|:-----|:------|:------|
+| **把所有修复都做成 LLM** | 90 次 LLM 调用/全量修复，浪费资源 | 先用五步分析确定可自动化程度，70% 是确定性的 |
+| **扫描器和修复器紧耦合** | 扫描数据结构变了修复也得改 | FixRule 接收 `dict`（序列化的 CheckResult），而非内部对象 |
+| **忽略幂等性** | 反复跑 fix 产生重复修改 | 每个 FixRule 必须实现 `_is_already_fixed()` 检查 |
+| ❌ 不做 dry_run 预览 | 批量修复出问题难以回滚 | `dry_run` 输出 unified diff，主人确认后再 `apply` |
+| ❌ 复制现有 fix 脚本而非提取模式 | 新脚本和旧脚本不一致，维护成本翻倍 | 提取 YAML RMW/frontmatter/幂等性模式为通用工具函数 |
+| ❌ FixRule 写好了却不生效 | `_setup_fix_dispatcher()` 是空壳，未注册任何规则 | 用 `importlib` + `inspect` + `pkgutil.walk_packages()` 自动发现 FixRule 子类 |
+| ❌ F001 对完整路径声明的 skill 报告缺失 | skill `path: SKILLS/plan/SKILL.md` 被再次追加 `/SKILL.md` → 双重路径 | `_resolve_skill_path()` 检测路径是否已以 `.md` 结尾 |
+| ❌ .bak 备份文件污染 git 状态 | `FixRule._backup()` 创建 `*.bak`，`git status` 显示一大批 `??` | `.gitignore` 添加 `*.bak` |
+
+### 14.7 与已有架构的关系
+
+```text
+EPIC-005 (治理引擎) ──检测──→ EPIC-006 (修复引擎)
+   Scanner              FixRule
+   CLI scan             CLI fix
+   Report               dry_run diff
+                          ↓
+                    cap-pack.yaml / SKILL.md 修改
+                          ↓
+                    EPIC-005 重新扫描验证
+```
+
+修复引擎不替代治理引擎，而是在其上游消费扫描结果、在其下游用重新扫描验证修复效果。两个引擎组成 **scan → analyze → fix → verify** 闭环。
+
+### 14.8 跨 Agent 文档模式 (Cross-Agent Documentation Pattern) 🔥
+
+> **2026-05-16 新增** — 基于 EPIC-006 Phase 3 的设计经验。治理引擎做完后，下一步是让任意 Agent 理解并使用 cap-pack。
+
+#### 问题
+适配器写得再好，如果没人知道怎么用就等于白做。EPIC-005 Phase 3 交付了 4 个适配器（Hermes/OpenCode/OpenClaw/Claude），但缺乏清晰的文档让新 Agent 快速上手。
+
+#### 三文档模式
+
+构建跨 Agent 文档时，按以下三个层次组织：
+
+| 文档 | 目标读者 | 核心内容 | 典型结构 |
+|:-----|:---------|:---------|:---------|
+| **README.md** | 所有 AI Agent | 「这是什么？我能用它做什么？」 | readme-for-ai 方法论：编号章节 + 三列 CLI 表 + 每节验证命令 |
+| **ADAPTER_GUIDE.md** | 需要扩展新 Agent 的开发者 | 「如何接入新 Agent？」 | 每个适配器的使用案例 + 配置 + 验证方法 + 故障排查 |
+| **QUICKSTART.md** | 首次接触 cap-pack 的 Agent | 「如何 5 分钟用起来？」 | 3-5 条命令完成安装/检查/修复 |
+
+#### README 的 AI 友好标准
+
+参考 `readme-for-ai` skill 的 11 条原则，cap-pack README 必须满足：
+
+- [ ] CLI 参考表使用三列格式（命令 / 关键参数 / 预期输出）
+- [ ] 每个章节末尾有验证命令
+- [ ] 提供多路径安装方式
+- [ ] 前置条件明确且可自检
+- [ ] 包含跨 Agent 模型图（挂载层示意图）
+- [ ] 适配器一览表（Agent → 适配器 → 状态）
+- [ ] FAQ 即恢复路径
+
+#### 实战参考
+EPIC-006 Phase 3 (STORY-6-3-1 + STORY-6-3-2) 是此模式的完整实践，详见 `docs/EPIC-006-governance-fix-engine.md`。
+
+### 14.10 行业生态更新（2026-05-16）
+
+| 新工具 | 类型 | Stars | 核心发现 |
+|:-------|:-----|:-----:|:---------|
+| **SkillKit** | TS CLI | ⭐935 | 跨 46 Agent 格式翻译/安装/推荐，`skillkit translate` 验证了 SKILL.md 的跨平台可行性 |
+| **Agent Skill Porter** | npm | — | 7 Agent 格式互转，Chimera Hub 中间格式模式与本 converter 的解耦设计思路一致 |
+
+**核心洞察**: 已有工具全部在做「格式翻译」（Hermes↔Claude↔Cursor），**没有工具做「语义化结构重组」（扁平 skill → 语义能力包）**。
+
+详见 `references/industry-landscape-2026.md` 完整调研报告。
+
+### 14.9 相关资源
+
+| 资源 | 路径 | 说明 |
+|:-----|:------|:------|
+| EPIC-006 完整设计 | `docs/EPIC-006-governance-fix-engine.md` | 4 Phase 12 Story 的完整计划 |
+| SPEC-6-1 技术方案 | `docs/SPEC-6-1.md` | Fix 基础设施 + 确定性修复的详细架构设计 |
+| 代码库深度分析 | `references/governance-fix-strategies.md` | 7 维代码库分析（CLI/适配器/扫描器/脚本/包结构/依赖/测试） |
+| 混合方案论证 | (本 §14) | 确定性 vs LLM vs 混合方案的选择框架 |
+| 跨 Agent 文档模式 | (本 §14.8) | README + ADAPTER_GUIDE + QUICKSTART 三文档模式 |
+| 修复模式速查 | `references/fix-pattern-cookbook.md` | 7 种可复用的代码模式（YAML RMW/frontmatter/启发式/备份/幂等/diff/测试） |
+| 实战陷阱速查 | `references/fix-engine-production-lessons.md` | FixRule 自动发现 / F001 路径双重 / .bak git 管理 / 模式错位 |
+| 修复后文档对齐 | `references/fix-engine-production-lessons.md#六修复后文档对齐清单post-fix-doc-alignment` | 修复后必须更新的 6 种文档及其对齐顺序 |
+
+---
+
+### 15.8 主 Agent 驱动模式 (Main Agent-Driven Analysis)
+
+> **2026-05-16 新增** — 基于 EPIC-007 设计反馈的架构决策。
+
+Script+LLM 混合模式中的 "LLM" **不建立独立的 LLM 调用模块**，而是通过 **主 Agent驱动**来完成：
+
+```text
+// ❌ 错误做法：内置 LLM prompt 模块
+converter/llm_analyzer.py → 自己调 API → 自己解析 → 耦合 LLM 逻辑
+
+// ✅ 正确做法：主 Agent 通过 skill 流程驱动
+1. 脚本执行 SCAN → 输出候选清单 (JSON)
+2. 主 Agent (boku) 读取 JSON →
+   用自己的推理能力判断「分类/分组/描述」
+3. 脚本根据主 Agent 的判断执行 EXTRACT
+4. 治理引擎 (scanner+fixer) 自动跑验证
+```
+
+#### 实现方式
+
+整个 `convert` 流程本身就是一个 Hermes Skill（`cap-pack-converter`）。Script 和 Agent 通过**结构化 JSON 文件**交换数据：
+
+```bash
+# 步骤① 脚本扫描 → 输出 JSON
+cap-pack scan --unpacked-only --format json > /tmp/candidates.json
+
+# 步骤② 主 Agent 读取 candidates.json → 分析 → 输出 decisions.json
+# （这是通过 skill 流程完成的，不是独立命令）
+# 输出示例: [{"skill":"pdf-layout","target_pack":"doc-engine","confidence":92}]
+
+# 步骤③ 脚本消费 decisions.json → 提取
+cap-pack convert --from-json /tmp/decisions.json
+
+# 步骤④-⑤ 治理扫描 + 报告
+cap-pack scan packs/doc-engine
+cap-pack fix packs/doc-engine
+```
+
+#### 决策
+
+| 谁做 | 做什么 | 依据 |
+|:-----|:-------|:------|
+| 🛠️ 脚本 | 文件扫描/枚举、目录创建/复制、YAML 生成/解析、schema 验证、治理扫描/修复 | 确定性操作，用脚本又快又准 |
+| 🤖 **主 Agent** | 分类推断、分组决策、描述撰写、经验标记 | 需语义理解，不适合规则硬编码 |
+
+---
+
+> **2026-05-16 新增** — 基于 EPIC-007 的深度设计经验。当需要将「非结构化 Agent 原生技能」自动转换为「标准化能力包」时使用的架构模式。核心创新：**脚本做确定性的文件操作，LLM 做需要语义理解的分析决策，两者通过结构化 JSON 接口解耦**。
+
+### 15.1 问题
+
+治理引擎（EPIC-005/006）能「发现问题」和「修复问题」，但无法将 `~/.hermes/skills/` 下的扁平原生技能自动组织成语义分组的能力包。手动提取一个包需要 20-40 分钟，且依赖人工判断。
+
+### 15.2 五阶段管线
+
+```
+┌──────────┐   ┌────────────┐   ┌────────────┐   ┌──────────┐   ┌───────────┐
+│ ① SCAN  │──▶│ ② ANALYZE  │──▶│ ③ EXTRACT  │──▶│ ④ GOVERN │──▶│ ⑤ REPORT  │
+│ 枚举扫描  │   │ LLM分类+   │   │ 复制文件 +  │   │ 治理扫描  │   │ 输出摘要  │
+│ (脚本)   │   │ 分组决策    │   │ 生成结构   │   │ + LLM调优 │   │ (脚本)    │
+└──────────┘   │ (LLM)      │   │ (脚本)    │   │ (脚本+LLM)│   └───────────┘
+               └────────────┘   └────────────┘   └──────────┘
+```
+
+| Phase | 谁驱动 | 输入 → 输出 |
+|:-----:|:------:|:----------|
+| ① SCAN | 🛠️ 脚本 | `~/.hermes/skills/` → skill 候选清单 + 已有包索引 |
+| ② ANALYZE | 🧠 LLM | skill frontmatter + 内容 → 分类/分组/描述/经验标记 (JSON) |
+| ③ EXTRACT | 🛠️ 脚本 | LLM 决策 JSON + skill 文件 → 目录结构 + cap-pack.yaml |
+| ④ GOVERN | 🛠️+🧠 | 新包 → L0-L4 扫描 + FixRule + LLM 经验提取 |
+| ⑤ REPORT | 🛠️ | 修复结果 → 转换摘要 + schema 验证 |
+
+### 15.3 接口契约：脚本 ↔ LLM 的 JSON 桥
+
+```json
+// 脚本→LLM 输入 (SCAN 产出)
+{
+  "unpacked_skills": [
+    {"name": "pdf-layout", "tags": ["pdf"], "dir_size": "1.2MB"}
+  ],
+  "existing_packs": [
+    {"name": "doc-engine", "skills": ["pdf-layout"], "classification": "domain"}
+  ]
+}
+
+// LLM→脚本 输出 (ANALYZE 产出)
+{
+  "decisions": [{
+    "skill_name": "pdf-layout",
+    "target_pack": "doc-engine",
+    "new_pack_name": null,
+    "new_pack_classification": "domain",
+    "new_pack_description": null,
+    "confidence": 92,
+    "reasoning": "tags+domain → doc-engine",
+    "has_experience_content": true,
+    "experience_types": ["pitfall"]
+  }]
+}
+```
+
+### 15.4 可信度分级
+
+| Confidence | 处理方式 |
+|:----------:|:---------|
+| ≥ 80 | 自动执行 |
+| 60-79 | 执行 + 标记「建议复核」 |
+| < 60 | **不执行**，放入待确认池 |
+
+### 15.5 与现有治理引擎的集成
+
+| 可复用组件 | 来源 | 用途 |
+|:-----------|:------|:------|
+| `find_skill_dir()` / `list_skill_files()` | `scripts/extract-pack.py` | 文件操作 |
+| `CapPackAdapter.suggest()` | `adapter/cap_pack_adapter.py` | 包匹配推荐 (LLM 参考) |
+| `BaseScanner` + 子类 | `scanner/` | L0-L4 扫描 |
+| `FixRule` | `fixer/` | 自动修复 |
+
+### 15.6 行业对标
+
+| 对比维度 | SkillKit (⭐935) | Agent Skill Porter | **本模式** |
+|:---------|:--------------:|:-----------------:|:----------:|
+| 核心方向 | 跨 46 Agent 格式翻译 | 7 Agent 格式互转 | **语义化结构重组** |
+| 语义分组 | ❌ 无 | ❌ 无 | ✅ LLM 智能分组 |
+| 治理闭环 | ❌ 无 | ❌ 无 | ✅ 自动 scan+fix |
+| 经验提取 | ❌ 无 | ❌ 无 | ✅ EXPERIENCES/ 生成 |
+
+**核心洞察**: 已有工具专注「格式翻译」，空白区是「结构化重组 + 治理闭环」。
+
+### 15.7 实战参考
+
+- `docs/EPIC-007-skill-to-cap-pack-converter.md` — 完整 EPIC 设计 (4 Phase · 14 Stories)
+- `references/hermes-to-cap-pack-converter.md` — 治理引擎代码差距分析
+- `references/industry-landscape-2026.md` — 行业调研报告 (SkillKit 等详情)
+
+> **2026-05-16 新增** — 基于深度调研（12 款工具 + 4 篇学术论文 + 8 篇实践指南）的 Agent Skill 治理工具全景图。
+> 完整数据见 `references/industry-landscape-2026.md`。
+
+### 13.6 统一标准框架 — Cap-Pack Compliance Levels
+
+> **2026-05-16 新增** — 基于行业调研（8 个标准/规范 + 5 个生产实践）和学术研究（SkillRouter/skill-tree/Perplexity/Corpus2Skill）的能力包统一管理标准框架。
+> 
+> **核心原则**: 不 fork 行业标准（Agent Skills Spec），只在其上扩展 cap-pack 特有的合规层。
+> 
+> **标准优先铁律**: 构建治理/合规类工具时，必须先定义标准再构建检测器。标准是检测器的规范来源，而不是反过来从检测器推导标准。详见 §实战陷阱「标准优先顺序」。
+
+#### 框架概览
+
+```
+Agent Skills Spec (行业基础)
+     ↓ 100% 兼容，不 fork
+┌─────────────────────────────────────┐
+│  cap-pack 统一管理标准                │
+│                                     │
+│  Level 0: 兼容层 (强制)              │
+│  ├── 目录结构: SKILL.md + scripts/  │
+│  │   references/ + assets/          │
+│  ├── YAML frontmatter: name + desc  │
+│  ├── 渐进披露: 3 级加载              │
+│  └── SKILL.md < 500 行              │
+│                                     │
+│  Level 1: 强制层 (门槛)              │
+│  ├── 结构合规: 目录规范 + frontmatter│
+│  ├── 质量合规: SQS ≥ 60 / CHI pass  │
+│  ├── 元数据合规: version/tags/       │
+│  │   classification 必填            │
+│  └── 包描述: domain + capability     │
+│                                      │
+│  Level 2: 推荐层 (健康)              │
+│  ├── 树状归属: 每个 skill 在 cluster │
+│  ├── 内聚性: 簇大小 3-15,           │
+│  │   无 >60% 重叠                    │
+│  ├── 编排声明: design_pattern 声明   │
+│  ├── 原子性: 行数<500, 主题数≤3      │
+│  └── 版本规范: semver + changelog    │
+│                                      │
+│  Level 3: 生态层 (最佳实践)          │
+│  ├── SRA 可发现性: 描述含触发关键词   │
+│  ├── 跨平台: compatibility表         │
+│  ├── 跨包无冗余: 不同包无>60%重叠    │
+│  └── 经验积累: L2 Experiences 文档    │
+└──────────────────────────────────────┘
+```
+
+#### 各 Level 详细标准
+
+##### Level 0 — 兼容层（与 Agent Skills Spec 100% 一致）
+
+| 检查项 | 标准 | 来源 |
+|:-------|:-----|:------|
+| `name` 字段 | 1-64 字符，小写+连字符，匹配目录名 | Agent Skills Spec |
+| `description` 字段 | 1-1024 字符，含触发词 | Agent Skills Spec |
+| 目录结构 | 只允许 scripts/references/assets 作为子目录 | Agent Skills Spec |
+| SKILL.md 行数 | < 500 行 | Agent Skills Spec (rec.) |
+| 渐进披露 | 三级加载: metadata → instructions → resources | Agent Skills Spec |
+
+##### Level 1 — 强制层（cap-pack 最低门槛）
+
+| 检查项 | 标准 | 测量方式 |
+|:-------|:-----|:---------|
+| v2 schema 验证 | cap-pack.yaml 通过 `cap-pack-v2.schema.json` | `validate-pack.py` |
+| SQS 最低分 | ≥ 60（硬性门槛） | `skill-quality-score.py` |
+| CHI pass | ≥ 0.55（硬性门槛） | `health-check.py --gate` |
+| classification | 必填（domain/toolset/infrastructure） | schema 验证 |
+| version | 必填，semver 格式 | schema 验证 |
+| tags | 至少 2 个，与分类匹配 | schema 验证 |
+| compatibility.agent_types | 非空 | schema 验证 |
+
+##### Level 2 — 推荐层（健康度标准）
+
+| 检查项 | 标准 | 测量方式 |
+|:-------|:-----|:---------|
+| 树状归属 | 每个 skill 至少属于一个 cluster | `skill-tree-index.py` |
+| 簇大小 | 3-15 个 skill/簇 | `skill-tree-index.py --cluster-stats` |
+| 包内重叠 | 同包 skill 间语义重叠 < 60% | `merge-suggest.py` |
+| 编排声明 | 有编排的 skill 声明 `design_pattern` | `workflow_detector.py` |
+| 原子性 | 主题数 ≤ 3, 功能内聚 | `atomicity_scanner.py` |
+| 版本规范 | semver + CHANGELOG | `skill-lifecycle-audit.py` |
+| 低分率 | SQS < 60 的 skill < 15% | `health-check.py` |
+
+##### Level 3 — 生态层（最佳实践）
+
+| 检查项 | 标准 | 测量方式 |
+|:-------|:-----|:---------|
+| SRA 可发现性 | SRA 推荐命中率 > 80% | `sra-discovery-test.py` |
+| 跨平台兼容 | 至少 2 个 agent_types | schema 验证 |
+| 跨包无冗余 | 不同包间无 > 60% skill 重叠 | `merge-suggest.py --cross-pack` |
+| L2 经验 | 至少 1 篇 Experience 文档 | validates-packs.py |
+| 链接有效性 | 无死链 | skill-validator validate links |
+
+#### 标准的生产级验证（从规范到门禁）
+
+统一标准的最终目标是**可执行门禁**，而非思想原则：
+
+```bash
+# 全量合规检查（Level 0-3 的自动检查）
+python3 scripts/compliance-gate.py check <pack-name>
+
+# 单层检查
+python3 scripts/compliance-gate.py check <pack-name> --level 1
+python3 scripts/compliance-gate.py check <pack-name> --level 2
+
+# CI 门禁模式
+python3 scripts/compliance-gate.py gate <pack-name> --min-level 1
+# exit 0 = 通过 Level 1 门槛
+# exit 1 = 未通过
+```
+
+#### 触发词补充
+
+添加以下触发词以便基于本 skill 发现标准相关内容：
+`统一标准` `合规标准` `compliance levels` `cap-pack 标准` `管理标准` `标准框架` `Level 0` `Level 1` `Level 2` `Level 3` `强制层` `推荐层` `生态层` `兼容层`
+
+### 13.1 为什么关注行业生态
+
+能力包不是孤岛——它在快速演进的 Agent Skill 治理生态中。理解已有工具：
+- 🚫 避免重复造轮子（复用现有工具的扫描/验证输出作为上游数据）
+- 🎯 发现差异化空间（Cap-Pack 合规 + 自动适配是独特护城河）
+- 🔗 制定集成策略（哪些工具通过 MCP/CLI 提供可消费的数据）
+
+### 13.2 七维差距矩阵
+
+| 检测维度 | 现有工具覆盖 | Cap-Pack 差异化定位 |
+|:---------|:-----------|:-------------------|
+| ① 原子性扫描 | ⚠️ 部分（skill-validator/skill-guard 检查结构） | 定义**原子性阈值标准**+四问测试（cap-pack §①） |
+| ② 树状结构管理 | ⚠️ skill-tree（danielbrodie）做聚类，但不关联质量 | 树状 + 质量 SQS + cap-pack 三者统一 |
+| ③ 工作流编排检测 | ❌ **完全空白** | 检测 SKILL.md 的 `design_pattern` + `depends_on` + 步骤编排 |
+| ④ Cap-Pack 合规 | ❌ **完全空白** | 基于 cap-pack-v2.schema.json 的扩展检查 |
+| ⑤ 自动新增检测 | ⚠️ 部分（pre-commit hooks: skill-guard） | 持续 cron watcher + fingerprint 快照对比 |
+| ⑥ 自动质量测试 | ⚠️ 部分（on-demand 命令） | 触发性扫描（skill 创建/修改时自动触发） |
+| ⑦ 自动适配改造 | ❌ **完全空白** | 自动生成 cap-pack.yaml 条目 + 元数据补充 |
+
+> **核心洞察**: 现有 12 款工具全部集中在「发现问题→报告问题」阶段。**「发现问题→自动适配到 Cap-Pack 标准」是 cap-pack 项目的独特护城河**。
+
+### 13.3 三层集成架构（已有工具的复用策略）
+
+```text
+Layer 1: 现有工具作为数据源（集成层）
+  skill-guard validate    → 格式合规分数
+  skill-validator score   → LLM 质量评分
+  skill-tree manifest     → 树状聚类建议
+
+Layer 2: Cap-Pack 治理引擎（本项目的核心层）
+  解析上游数据 + 补充 cap-pack 自有检测
+  → 生成综合治理报告 + 适配改造建议
+
+Layer 3: Agent 适配层（输出层）
+  Hermes:   pre_flight gate + cron watcher + SRA 质量注入
+  MCP:      跨 Agent 暴露治理能力（Skilldex 已验证此模式）
+  CLI:      skill-governance 命令
+```
+
+### 13.4 战略价值评估
+
+| 维度 | 评估 |
+|:-----|:------|
+| 差异化 | 🔥 **强** — cap-pack 合规 + 自动适配 + 工作流检测 = 3 个完全空白维度 |
+| 项目价值 | 填补 cap-pack 缺失的自动化治理环节，使「提取→质量→治理→发布」形成闭环 |
+| 技术可行性 | ✅ **高** — 核心逻辑纯 Python，Hermes 扩展点充分（pre_flight/cron/SRA） |
+| 跨 Agent 适配 | 三层架构确保核心层与适配层分离，先做 Hermes + MCP |
+| 实现成本 | ~4-6 周全功能版，2 周 MVP（核心扫描引擎 + Hermes 集成） |
+
+### 13.5 相关资源
+
+| 资源 | 路径 |
+|:-----|:------|
+| 完整生态调研报告（12 工具 + 来源索引） | `references/industry-landscape-2026.md` |
+| 学术论文: Skilldex 格式合规评分 | `arxiv 2604.16911` |
+| 学术论文: SkillRouter 大规模技能路由 | `arxiv 2603.22455` |
+| 学术论文: SkillOrchestra 技能感知编排 | `arxiv 2602.19672` |
 

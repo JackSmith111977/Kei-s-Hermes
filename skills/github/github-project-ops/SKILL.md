@@ -204,10 +204,11 @@ curl -s https://api.github.com/repos/:owner/:repo | \
 ```
 
 **典型发现的「文档飘移」问题：**
-- README 中声称"零依赖"但实际有 pyyaml 依赖
+- README 中声称「零依赖」但实际有 pyyaml 依赖
 - 项目结构图遗漏 .github/ pyproject.toml 等重要文件
 - pip install 指令包含 --user 参数（PyPI 发布后不需要）
 - GitHub Topics/Description 为空（项目完全不可被搜索发现）
+- ⚠️ **Markdown 表格列数不匹配**：表头行有 N 列，对齐行（`|---|---|`）只有 N-1 列，导致渲染错乱。典型错误如 `| | 属性 | 值 |`（3 列头）配上 `|:-----|:----|`（2 列对齐行）。修复：对齐行列数必须与表头一致，多余的 `| |` 前缀应移除。
 
 ### 1.6 深度文档审计模式（进阶）
 
@@ -781,6 +782,31 @@ jobs:
 6. **测试**：`python3 -m pytest tests/ -v`
 7. **打 tag**：`git tag vX.Y.Z && git push origin vX.Y.Z`
 8. **GitHub Release**：`gh release create vX.Y.Z --notes "..."`
+
+> ⚠️ **⚠️ Pitfall: 版本号变更 ≠ 发布** — 只修改文件中的版本号、提交 commit，并不等于发布了新版本。必须额外创建 git tag（步骤7）+ GitHub Release（步骤8），才算完成一次完整的发布。常见错误模式：「commit 信息写 'v1.0.1 patch'，推了 main，以为已经发布了」。验证方法：`gh release list` 检查最新 release 是否匹配预期版本号。
+
+### 6.4b 预检：检测「未发布的版本提升」
+
+准备发布前，先检查是否有「文件版本已改但未打 tag」的遗留问题：
+
+```bash
+# 找出所有 tag 名
+git tag | sort -V
+
+# 查看最近 commits 中的版本变更
+git log --oneline -20 | grep -iE 'version|release|v[0-9]'
+
+# 检查当前 HEAD 是否已有 tag
+git describe --tags --exact-match HEAD 2>/dev/null && echo "✅ HEAD 已有对应 tag" || echo "⚠️ HEAD 没有 tag — 版本变更但未发布！"
+
+# 列出最新 tag → HEAD 之间的 commits
+latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+if [ -n "$latest_tag" ]; then
+  echo "最新 tag: $latest_tag"
+  echo "之后新增的 commits:"
+  git log --oneline "$latest_tag"..HEAD
+fi
+```
 
 > 📋 完整操作步骤和详细检查清单见 `references/pre-release-checklist.md`
 

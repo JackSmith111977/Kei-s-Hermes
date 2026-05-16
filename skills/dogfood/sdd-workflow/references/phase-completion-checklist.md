@@ -91,6 +91,42 @@ python3 -c "import json; d=json.load(open('docs/project-report.json')); print(f'
 
 ---
 
+### 5. chain-state.json（多 Phase EPIC 时）⚠️ 容易遗漏
+
+当 EPIC 包含多个 Phase（如 EPIC-005 的 Phase 0/1/2/3），每完成一个 Phase，`chain-state.json` 需要手动更新 Phase 字段，否则下一个 Phase 的状态机无法感知当前进度。
+
+```text
+修改项:
+  phase: 更新为下一 Phase 编号（如 "Phase-3"→"Phase-4"）
+  completed_stages: 如有需要可追加（但 multi-phase 场景通常复用已完成阶段）
+```
+
+**为什么需要手动更新？**
+- `chain-state.json` 追踪的是 **workflow chain 阶段**（SPEC→DEV→QA→COMMIT），而非 **EPIC Phase**（Phase-0→Phase-1→Phase-2）
+- 每个 Phase 都会走一遍完整的 `SPEC→DEV→QA→COMMIT` 链
+- 完成后 `chain-state.json` 显示完成，但不会自动进入下一 Phase
+- 需要手动将 `"phase": "Phase-N"` 更新为 `"phase": "Phase-(N+1)"`
+
+**示例**（EPIC-005 Phase 2 完成后）：
+```json
+{
+  "EPIC-005": {
+    "epic": "EPIC-005",
+    "current_stage": "SPEC",
+    "completed_stages": ["COMMIT", "QA", "DEV", "SPEC"],
+    "phase": "Phase-3",       // ← 手动从 Phase-2 改为 Phase-3
+    "gate_history": []
+  }
+}
+```
+
+**检查清单**：在 Phase 所有 Story 都标记 `completed` 后，问自己：
+- [ ] 这是多 Phase EPIC 吗？
+- [ ] chain-state.json 的 `phase` 字段是否为下一 Phase？
+- [ ] 如果是最后一个 Phase → `phase` 可设为 `COMPLETED`
+
+---
+
 ## 三、常见失误
 
 | 失误 | 后果 | 预防 |
@@ -99,6 +135,7 @@ python3 -c "import json; d=json.load(open('docs/project-report.json')); print(f'
 | 只更新 Story 忘更新 SPEC/EPIC | EPIC 仍显示 Phase 未完成 | 检查 project-report + EPIC |
 | 用 patch 逐文件更新（11 文件 × 3 处 = 33 次 api 调用） | 耗时、易出错 | 用 execute_code + Python 一次处理 |
 | 忘记 project-report.json 的 test 计数 | 报告显示旧测试数 | 验证 `tests.passing/tests.total` |
+| **先跑 `project-state.py sync` 再手动修 frontmatter** | sync 从 spec-state.py JSON 读取 → spec-state.py 无记录 → 将已完成的 story/spec 回退到 draft | **顺序很重要**: 先手动修 markdown frontmatter → 再 `python3 scripts/project-state.py verify` → 如果 verify 报错，直接 patch `project-state.yaml` 手动修正，跳过 sync。或者：修 frontmatter → patch project-state.yaml → verify 通过。**永远不要在手动修 frontmatter 之前跑 sync** |
 
 ---
 

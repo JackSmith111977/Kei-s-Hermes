@@ -1,7 +1,7 @@
 ---
 name: readme-for-ai
 description: 编写模型友好型 README 的方法论。让 AI Agent 在阅读 README 后能自主完成安装、配置、运行全流程。
-version: 1.3.0
+version: 1.4.0
 triggers:
 - 写 README
 - 模型友好
@@ -9,9 +9,14 @@ triggers:
 - readme for AI
 - 自述文件
 - 文档编写
-- validate-readme
-- readme对齐
-- 验证readme
+- 项目身份表
+- identity table
+- 7字段
+- Mermaid
+- ASCII art
+- 示意图
+- 架构图
+- 项目身份检查
 - README 模板
 - readme template
 author: Emma (小喵)
@@ -166,7 +171,53 @@ AI 比人类更依赖标题层级来理解文档结构。**显式的编号（一
 ## → 已安装: 0 个
 ```
 
-### 11. 🆕 README 对齐验证 + CI 门禁
+### 11. 🆕 示意图必须使用 Mermaid，禁止 ASCII 字符画
+
+AI Agent 生成的 README 有时会包含 ASCII 字符画来展示架构图。但 ASCII art 存在以下问题：
+
+| 问题 | 影响 |
+|:-----|:------|
+| **不可渲染** | GitHub/GitLab 等平台不渲染 ASCII art，用户看到的是原始字符 |
+| **不可缩放** | 大图会撑裂页面，小图无法放大 |
+| **不可维护** | 新增一个模块就得重新对齐所有行 |
+| **机器感重** | 一眼看出是 AI 生成的，降低文档可信度 |
+
+**正确做法**：所有架构图、流程图、序列图使用 **Mermaid** 语法：
+
+```markdown
+```mermaid
+flowchart LR
+    A[输入] --> B[处理]
+    B --> C[输出]
+```
+```
+
+Mermaid 支持的图类型：
+- `flowchart TB/LR` — 流程图（上下/左右方向）
+- `sequenceDiagram` — 序列图（时序交互）
+- `classDiagram` — 类图（继承/依赖关系）
+- `stateDiagram-v2` — 状态图（状态转换）
+- `gantt` — 甘特图（时间线）
+
+**验证方式**：在 GitHub 编辑器中预览，确保 Mermaid 块正确渲染。如果无法预览，用 `mermaid-cli` 或在线编辑器验证。
+
+### 12. 🆕 项目身份表维护 — 7 字段必检
+
+README 的「项目身份」表是最容易被遗忘的漂移点。每次版本发布/功能变更后，必须检查以下 7 个字段：
+
+| 字段 | 常见漂移 | 检查方式 |
+|:-----|:---------|:---------|
+| **CLI 入口** | 项目重构后 CLI 路径变了但 README 未更新 | `grep -r "python -m " README.md` 与实际入口对比 |
+| **Schema 版本** | schema 文件新增了 v3 但 README 还指着 v1 | `ls schemas/` 对比 README 引用的版本号 |
+| **最小 Python** | 引入了新依赖需要更高版本 | 对比 `pyproject.toml` 的 `requires-python` |
+| **依赖** | 新增了 pip 包但 README 没加 | 对比 `pyproject.toml` 的 `dependencies` |
+| **仓库** | fork 或迁移了仓库 | `git remote -v` 对比 |
+| **作者** | 项目交接或共同维护 | 确认维护者信息 |
+| **目的描述** | 项目范围变了但描述没更新 | 对比实际能力 vs 一句话描述 |
+
+**技巧**：在 CI 中用 `scripts/validate-readme.py` 的自定义检查规则来自动验证版本号一致性（P0 阻塞级），其他字段作为 P1 警告。
+
+### 13. 🆕 README 对齐验证 + CI 门禁
 
 手写 README 必然漂移。需要**可编程的验证器**来保证对齐。
 

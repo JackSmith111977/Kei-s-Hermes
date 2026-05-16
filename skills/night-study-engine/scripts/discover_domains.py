@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-夜间自习引擎 v3.0 - 领域发现器（增强版）
-自动检测需要加入学习队列的新领域。v3.0 增加：
+夜间自习引擎 v4.0 - 领域发现器（cap-pack 感知版）
+自动检测需要加入学习队列的新领域。v4.0 增加：
 - 增强的 stale skill 检测（跳过系统 skill）
 - gap_queue 真实读取（通过 review-engine.py）
 - 基于 learning_history 的热度分析
 - 概念关系断裂检测（孤立概念提醒）
+- cap-pack 包自动发现（从 Hermes-Cap-Pack/packs/ 同步新包）
 
 发现规则：
 1. Skill 超过 30 天未更新 → 自动加入学习队列
@@ -259,6 +260,49 @@ def discover(dry_run=False, rule_filter=None):
             print(f"\n✅ 已更新配置文件")
     else:
         print("💡 使用 --dry-run 跳过，未修改配置")
+
+    # ── Cap-Pack 包同步检查 ──
+    print(f"\n{'='*50}")
+    print("📦 Cap-Pack 包同步检查")
+    CAP_PACK_DIR = Path.home() / "Hermes-Cap-Pack" / "packs"
+    cap_pack_domain_map = {
+        "agent-orchestration": "agent_orchestration", "creative-design": "creative_design",
+        "developer-workflow": "dev_tools", "devops-monitor": "devops_monitoring",
+        "doc-engine": "doc_generation", "financial-analysis": "financial_analysis",
+        "github-ecosystem": "github_ecosystem", "learning-engine": "learning_methodology",
+        "learning-workflow": "learning_methodology", "media-processing": "media_audio_video",
+        "messaging": "messaging_comm", "metacognition": "metacognition_system",
+        "network-proxy": "network_proxy", "quality-assurance": "quality_governance",
+        "skill-quality": "quality_governance", "security-audit": "security_audit",
+        "social-gaming": "social_gaming",
+    }
+    if CAP_PACK_DIR.exists():
+        existing_ids = {d["id"] for d in config["domains"]}
+        for pack_dir in sorted(CAP_PACK_DIR.iterdir()):
+            if not pack_dir.is_dir() or pack_dir.name.startswith("."):
+                continue
+            did = cap_pack_domain_map.get(pack_dir.name)
+            if did and did not in existing_ids:
+                skill_count = len(list(pack_dir.glob("SKILLS/*")))
+                print(f"  🆕 新 cap-pack: {pack_dir.name} → 领域 {did} ({skill_count} skills)")
+                if not dry_run:
+                    nd = {"id": did, "name": pack_dir.name.replace("-"," ").title(),
+                          "keywords": pack_dir.name, "target_skill": "", "priority": 0.5,
+                          "schedule_interval_hours": 12, "cap_pack": [pack_dir.name],
+                          "freshness_score": 0.5,
+                          "review_schedule": {"l1":now[:10],"l2":now[:10],"l3":now[:10]},
+                          "learning_history": {"total_sessions":0,"avg_quality":0.5,
+                                               "last_loop_count":0,"consecutive_failures":0},
+                          "knowledge_gaps_filled":[], "last_updated": now}
+                    config["domains"].append(nd)
+                    save_config(config)
+                    print(f"     ✅ 已添加")
+                    created_kb = True
+        if not dry_run and created_kb:
+            print(f"  📊 领域总数: {len(config['domains'])}")
+    else:
+        print("  ⚠️ cap-pack 目录不存在")
+    return created_kb
 
 
 if __name__ == "__main__":
