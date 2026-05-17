@@ -13,20 +13,20 @@
       "cap_pack": [
         "learning-engine"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.6599999999999999,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
+        "total_sessions": 17,
+        "avg_quality": 0.89,
         "last_loop_count": 0,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-17T02:03:51.956126+08:00"
     },
     {
       "id": "dev_tools",
@@ -38,20 +38,20 @@
       "cap_pack": [
         "developer-workflow"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.74,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
+        "total_sessions": 13,
+        "avg_quality": 0.83,
         "last_loop_count": 0,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-17T00:04:20+08:00"
     },
     {
       "id": "anime_acg",
@@ -63,20 +63,20 @@
       "cap_pack": [
         "social-gaming"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.86,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
+        "total_sessions": 7,
+        "avg_quality": 0.86,
         "last_loop_count": 0,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-15T08:00:00+08:00"
     },
     {
       "id": "productivity",
@@ -88,20 +88,20 @@
       "cap_pack": [
         "learning-engine"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.7,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
+        "total_sessions": 15,
+        "avg_quality": 0.88,
         "last_loop_count": 0,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-16T04:03:06+08:00"
     },
     {
       "id": "agent_orchestration",
@@ -113,20 +113,20 @@
       "cap_pack": [
         "agent-orchestration"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.98,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
-        "last_loop_count": 0,
+        "total_sessions": 1,
+        "avg_quality": 0.92,
+        "last_loop_count": 1,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-17T04:04:16.160756"
     },
     {
       "id": "creative_design",
@@ -163,20 +163,20 @@
       "cap_pack": [
         "devops-monitor"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.95,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
+        "total_sessions": 1,
+        "avg_quality": 0.89,
         "last_loop_count": 0,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-17T08:05:09.575480+08:00"
     },
     {
       "id": "doc_generation",
@@ -239,20 +239,20 @@
         "learning-engine",
         "learning-workflow"
       ],
-      "freshness_score": 0.5,
+      "freshness_score": 0.85,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-16",
         "l3": "2026-05-16"
       },
       "learning_history": {
-        "total_sessions": 0,
-        "avg_quality": 0.5,
-        "last_loop_count": 0,
+        "total_sessions": 1,
+        "avg_quality": 0.88,
+        "last_loop_count": 1,
         "consecutive_failures": 0
       },
       "knowledge_gaps_filled": [],
-      "last_updated": "2026-05-16T23:55:48+08:00"
+      "last_updated": "2026-05-17T06:01:00+08:00"
     },
     {
       "id": "media_audio_video",

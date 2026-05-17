@@ -149,6 +149,21 @@ ps aux --sort=-%mem | head -5
 dmesg | grep -i "out of memory"
 ```
 
+## 八、监控最佳实践（2026）
+
+> 📖 详见 [references/devops-monitoring-2026.md](references/devops-monitoring-2026.md) — 含 Prometheus+Grafana 部署、进程管理选型、Cron 死信开关模式、OpenTelemetry 分布式追踪、2026 观测性趋势数据。
+
+```bash
+# Prometheus targets 状态检查
+curl -s http://localhost:9090/api/v1/targets 2>/dev/null | python3 -m json.tool
+
+# Node Exporter 指标检查
+curl -s http://localhost:9100/metrics 2>/dev/null | head -5
+
+# 监控栈健康检查
+ss -tlnp | grep -E '9090|9100|3000|9093'
+```
+
 ## 七、快速排查流程
 
 ```bash

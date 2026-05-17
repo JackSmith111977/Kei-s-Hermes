@@ -1,7 +1,7 @@
 ---
 name: ai-trends
 description: AI前沿技术趋势追踪 — 开源模型、AI Agent、LLM新特性、ML论文动态。定期更新，保持对AI领域最新进展的知识同步。
-version: 1.14.0
+version: 1.15.0
 triggers:
 - ai trends
 - ai前沿
@@ -30,18 +30,27 @@ metadata:
 1. **Qwen 系列** — 已超越 Llama 成为开放权重社区最受欢迎的模型家族（下载量和衍生品数量）
    - Qwen3 系列：推理与编码能力突出
    - Qwen3-Next：混合架构，注重成本效率
-   - **Qwen3.6 系列**（2026.05）：Qwen3.6-27B、Qwen3.6-35B-A3B（MoE），延续高性能推理与编码能力
+   - **Qwen3.6 系列**（2026.05）：Qwen3.6-27B、Qwen3.6-35B-A3B（MoE，35B 总/3B 活跃/256 专家，Apache 2.0），延续高性能推理与编码能力
+     - Qwen 3.6-35B-A3B：**73.4 SWE-Bench Verified** — 12 个月前需 400B+ 密集模型
+     - 4-bit 量化版可在单张 RTX 4090 上运行，是效率前沿的清晰信号
 2. **DeepSeek 系列**
    - DeepSeek-V3.2 / V3.2-Speciale：稀疏注意力架构，128K 上下文，在精英数学测试中达 99.2%
    - DeepSeek-V4：面向长上下文推理、编码和 Agent 工作流，两大 MoE 模型
    - **DeepSeek-V4-Pro-Max / V4-Flash-Max**（2026.05）：最新推理优化变体
-3. **其他竞争者**：Kimi K2.6、GLM-4.7、MiniMax、Yi
+3. **其他竞争者**：Kimi K2.6、GLM-5.1、MiniMax、Yi
+   - **GLM-5.1**（2026.04.07 发布，Zhipu AI）：744B/40B MoE，MIT 许可证
+     - **SWE-Bench Pro 58.4%**（SOTA 开放权重）— 该项基准第 1 名
+     - SWE-Bench Verified ~77.8%，AIME 2026 **95.3%**，GPQA-Diamond **86.2%**
+     - Terminal-Bench 2.0 69.0%，CyberGym 68.7%，BrowseComp 68.0%
    - **Kimi K2.6 GA**（2026.04.21）：1T/32B MoE（384 experts），262K 上下文，12 小时自治运行，300-agent 群协调
      - SWE-Bench Pro **58.6%**，Terminal-Bench 2.0 **66.7%**，MathVision **93.2%**
      - Partner 验证：Vercel >50% Next.js 提升，Factory.ai +15%，CodeBuddy +12% accuracy
      - Anthropic API 兼容，Apache 2.0 基础权重开源
    - **Zyphra ZAYA1-8B**（2026.05.06）：8B MoE 语言模型，<1B active parameters，Apache 2.0 开源。在 AMD MI300X 集群（1024 GPU）上训练。匹配/超越 Nemotron-3-Nano-30B-A3B、Mistral-Small-4-119B，与 DeepSeek-R1-0528、Gemini-2.5-Pro 竞争。引入 Compressed Convolutional Attention (CCA) + MLP-based 专家路由器 + Markovian RSA 测试时计算方法（无限推理恒定内存成本）。体现"智能密度"趋势
-4. **Mistral 3**（2025.12）：采用 DeepSeek V3 架构
+- **Mistral 3**（2025.12）：采用 DeepSeek V3 架构
+   - **Mistral Medium 3.5**（2026.04.29 发布）：128B 密集模型，256K 上下文，Modified MIT 许可证
+     - SWE-Bench Verified **77.6%** — 超越 Devstral 2 和 Qwen 3.5 397B A17B
+     - EU 友好编码首选，适合单供应商栈部署
 5. **Llama 4 系列**（Meta，2025.10）：Llama 4 Scout（17B active/109B total，16 experts，10M token 上下文）、Llama 4 Maverick（17B active/400B total，128 experts，1M 上下文），单卡 H100 可跑 Scout。截至 2026.05 已被 Qwen3.6/DeepSeek-V4 部分超越
 
 ### 闭源/专有模型
@@ -218,6 +227,9 @@ metadata:
 | | **AlphaEvolve 2026** | Google DeepMind (2026.05) | Gemini驱动编码Agent年度回顾：DeepConsensus 30%变异检测错误降低；电网可行解14%→88%；灾难预测+5%；Willow量子10x误差降低；Spanner写放大-20%，存储-9% |
 || **ATOM Report** | Interconnects AI (arxiv 2604.07190) | **开源LLM生态全景**: 20.4亿累计下载(6× YoY)。中国1.15B vs 美国723M。Qwen ~942M最受欢迎, DeepSeek 75.6%推理token份额(OpenRouter)。RAM指标量化动量 |
 | | **Adaption AutoScientist** | Adaption (2026.05.13) | Sara Hooker (ex-Cohere VP AI R)创办。自动化微调工具，**co-optimize数据+模型**，声称2x+ win rates across models。免费使用30天。标志着"AI自我改进"从研究走向产品 |
+| | **Lenovo AI Library** | Lenovo (2026.05.12) | 生产就绪 AI Agent 一周部署。Signal65 验证：知识任务时间减少30%，每员工年省120h。预构建 Agent 覆盖制造/零售/医疗。xIQ Agent Platform 全生命周期管理 |
+| | **SAP Joule Studio** | SAP (2026.05.13) | 全生命周期 Agent 构建平台。内嵌 n8n 可视化多 Agent 编排。NVIDIA OpenShell 隔离沙箱。Signavio/LeanIX/Cloud ALM 集成。年末前免费设计时访问 |
+| | **Glean Enterprise ADLC** | Glean (2026.05.12) | Enterprise Agent Development Lifecycle 7 阶段框架。Auto Mode 自然语言 Agent Builder。Sub-Agents 模块化架构。Content Triggers 事件驱动。Agent Access Policies 组织级护栏 |
 | | **Ineffable Intelligence × NVIDIA** | Ineffable (2026.05.13) | David Silver（DeepMind RL之父）创立的RL超级智能公司。$1.1B seed（史上最大种子轮）。NVIDIA工程级合作：Grace Blackwell + Vera Rubin for large-scale RL。'超学习者'范式——系统从经验而非人类数据中学习 |
 | | **OpenAI Daybreak** | OpenAI (2026.05.11) | 公开网络安全AI，直接回应 Anthropic Mythos。客户端: Cloudflare/Cisco/CrowdStrike/Oracle/Zscaler。3阶段: 优先→测试→修复。与 Project Glasswing 形成AI安全双极格局 |
 | | **Meta Incognito Chat** | Meta (2026.05.13) | 端到端加密无日志AI聊天。WhatsApp Private Processing技术。'完全私密'——聊天内容连Meta也无法查看。回应用户隐私诉讼压力 |
@@ -371,4 +383,6 @@ REDEREF = Thompson Sampling + Reflection Judge + Memory-Aware Priors
 > - 2026-05-11: **v1.10 更新** — NVIDIA Star Elastic 单检查点多模型嵌套(360× token/53%存储)；Mozilla×Mythos 271漏洞实战数据(180 sec-high, 几乎无假阳性)；ATOM Report 开源模型生态全景(中国1.15B, Qwen 69%衍生份额)；Mythos 条目更新 Firefox 实战数据；趋势观察 #14-#15 新增
 > - 2026-05-12: **v1.11 更新** — Amazon SageMaker AI Agent Experience(5/4, Agentic模型定制)；Twilio Agent Connect GA(5/6, 自托管音视频编排)；IBM Think 2026(5/5, watsonx/Concert/Sovereign Core四支柱)；MCP生态数据更新(13K+服务器/97M+月下载/Streamable HTTP标准/云厂商Gateway对比)；GPT-5.5 API完整规格(1,050K上下文/$5-$30定价/Rate Limits)；趋势观察 #16(企业Agent基础设施三强争霸)
 > - 2026-05-13: **v1.12 更新** — GPT-5.3-Codex 最强Agentic编码(SOTA SWE-Bench Pro 56.8%/Terminal-Bench 77.3%/OSWorld 64.7%/Cybersecurity High-capability)；Microsoft MDASH 100+Agent安全系统(16 CVE/88.45% CyberGym)；OpenAI Workspace Agents(云端Agent自主工作)；AlphaEvolve 2026年度突破回顾；Honeycomb Agent Observability(Agent Timeline/Canvas/Skills)；DeepSeek V4定价经济学(34x比GPT-5.5便宜)；Qwen 3.6 Max-Preview(6项基准#1)；Gemini 3.1 Pro(GPQA 94.3%)/Grok 4.20多Agent辩论；Apple ICLR 2026(ParaRNN 665x/Manzano/SHARP/SimpleFold)
-> - 2026-05-14: **v1.13 更新** — Adaption AutoScientist(Sara Hooker自我改进AI)；Ineffable Intelligence×NVIDIA(David Silver RL超级智能, $1.1B seed)；OpenAI Daybreak(公开网络安全AI, 回应Mythos)；Meta Incognito Chat(端到端加密无日志)；Amazon Alexa for Shopping(agentic商业) |
+> - 2026-05-14: **v1.13 更新** — Adaption AutoScientist(Sara Hooker自我改进AI)；Ineffable Intelligence×NVIDIA(David Silver RL超级智能, $1.1B seed)；OpenAI Daybreak(公开网络安全AI, 回应Mythos)；Meta Incognito Chat(端到端加密无日志)；Amazon Alexa for Shopping(agentic商业)
+> - 2026-05-17: **v1.14 更新** — 更新 Qwen 3.6-35B-A3B 详细数据(73.4 SWE-Bench, 单RTX 4090)；GLM-5.1 追加(SWE-Bench Pro 58.4% SOTA)；Mistral Medium 3.5 追加(77.6% SWE-Bench)；Llama 4 基准数据更新(Apr 2026)；Google 50-MCP 升级(置信度 0.85)
+> - 2026-05-17: **v1.15 更新** — 新增企业Agent基础设施：Lenovo AI Library(1周部署)、SAP Joule Studio(n8n编排)、Glean ADLC(7阶段框架)；更新趋势观察 #17(企业Agent三大产品发布)；ai_tech KB 更新至 87 概念

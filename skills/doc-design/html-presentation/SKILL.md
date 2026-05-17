@@ -1,7 +1,7 @@
 ---
 name: html-presentation
 description: 用 HTML/CSS 制作演示文稿的完整指南 — 替代传统 PPTX 的新思路。涵盖 reveal.js、Slidev、Marp、纯 CSS 四大方案，从选型到实操的全流程指导。v2.0 新增 7 种网页 UX/UI 设计风格实现（Glassmorphism/Neumorphism/Neubrutalism/Material You/日式侘寂/Mesh Gradient/赛博霓虹），可直接用于幻灯片设计。
-version: 2.1.0
+version: 2.2.0
 triggers:
   - HTML 做 PPT
   - 网页幻灯片
@@ -15,6 +15,14 @@ triggers:
   - slide deck
   - HTML slide
   - 前端演示
+  - 教材
+  - 教科书
+  - 教学课件
+  - 网页教材
+  - 网络课程
+  - 电子教材
+  - 课本
+  - 教育演示
   - UI 设计风格
   - Glassmorphism
   - Neumorphism
@@ -82,6 +90,7 @@ depends_on:
 | 🎤 技术演讲/代码演示 | **Slidev** | Shiki 代码高亮 + live coding + 热重载 |
 | 🎨 需要最大自定义 | **reveal.js** | 69k stars 插件生态，HTML 完全控制 |
 | 📄 快速输出多种格式 | **Marp** | 一行命令出 HTML/PDF/PPTX 三种格式 |
+| 📗 多章节教材/教科书 | **Python 数据驱动 + 纯 CSS** | 结构化数据自动生成，零依赖，侧栏导航 |
 | 🪶 极简零依赖 | **纯 CSS + WeasyPrint** | 一个 HTML 文件搞定 |
 | 🤖 批量自动化生成 | **Marp CLI** | 脚本化管道，最简 API |
 
@@ -397,20 +406,75 @@ weasyprint slides.html output.pdf
 
 ---
 
+### 方案 E：数据驱动教材生成（Python + 纯CSS）— 多章节教材/教科书
+
+> **适用场景**：制作多章节、结构化的教育类网页教材（10+ 章、50+ 页），每章需标准化结构（定义→概念→方法→总结）。不适合单次演讲/短演示。
+
+**核心思路**：用 Python 结构化数据（JSON/dict）定义章节内容，通过模板引擎自动生成完整的 HTML 文件。一次编写数据，自动产出 50+ 页幻灯片。
+
+**六大幻灯片类型模板**（每章通用结构）：
+
+| 类型 | 用途 | CSS 布局 |
+|:----|:-----|:---------|
+| `chapter-title` | 章节封面 | 居中 + 渐变背景 + 引文 |
+| `definition` | 核心定义 | 左竖线标题 + 正文 + 关键点卡片 |
+| `concept` | 概念讲解 | 响应式卡片网格（`.cards > .card`） |
+| `process` | 方法步骤 | 弹性步骤序列（`.process-steps`） |
+| `summary` | 总结回顾 | 要点列表 + 实操练习框 |
+| `comparison` | 对比总结 | 全宽表格，hover 行高亮 |
+
+**设计系统**（深色教育主题）：
+
+```css
+:root {
+  --bg-primary: #0f1117;     /* 主背景 */
+  --bg-secondary: #161822;   /* 侧栏背景 */
+  --bg-card: #1c1f2e;        /* 卡片背景 */
+  --text-primary: #e8eaed;   /* 主文字 */
+  --text-secondary: #9aa0a6; /* 辅助文字 */
+  --border-color: #2c2f3e;   /* 卡片边框 */
+}
+```
+
+**布局特征**：
+- 左侧固定导航栏（260px）：章节目录，可点击跳转
+- 右侧 `scroll-snap: y mandatory` 垂直分页
+- 每章 `id="#chN"`，导航 `href="#chN"`
+- 底页页码指示器（`<div class="page-indicator">`）
+
+**快速开始**：
+
+```
+结构化数据 → Python 模板 → generate_textbook.py → index.html
+```
+
+**完整模板及设计细节**：见本 skill 的 `references/educational-textbook-template.md`
+
+**避坑须知**：
+1. **f-string 花括号转义**：Python f-string 中的 CSS `{` 必须写为 `{{`，否则报 `NameError`。单行声明（如 `.slide { align-items:center; }`）最容易遗漏。
+2. **内容量预估**：每章 5-6 页幻灯片 / 11 章 ≈ 350KB 数据源 → 60-70KB 输出 HTML。规划时按此比例估算。
+3. **打印适配**：从第一行代码就加入 `@media print`，`.sidebar { display:none }` + `@page { size: A4 landscape }`。
+4. **每章颜色独立**：用 `var(--ch-color)` 实现每章不同主题色（如在 `style` 属性中设置 `--ch-color`）。
+
+---
+
 ## 三、方案对比矩阵
 
-| 维度 | reveal.js | Slidev | Marp | 纯 CSS |
-|------|-----------|--------|------|--------|
-| 编写方式 | HTML/Markdown | Markdown | Markdown | HTML |
-| 学习成本 | 中 | 低 | 最低 | 中偏高 |
-| 自定义度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| 热重载 | 需额外配置 | ✅ 原生支持 | ❌ | ❌ |
-| 代码高亮 | highlight.js | Shiki ⭐ | highlight.js | 需自己加 |
-| 交互组件 | 插件系统 | Vue 组件 | 有限 | 需自己写 |
-| 输出格式 | HTML/PDF | HTML/PDF/PPTX/PNG | HTML/PDF/PPTX/Img | HTML/PDF |
-| 文件大小 | 最小（单 HTML） | 中等（静态站点） | 最小 | 最小 |
-| 包大小 (npm) | ~2.5MB | ~15MB | ~8MB | 0 |
-| 社区 | 69k stars, 成熟 | 38.5k stars, 增长快 | 9k stars | N/A |
+| 维度 | reveal.js | Slidev | Marp | 纯 CSS | **教材生成(Python)** |
+|------|-----------|--------|------|--------|---------------------|
+| 编写方式 | HTML/Markdown | Markdown | Markdown | HTML | **Python 数据** |
+| 学习成本 | 中 | 低 | 最低 | 中偏高 | **中（一次编写）** |
+| 自定义度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | **⭐⭐⭐⭐⭐** |
+| 热重载 | 需额外配置 | ✅ 原生支持 | ❌ | ❌ | ❌ |
+| 代码高亮 | highlight.js | Shiki ⭐ | highlight.js | 需自己加 | **需自己加** |
+| 交互组件 | 插件系统 | Vue 组件 | 有限 | 需自己写 | **需自己写** |
+| 输出格式 | HTML/PDF | HTML/PDF/PPTX/PNG | HTML/PDF/PPTX/Img | HTML/PDF | **HTML/PDF** |
+| 文件大小 | 最小（单 HTML） | 中等（静态站点） | 最小 | 最小 | **最小** |
+| 包大小 (npm) | ~2.5MB | ~15MB | ~8MB | 0 | **0** |
+| **章节导航** | 需插件 | 需配置 | ❌ | 需手写 | **✅ 内置** |
+| **内容标准化** | 自由 | 自由 | 自由 | 自由 | **✅ 6 种模板**|
+| **多章节大规模** | ❌ 维护困难 | ❌ 不适合 | ❌ 不适合 | ❌ 重复劳动 | **✅ 数据驱动** |
+| 社区 | 69k stars, 成熟 | 38.5k stars, 增长快 | 9k stars | N/A | — |
 
 ---
 
@@ -434,6 +498,13 @@ Markdown 编写 → marp --pdf → PDF 发听众
 ```
 HTML 编写 → CDN 启动 → 插件增强
 → 浏览器打印 PDF → 单 HTML 文件发布
+```
+
+### 场景：多章节教材/教科书（推荐 Python 数据驱动 + 纯CSS）
+```
+结构化数据 (Python dict) → 模板生成 → 单 HTML 文件
+→ 侧栏导航浏览 → 浏览器打印 PDF
+→ 修改数据即可迭代内容
 ```
 
 ---
@@ -465,7 +536,9 @@ HTML 编写 → CDN 启动 → 插件增强
 | 文件 | 风格 | 来源 |
 |------|------|------|
 | `references/dracula-revealjs-template.md` | Dracula 主题 + 毛玻璃卡片 + Mesh Gradient | 2026-05-08 Gemini API 研究报告 |
-| `references/ai-coding-evolution-presentation-template.md` | **[新增]** Cyber 暗色主题 + Grid 卡片 + 数据指标 + 颜色标签系统 | 2026-05-09 AI 编程进化史研究报告 |
+| `references/ai-coding-evolution-presentation-template.md` | Cyber 暗色主题 + Grid 卡片 + 数据指标 + 颜色标签系统 | 2026-05-09 AI 编程进化史研究报告 |
+| `references/educational-textbook-template.md` | **[新增]** 深色教育主题 + 6 种幻灯片模板 + 侧栏导航 + 数据驱动生成指南 | 2026-05-17 创新思维方法教材实战 |
+
 - 完整模板文件位置：`~/.hermes/research/ai_coding_evolution_presentation.html`
 
 ## 六、🎨 7 种网页 UX/UI 设计风格 — 直接用于 PPT

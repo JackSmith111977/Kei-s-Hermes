@@ -1,7 +1,7 @@
 ---
 name: news-briefing
 description: 新闻采集与报刊级别简报生成技能。涵盖 RSS/API 采集管线、新闻分类筛选去重、AI 辅助摘要、以及使用 WeasyPrint 生成专业报刊级 PDF 文档（4+页，网格系统+视觉层次+多栏布局）。
-version: 2.2.0
+version: 2.3.0
 triggers:
 - 新闻采集
 - 新闻简报
@@ -12,6 +12,13 @@ triggers:
 - 周报
 - 看新闻
 - 新闻汇总
+- 专题报道
+- 新闻专题
+- 特辑
+- 深度报道
+- 访华
+- 峰会
+- 会晤
 depends_on:
 - web-access
 - pdf-layout-weasyprint
@@ -111,6 +118,65 @@ SEARCH_QUERIES = [
     "2026年5月4日 国际新闻 欧洲 乌克兰 中东",          # 国际
 ]
 ```
+
+### 1.6 专题新闻深度采集（v2.3 新增）
+
+**适用场景**：聚焦单一重大事件（如元首会晤、地缘冲突、重大政策发布），需要跨源、多语种、多角度地深度采集和结构化呈现。
+
+#### 1.6.1 多语种并行搜索
+
+对于涉及国际关系的专题新闻，必须同时搜索中文和英文来源以获取完整图景：
+
+```python
+# 中英文并行搜索（示例：特朗普访华专题）
+queries = [
+    # 中文搜索：获取中方视角和细节
+    "特朗普访华 习近平 2026 会谈 成果",
+    "特朗普 中国 访问 中美关系 贸易 2026",
+    # 英文搜索：获取国际视角和不同叙述
+    "Trump visit China 2026 Xi Jinping summit",
+    "Trump Beijing meeting Xi trade Iran Taiwan 2026",
+]
+```
+
+**交叉验证要点**：
+- 同一事实的中英文表述可能存在差异（如美方纪要和中方纪要的侧重点不同）
+- 凡涉及领土主权、战争、制裁等敏感议题，必须对比双方官方表述
+- 数字（订单数量、关税税率、百分比）需多源交叉核对
+
+#### 1.6.2 按主题纬度组织内容
+
+采集完成后，将新闻按议题分类，而非按来源或时间排列，形成"全景视野"：
+
+```markdown
+# 专题报道结构
+├── 核心议题 A（如贸易经济）
+│   ├── 中方立场与成果
+│   ├── 美方表述与诉求
+│   ├── 市场反应
+│   └── 第三方分析
+├── 核心议题 B（如地缘安全）
+│   ├── 事件经过
+│   ├── 双方公报对照
+│   └── 国际反应
+├── 议程细节（行程/随行人员/仪式）
+├── 深度分析
+│   ├── 历史纵览（时间线）
+│   └── 专家解读
+└── 未来展望
+```
+
+#### 1.6.3 来源多样化清单
+
+专题新闻应覆盖以下来源类型（每种至少 2-3 个）：
+
+| 类型 | 中文来源 | 英文来源 |
+|:----|:---------|:---------|
+| 官方/政府 | 新华社、人民日报、外交部 | White House、State Dept、Xinhua EN |
+| 主流媒体 | 央视、环球网、观察者网 | ABC、BBC、CNN、NPR |
+| 财经媒体 | 上海证券报、财新网 | Bloomberg、Reuters、CNBC |
+| 地区媒体 | 星岛日报、联合早报、共同社(中文) | AP News、Kyodo News、The Star |
+| 分析评论 | 知乎专栏、观察者网 | Atlantic Council、Indian Express |
 
 ### 1.5 去重与分类
 
@@ -281,7 +347,7 @@ HTML(string=html_content).write_pdf(
 | 第1页太空 | 第1页就开始双栏，头条下直接接双栏内容，底部加三栏快讯 |
 | 字体过多 | ≤2种字体，通过字重变化区分层次 |
 | 颜色杂乱 | 60-30-10 法则 |
-| 飞书发 PDF 失败 | 飞书不支持 send_message MEDIA，需用飞书 API 上传→获 file_key→发 file 消息 |
+| WeasyPrint 找不到模块 | 系统 apt 安装的 WeasyPrint 在 `/usr/bin/python3` 中可用，但 venv 的 `python3` 不可用。使用 `which weasyprint` 检查系统安装，脚本改用 `/usr/bin/python3` 执行 |
 | 飞书 receive_id 报错 | POST body 里放 `receive_id` 和 `msg_type`，URL 用 `receive_id_type=open_id` |
 
 ---
@@ -295,8 +361,8 @@ HTML(string=html_content).write_pdf(
 4. 摘要 ──→ 每篇提炼 2-3 句核心摘要
 5. 排序 ──→ 按重要性/热度排序
 6. 排版 ──→ 套用报刊 HTML 模板（4+页，双栏，数据条）
-7. 生成 ──→ WeasyPrint → PDF
-8. 验证 ──→ pdftoppm 转图 + vision_analyze 检查排版
+7. 生成 ──→ WeasyPrint → PDF（使用 `/usr/bin/python3`，非 venv python3）
+8. 验证 ──→ `pdftoppm -png -r 150 output.pdf /tmp/preview` + `vision_analyze` 检查排版
 9. 发送 ──→ 飞书 API 上传文件 → 发 file 消息
 ```
 
@@ -358,4 +424,14 @@ HTML(string=html_content).write_pdf(
   ├─ .section .section-title .article（文章2）
   └─ .pull-quote / .editor-note（跨栏元素）
 页脚 .footer → 来源列表 + 页码
+
+---
+
+## 更新记录
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| 1.0.0 | — | 初始版本 |
+| 2.2.0 | — | 严禁使用 Filler Hack，确立"真实新闻填充"原则 |
+| 2.3.0 | 2026-05-17 | 新增 §1.6 专题新闻深度采集（多语种搜索 + 主题纬度组织 + 来源多样化）；新增 pitfall：WeasyPrint 系统 Python vs venv 区别；新增 PDF 视觉验证流程；新增 references/topic-specific-research-synthesis.md 参考文件 |
 ```

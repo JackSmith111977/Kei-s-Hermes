@@ -4,6 +4,60 @@
 >
 > **解决方案**：在调度器输出后增加一层交叉验证，检查今日实际已学记录 + KB 饱和状态 + 更新时间间隔。
 
+## 配置版本检测 — v3/v2 抉择
+
+> **问题**：当 `night_study_config_v3.json`（18 领域，自动生成于 2026-05-16）存在时，读取 v2（4 领域）会导致调度数据严重不完整 —— 从未初始化的领域（0 sessions、freshness=0.5、avg_Q=0.5）会被完全忽略。
+
+### 检测方式
+
+会话开始时，优先检查 v3 配置的存在性：
+
+| 文件名 | 领域数 | 来源 | 生成方式 |
+|--------|:------:|:----:|:--------:|
+| `night_study_config_v3.json` | 18 | `generate-night-study-config.py` | 自动从 cap-pack 映射 |
+| `night_study_config_v2.json` | 4 | 手动创建 | 原始 4 领域配置 |
+
+```python
+from pathlib import Path
+import json
+
+v3 = Path.home() / ".hermes" / "config" / "night_study_config_v3.json"
+v2 = Path.home() / ".hermes" / "config" / "night_study_config_v2.json"
+
+config_path = v3 if v3.exists() else v2
+domains_count = len(json.load(open(config_path))["domains"])
+# v3 → 18 领域；v2 → 4 领域
+```
+
+### 漂移标志
+
+即使使用 v3 配置，也需要检查 `learning_history` 是否真实：
+
+| 检查项 | 健康值 | 漂移标志 | 处理方法 |
+|:-------|:------:|:---------|:---------|
+| `total_sessions` vs KB session_log 数 | 匹配 | v3 中为 0 但 KB 有 5+ session | 运行 `batch-config-sync-pattern.md` 全量同步 |
+| `avg_quality` vs KB 实际 | 0.8-0.95 | v3 中为 0.5 但 KB 有实际 session | `config-drift-check.py --fix-all` |
+| 领域数量 | 18 | 突然少于 15（已学习领域在 KB 存在但不在配置中） | 重新运行 `generate-night-study-config.py` |
+
+### 实战验证：2026-05-17 08:00
+
+首次使用 v3 配置进行调度。v3 配置中的 14 个新领域（如 devops_monitoring、github_ecosystem）均为 `total_sessions=0, avg_quality=0.5`，调度公式为 `priority*0.3 + 0.3`：
+
+| 领域 | priority | 调度分 | 结果 |
+|:-----|:--------:|:------:|:-----|
+| devops_monitoring | 0.70 | 0.510 | 🥇 **被选择，首次初始化成功** |
+| github_ecosystem | 0.70 | 0.510 | 第二顺位 |
+| ai_tech（对比） | 0.95 | 0.260 | 已学 17 次，分数被高 freshness 压低 |
+
+若不检查 v3 配置，仅看 v2 的 4 个领域，ai_tech 会因 `0.95*0.6*0.34 + 0.6*0.11 = 0.26` 被选中——但 ai_tech 早就今天 02:04 学过了。v3 配置正确地将 12 个从未学习的领域排在前面。
+
+```text
+[无 v3]  v2 选择 ai_tech (0.26) → 6h 前刚学过，边际收益低
+[有 v3]  v3 选择 devops_monitoring (0.51) → 首次初始化，+7 概念，Q=89 ✓
+```
+
+---
+
 ## 适用场景
 
 调度器输出与以下条件冲突时：

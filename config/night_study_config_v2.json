@@ -8,8 +8,8 @@
       "target_skill": "ai-trends",
       "priority": 0.9,
       "schedule_interval_hours": 2,
-      "last_updated": "2026-05-16T08:01:31+08:00+08:00",
-      "freshness_score": 0.55,
+      "last_updated": "2026-05-17T02:04:04.712792+08:00",
+      "freshness_score": 0.49,
       "review_schedule": {
         "l1": "2026-05-15",
         "l2": "2026-05-17",
@@ -38,8 +38,8 @@
         "Google I/O 2026: Gemini 3.1 Ultra + Project Astra preview"
       ],
       "learning_history": {
-        "total_sessions": 16,
-        "avg_quality": 0.89,
+        "total_sessions": 17,
+        "avg_quality": 0.8894,
         "last_loop_count": 1,
         "consecutive_failures": 0
       }
@@ -51,8 +51,8 @@
       "target_skill": "linux-ops-guide",
       "priority": 0.7,
       "schedule_interval_hours": 4,
-      "last_updated": "2026-05-16T08:03:21+08:00",
-      "freshness_score": 0.64,
+      "last_updated": "2026-05-17T00:04:20+08:00",
+      "freshness_score": 0.5,
       "review_schedule": {
         "l1": "2026-05-16",
         "l2": "2026-05-21",
@@ -74,7 +74,7 @@
       ],
       "learning_history": {
         "total_sessions": 12,
-        "avg_quality": 0.82,
+        "avg_quality": 0.8957999999999999,
         "last_loop_count": 1,
         "consecutive_failures": 0
       }
@@ -140,6 +140,36 @@
       "learning_history": {
         "total_sessions": 15,
         "avg_quality": 0.88,
+        "last_loop_count": 1,
+        "consecutive_failures": 0
+      }
+    },
+    {
+      "id": "devops_monitoring",
+      "name": "运维与监控",
+      "keywords": "Docker, Linux ops, process management, project startup, webhook, Kanban, proxy monitor, cron job",
+      "target_skill": "linux-ops-guide",
+      "priority": 0.7,
+      "schedule_interval_hours": 8,
+      "last_updated": "2026-05-17T08:05:51+0800",
+      "freshness_score": 0.95,
+      "review_schedule": {
+        "l1": "2026-05-18",
+        "l2": "2026-05-19",
+        "l3": "2026-05-20"
+      },
+      "knowledge_gaps_filled": [
+        "2026观测性八大趋势",
+        "Prometheus+Grafana监控栈",
+        "Docker容器监控",
+        "进程管理方案对比",
+        "Cron作业死信开关监控模式",
+        "OpenTelemetry分布式追踪",
+        "DevOps监控工具选型"
+      ],
+      "learning_history": {
+        "total_sessions": 1,
+        "avg_quality": 0.89,
         "last_loop_count": 1,
         "consecutive_failures": 0
       }

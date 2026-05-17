@@ -171,3 +171,47 @@
 | Lightning CSS | Rust | Tailwind v4 Oxide 引擎 |
 | **Bun** | ~~Zig~~ **Rust** | 2026年5月从 Zig 移植到 Rust（96.6 万行） |
 | **TypeScript 7** | **Go** | 唯一不在 Rust 生态中的关键工具 |
+
+---
+
+## 5月17日 Update — 第二轮深度扫描
+
+> 夜间自习引擎 v4.0 | Q=91 | +18 新概念，+16 更新
+
+### Go 1.27 前瞻确认（冻结 2026-05-20 🚨）
+- Go 1.26 是最后支持 macOS 12 Monterey 的版本；1.27 需要 macOS 13+
+- GOEXPERIMENT=nogreenteagc 将在 1.27 移除（Green Tea GC 完全默认）
+- goroutineleak profile 默认启用
+- 所有旧 GODEBUG 设置批量移除
+- Unicode 17 支持已确认
+- Generic Methods for Concrete Types（提案 #77273）可能在 1.27 或 1.28
+
+### TypeScript 7.0 Beta 进展确认
+- VS Code 和 Visual Studio 2026 18.6 Insiders 默认启用 TS 7 Beta
+- `@typescript/typescript6` 兼容包提供 `tsc6` 入口
+- TS 7.0 已知问题：Quick Fixes (Ctrl+.) 不可用，仅 AI Copilot 建议可用；Watch mode 尚未优化
+- 稳定版预计 2 个月内（2026年6-7月）
+
+### Node.js 26.1.0 + 发布模型变更
+- **实验性 `node:ffi`**（需 `--experimental-ffi`）：加载动态库并调用原生符号
+- Node.js 27.x 起改为**年度大版本发布**（原来每年2次）
+- 所有版本都变 LTS（不再分奇数/偶数）
+- Alpha(10月)→Current(4月)→LTS(10月)，共 36 个月支持
+
+### Python 3.16 启动
+- 开发启动：2026-05-07（PEP 826）
+- 17 个月开发周期，12 月发布节奏
+- Alpha 1：2026-10-13，Final：2027-10-05
+
+### K8s 1.36 Workload-Aware Scheduling 详细
+- Workload API（静态模板）+ PodGroup API（运行时状态）
+- Gang scheduling、Topology-aware scheduling、workload-aware preemption
+- DRA ResourceClaim for workloads（允许 DRA 用于 PodGroup）
+- Job controller 第一个集成（WorkloadWithJob feature gate）
+- v1.37 计划：Workload/PodGroup → Beta，Multi-level hierarchies
+
+### Zig 0.16 补充细节
+- 增量编译已可用（master 分支）；类型解析重新设计（30000 行 PR）
+- 包管理中 `zig-pkg` 本地目录 + `--fork` 标志
+- `zig libc` 共享 Zig 编译单元（跨 libc 边界 LTO 级优化）
+- io_uring + GCD 的 std.Io.Evented 实现（实验性）

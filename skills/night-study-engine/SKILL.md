@@ -550,6 +550,7 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │   ├── references/cron-tavily-quota-strategy.md     # Tavily 配额降级策略（2026-05-12）
 │   ├── references/cron-execution-pattern.md         # 安全扫描器感知的 cron 执行模式（v3.3）
 │   ├── references/multi-topic-broad-search-strategy.md # 多主题广度域并行搜索（2026-05-13）
+│   ├── references/batch-config-sync-pattern.md          # 全领域配置同步模式（2026-05-17）
 │   ├── references/domain-selection-cross-validation.md # 领域选择交叉验证（2026-05-13）
 │   ├── references/aku-hermes-skill-evolution.md     # AKU Continuation Paths + Validators 映射（2026-05-12）
 │   ├── references/context-engineering-patterns.md   # Context Engineering 模式库
@@ -558,6 +559,7 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │   ├── references/hermes-contextk8s-mapping.md      # Hermes ↔ Context K8s 7 服务映射（2026-05-14）
 │   ├── references/review-backlog-scheduling.md      # 复习积压调度信号 — 到期概念数作为调度因子（2026-05-15）
 │   ├── references/dev-tools-landscape-may-2026.md   # 开发工具生态快照（2026-05-16, 跨8个工具链）
+│   ├── references/learning-methodology-landscape-2026.md # 学习方法论全景（2026-05-17, 从KM治理到KB构建实操, 4来源交叉验证, 含first-session领域初始化模式）
 │   ├── templates/
 │   │   └── kb-update-pattern.py                     # KB 批量更新 Python 模板
 │   └── scripts/
@@ -566,7 +568,8 @@ MCP 级联效应：Tavily 失败 7 次后 MCP 服务器锁定 ~58s。检测到 q
 │       ├── update_knowledge_base.py                 # 知识库更新器 v3.0（含关系图谱）
 │       ├── adaptive_scheduler.py                    # 自适应调度引擎 v3.0
 │       ├── experience_extractor.py                  # 经验提取器 v3.0
-│       └── config-drift-check.py                     # Config-KB 漂移检测+质量分数格式修复 (v3.6)
+│       ├── config-drift-check.py                     # Config-KB 漂移检测+质量分数格式修复 (v3.6)
+│       └── kb-field-type-fixer.py                    # KB 字段类型/质量分/timestamp 修复脚本 (v4.1)
 ```
 
 ---
@@ -769,19 +772,11 @@ FIELD = 'key_points' if 'key_points' in sample else ('notes' if 'notes' in sampl
           # ...
       }
       ```
-    - **修正**：遍历所有 KB JSON 的 session_log，找出并修复字段类型不一致的条目。建议一次性修复脚本：
-      ```python
-      for domain_file in kb_dir.glob("*.json"):
-          kb = json.load(open(domain_file))
-          fixed = False
-          for s in kb.get("session_log", []):
-              for field in ["new_concepts_added", "concepts_updated"]:
-                  if field in s and not isinstance(s[field], list):
-                      s[field] = [] if s[field] in (None, 0, "") else [str(s[field])]
-                      fixed = True
-          if fixed:
-              json.dump(kb, open(domain_file, "w"), ensure_ascii=False, indent=2)
+    - **修正**：运行专用修复脚本：
+      ```bash
+      python3 ~/.hermes/skills/night-study-engine/scripts/kb-field-type-fixer.py --fix
       ```
+      该脚本自动遍历所有 KB JSON，修复字段类型、归一化 quality_score、修复重复时区，并可同步配置。支持 `--domain` 限定单域、`--sync-config` 同歩配置、不带参数则以 dry-run 模式运行。详见脚本的 `--help`。
 
 29. ❌ **调度器忽视「到期概念数」导致推荐过时领域** — `select_domain.py`/`adaptive_scheduler.py` 使用 `priority × freshness_weight × (1-freshness) + (1-perf_weight) × (1-avg_quality)` 公式计算调度分，但未考虑 KB 中到期概念的数量。这导致刚学过的领域（high priority + low freshness since recently consumed）可能被再次推荐，而积压大量到期概念的领域（high freshness = 大部分内容已过时但未被标记）却被跳过。
     - **实际案例**：2026-05-15 06:00，ai_tech（2h 前学过，Q=88，0 到期）被推荐，dev_tools（22h 前学，30 到期）分数低。
@@ -853,6 +848,8 @@ FIELD = 'key_points' if 'key_points' in sample else ('notes' if 'notes' in sampl
     ```
 
     **注意**：即使不嵌入同步步骤，定期运行检测命令也可及时发现漂移。`--skip` 参数可临时绕过错误推荐。
+
+    **全量同步参考**：当 v3 配置为新生成（所有领域为默认值 0 session）或需一次性修复全部域时，使用 `references/batch-config-sync-pattern.md` 中的遍历模式。该模式在单个 `execute_code` 调用中完成所有域的 KB→config 同步，自动处理 quality_score 归一化、freshness 计算、缺失 KB 降级等边缘情况。
 
 ### v3.9 新增 — 实践教训（来自 2026-05-14 实测：KB 质量分数格式一致性与历史修复）
 
