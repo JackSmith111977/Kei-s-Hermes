@@ -20,6 +20,8 @@ metadata:
     - github-auth
     - github-pr-workflow
     - github-issues
+depends_on: []
+
 ---
 # GitHub Repository Management
 

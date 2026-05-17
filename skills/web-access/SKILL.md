@@ -55,6 +55,8 @@ metadata:
     related_skills: ["clash-config", "doc-design", "skill-creator", "web-ui-ux-design"]
     skill_type: product-verification
     design_pattern: pipeline
+depends_on: []
+
 ---
 # web-access Skill (Hermes 统一版 v6)
 

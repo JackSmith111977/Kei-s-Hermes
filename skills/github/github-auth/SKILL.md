@@ -27,6 +27,8 @@ metadata:
     - github-code-review
     - github-issues
     - github-repo-management
+depends_on: []
+
 ---
 # GitHub Authentication Setup
 

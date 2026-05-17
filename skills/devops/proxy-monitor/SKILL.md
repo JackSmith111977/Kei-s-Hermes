@@ -19,6 +19,8 @@ metadata:
     category: devops
     skill_type: operational
     design_pattern: tool_wrapper
+depends_on: []
+
 ---
 # 代理监控与部署技能 📡🚀
 

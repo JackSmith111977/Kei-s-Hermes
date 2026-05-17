@@ -20,6 +20,8 @@ metadata:
 prerequisites:
   commands:
   - remindctl
+depends_on: []
+
 ---
 # Apple Reminders
 

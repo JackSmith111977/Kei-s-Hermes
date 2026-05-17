@@ -40,6 +40,8 @@ metadata:
   hermes:
     tags: [knowledge-management, routing, memory, skills, experiences, brain]
     category: meta
+depends_on: []
+
 ---
 
 # 知识路由指南 v3.2 — 三层知识库完全适配版 + Pipeline 集成

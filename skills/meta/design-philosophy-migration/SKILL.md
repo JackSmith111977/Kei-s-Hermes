@@ -30,6 +30,8 @@ metadata:
     category: meta
     skill_type: methodology
     design_pattern: pipeline
+depends_on: []
+
 ---
 
 # 跨项目设计哲学重构方法论（Design Philosophy Migration）

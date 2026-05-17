@@ -1,7 +1,7 @@
 ---
 name: skill-creator
 description: "创建、优化、评估 Skill 的完整工作流。支持从实战任务中提取知识、从学习笔记转化 Skill。内置 5 种设计模式，9 阶段创作流程（含快速更新通道），引用依赖检查，skill-manage 联动拦截，以及全生命周期覆盖审计。"
-version: 5.2.0
+version: 6.0.0
 triggers:
 - skill
 - 创建技能
@@ -53,6 +53,8 @@ metadata:
     category: meta
     skill_type: generator
     design_pattern: pipeline
+depends_on: []
+
 ---
 # Skill Creator · Skill 创建与评估工具 v4.0
 
@@ -359,23 +361,27 @@ referenced_by:
 | **QSG-4** | triggers 列表 >= 3 | < 3 个 triggers 时警告 | 手册 质量清单 |
 | **QSG-5** | 有 Red Flags 章节 | 缺失时建议补充 | 手册 质量清单 |
 
-### 10.3 SQS 质量评分公式
+### 10.3 SQS 质量评分公式 (v2.0)
 
-Skill Quality Score (SQS) = 5 维度 x 20 分 = **100 分**
+Skill Quality Score (SQS) v2.0 = **7 维度 x 20 分 = 140 分**
 
 | 维度 | 权重 | 评分依据 | 工具 |
 |:-----|:----:|:---------|:-----|
-| S1 结构完整性 | 20 | YAML frontmatter 完整度、目录结构 | skill-quality-score.py |
-| S2 内容准确性 | 20 | 代码示例、Red Flags、操作步骤 | skill-quality-score.py |
-| S3 时效性 | 20 | 版本号、最后更新日期、创建日期 | skill-quality-score.py |
-| S4 关联完整性 | 20 | depends_on、referenced_by、交叉引用 | skill-quality-score.py |
-| S5 可发现性 | 20 | triggers 丰富度、标签、描述质量 | skill-quality-score.py |
+| S1 元数据完整性 | 20 | YAML frontmatter 完整度、必填字段、推荐字段 | skill-quality-score.py v2 |
+| S2 结构合规性 | 20 | 目录结构、文件命名规范、子目录完整性 | skill-quality-score.py v2 |
+| S3 内容可执行性 | 20 | 代码示例、Red Flags、步骤清晰度 | skill-quality-score.py v2 |
+| S4 时效性 | 20 | 版本号、最后更新日期、创建日期 | skill-quality-score.py v2 |
+| S5 关联完整性 | 20 | depends_on、referenced_by、断裂引用检查 | skill-quality-score.py v2 |
+| S6 可发现性 | 20 | triggers 丰富度、标签多样性、描述质量 | skill-quality-score.py v2 |
+| S7 验证覆盖度 | 20 | Eval Cases、Verification Checklist、tests/ 目录 | skill-quality-score.py v2 |
 
 **等级**:
-- 优秀 (90-100): 可直接发布
-- 良好 (70-89): 建议优化薄弱维度
-- 需改进 (50-69): 必须改进后才能部署
-- 不合格 (< 50): 禁止部署，需重建
+- 优秀 (119-140): 可直接发布
+- 良好 (98-118): 建议优化薄弱维度
+- 需改进 (70-97): 必须改进后才能部署
+- 不合格 (< 70): 禁止部署，需重建
+
+**全量审计命令**: `python3 skill-quality-score.py --audit`
 
 ### 10.4 生命周期状态管理
 
@@ -414,10 +420,13 @@ boku:
 
 | 脚本 | 位置 | 用途 |
 |:-----|:------|:------|
-| skill-quality-score.py | scripts/ | SQS 质量评分（单 skill / --audit 全量） |
-| skill-lifecycle-audit.py | scripts/ | 生命周期审计 + deprecate/revive 管理 |
+| skill-quality-score.py v2 | scripts/ | SQS v2.0 质量评分（7 维度/140 分制） |
+| skill-lifecycle-audit.py v2 | scripts/ | 生命周期审计 + 自动归档 |
+| quality-gate.py | scripts/ | 质量门禁（创建/编辑/删除前检查） |
+| skill-deprecation-gate.py | scripts/ | 废弃/删除前引用链安全检查 |
+| skill-state-manager.py | scripts/ | 统一生命周期状态管理 CLI |
 | dependency-scan.py | scripts/ | 依赖关系扫描（全量 / --target 定向） |
-| pre_flight.py | ~/.hermes/scripts/ | 通用守门员（集成以上所有检查） |
+| pre_flight.py | ~/.hermes/scripts/ | 通用守门员（集成 SQS + 依赖扫描） |
 
 ### 10.7 生命周期覆盖审计 (Lifecycle Coverage Audit)
 

@@ -29,6 +29,8 @@ metadata:
     category: github
     skill_type: library-reference
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 # Git 高级操作指南 🐙
 

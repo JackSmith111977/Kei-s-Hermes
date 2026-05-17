@@ -19,6 +19,8 @@ metadata:
     - test-driven-development
     - writing-plans
     - subagent-driven-development
+depends_on: []
+
 ---
 # Systematic Debugging
 

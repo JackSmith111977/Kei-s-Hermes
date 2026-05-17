@@ -18,6 +18,8 @@ metadata:
     - songs
     related_skills:
     - audiocraft
+depends_on: []
+
 ---
 # HeartMuLa - Open-Source Music Generation
 

@@ -56,6 +56,8 @@ related_skills:
   - web-ui-ux-design
   - analysis-workflow
   - commit-quality-check
+depends_on: []
+
 ---
 
 # ✅ Self-Review — boku 的自我审查系统

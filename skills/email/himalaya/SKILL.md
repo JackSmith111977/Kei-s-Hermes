@@ -19,6 +19,8 @@ metadata:
 prerequisites:
   commands:
   - himalaya
+depends_on: []
+
 ---
 # Himalaya Email CLI
 

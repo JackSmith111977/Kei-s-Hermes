@@ -19,6 +19,8 @@ metadata:
     related_skills:
     - github-auth
     - github-code-review
+depends_on: []
+
 ---
 # GitHub Pull Request Workflow
 

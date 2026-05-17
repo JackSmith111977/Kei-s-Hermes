@@ -15,6 +15,8 @@ metadata:
     - creative
     - image-generation
     homepage: https://github.com/JimLiu/baoyu-skills#baoyu-infographic
+depends_on: []
+
 ---
 # Infographic Generator
 

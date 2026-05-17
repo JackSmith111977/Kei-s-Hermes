@@ -42,6 +42,8 @@ metadata:
     skill_type: doc-generation
     design_pattern: generator
     merged_from: [pdf-layout-weasyprint, pdf-layout-reportlab]
+depends_on: []
+
 ---
 
 # PDF 排版与生成（合并版 v3.0）

@@ -27,6 +27,8 @@ metadata:
     - Model Quality
     - Academic Benchmarks
     - Industry Standard
+depends_on: []
+
 ---
 # lm-evaluation-harness - LLM Benchmarking
 

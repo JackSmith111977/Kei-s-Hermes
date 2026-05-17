@@ -1,7 +1,7 @@
 ---
 name: delete-safety
 description: "删除操作安全边界与确认框架。涵盖 Git 分支/标签/文件删除的风险分级、确认信息模板、批量删除安全策略、AI Agent 操作铁律。任何涉及 delete/remove/clear/truncate/drop 的操作，必须先走此框架评估。"
-version: 1.0.0
+version: 1.1.0
 triggers:
   - 删除
   - 清理分支
@@ -225,6 +225,25 @@ depends_on:
 | 🔴 S 级 | 多重确认 + 输入特定文字 | 必须输入 `YES DELETE` |
 
 不要对所有删除操作使用同一个"确认弹窗"——这会导致主人对确认信息产生肌肉记忆，不再仔细查看。
+
+### 3.5 备份超时陷阱
+
+当删除涉及大量/大文件时，备份步骤可能导致整个脚本超时中断，后续删除全部没执行。
+
+**分级策略**：
+- 目录 < 1GB → `cp -r` 备份（最快）
+- 目录 1-5GB → `tar -czf` 压缩备份
+- 目录 > 5GB → ⚠️ **跳过备份直接删除**（Python venv / node_modules 等可重建）
+
+**验证方法**：将备份命令用 `timeout` 包裹：
+```bash
+timeout 30 cp -r ~/large-dir/ ~/backup/ 2>/dev/null || {
+  echo "文件太大，跳过备份直接删除"
+  rm -rf ~/large-dir/
+}
+```
+
+**实战教训**：2026-05-17 清理 5.7GB docling-env 时，`cp -r` 备份导致整个清理脚本超时中断（exit 124），后续 7 个目录的 rm -rf 全部未执行，需要手动重跑。2 个教训：① 大目录永远不要 cp 备份；② 超时后必须验证删除是否真的执行了。
 
 ## 四、Git 分支删除的安全操作指南
 

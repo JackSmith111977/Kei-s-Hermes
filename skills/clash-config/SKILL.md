@@ -33,6 +33,8 @@ metadata:
     related_skills:
     - web-access
     - browser-automation
+depends_on: []
+
 ---
 # Clash / mihomo 配置管理 Skill
 

@@ -17,6 +17,8 @@ metadata:
     - 派
     - 艾特
     related_skills: []
+depends_on: []
+
 ---
 # Yuanbao Group Interaction
 

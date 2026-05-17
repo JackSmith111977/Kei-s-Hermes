@@ -18,6 +18,8 @@ metadata:
     - Visualization
     - JSON
     related_skills: []
+depends_on: []
+
 ---
 # Excalidraw Diagram Skill
 

@@ -18,6 +18,10 @@ metadata:
     - redirect
     category: productivity
     skill_type: experience-quickref
+depends_on:
+  - pdflatex
+  - web-access
+
 ---
 
 # LaTeX 快速入口
@@ -63,3 +67,16 @@ fc-list :lang=zh                              # 查看中文字体
 | 参考文献 | `biblatex`, `natbib` |
 
 > 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/latex-quick-ref.md
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

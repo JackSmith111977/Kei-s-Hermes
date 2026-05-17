@@ -14,6 +14,8 @@ tags:
 metadata:
   hermes:
     tags: []
+depends_on: []
+
 ---
 # Minecraft Modpack Server Setup
 

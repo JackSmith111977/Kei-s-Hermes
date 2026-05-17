@@ -27,6 +27,8 @@ metadata:
     - OpenAI API
     - Quantization
     - Tensor Parallelism
+depends_on: []
+
 ---
 # vLLM - High-Performance LLM Serving
 

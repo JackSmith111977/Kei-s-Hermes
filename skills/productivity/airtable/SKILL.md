@@ -11,6 +11,8 @@ metadata:
   hermes:
     tags: [Airtable, Productivity, Database, API]
     homepage: https://airtable.com/developers/web/api/introduction
+depends_on: []
+
 ---
 
 # Airtable — Bases, Tables & Records

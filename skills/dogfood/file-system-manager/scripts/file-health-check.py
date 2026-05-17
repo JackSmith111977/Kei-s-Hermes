@@ -22,19 +22,14 @@ EXPECTED_ROOT_DIRS = {
 
 EXPECTED_ROOT_FILES = {
     'SOUL.md', 'MEMORY.md', 'FILE_INDEX.md', 'FILE_INDEX.json',
-    'config.yaml', 'TASK_QUEUE.md', '.gitignore',
-    # 运行时状态文件（预期存在于根目录）
+    'config.yaml', '.gitignore',
+    # 运行时状态文件（软链接到 state/ data/ cache/）—— 用 os.path.exists 自动追踪
     'learning_state.json', 'channel_directory.json',
     'state.db', 'state.db-wal', 'state.db-shm',
     'gateway.pid', 'gateway_state.json',
     'feishu_seen_message_ids.json', 'processes.json',
     'models_dev_cache.json',
     'auth.json', 'auth.lock',
-    # 根目录文档（保留）
-    'pdf_design_plan.md',
-    'hackathon_report.md',
-    'hackathon_report_final.md',
-    'hackathon_report_part1.md',
 }
 
 # 文件类型

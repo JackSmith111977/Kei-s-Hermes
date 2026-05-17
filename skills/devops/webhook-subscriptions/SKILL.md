@@ -14,6 +14,8 @@ metadata:
     - integrations
     - notifications
     - push
+depends_on: []
+
 ---
 # Webhook Subscriptions
 

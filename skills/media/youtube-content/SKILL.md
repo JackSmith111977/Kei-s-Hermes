@@ -7,6 +7,10 @@ triggers:
 metadata:
   hermes:
     tags: []
+depends_on:
+  - youtube-dl
+  - web-access
+
 ---
 # YouTube Content Tool
 
@@ -74,3 +78,16 @@ After fetching the transcript, format it based on what the user asks for:
 
 
 > 🔍 **详细参考**: 更多内容请查阅 [output-formats.md](output-formats.md)
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

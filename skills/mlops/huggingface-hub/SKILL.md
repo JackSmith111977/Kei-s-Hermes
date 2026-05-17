@@ -17,6 +17,8 @@ tags:
 metadata:
   hermes:
     tags: []
+depends_on: []
+
 ---
 # Hugging Face CLI (`hf`) Reference Guide
 

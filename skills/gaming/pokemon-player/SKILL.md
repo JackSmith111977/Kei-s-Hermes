@@ -14,6 +14,10 @@ tags:
 metadata:
   hermes:
     tags: []
+depends_on:
+  - web-access
+  - browser-automation
+
 ---
 # Pokemon Player
 
@@ -49,3 +53,16 @@ Wait 4 seconds for startup, then verify with GET /health.
 
 
 > 🔍 **### 3. Set up live dash** moved to [references/detailed.md](references/detailed.md)
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

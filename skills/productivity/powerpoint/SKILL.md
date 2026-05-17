@@ -8,6 +8,8 @@ license: Proprietary. LICENSE.txt has complete terms
 metadata:
   hermes:
     tags: []
+depends_on: []
+
 ---
 # Powerpoint Skill
 

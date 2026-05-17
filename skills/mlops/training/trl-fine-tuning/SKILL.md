@@ -31,6 +31,8 @@ metadata:
     - RLHF
     - Preference Alignment
     - HuggingFace
+depends_on: []
+
 ---
 # TRL - Transformer Reinforcement Learning
 

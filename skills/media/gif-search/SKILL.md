@@ -21,6 +21,8 @@ metadata:
     - Search
     - Tenor
     - API
+depends_on: []
+
 ---
 # GIF Search (Tenor API)
 

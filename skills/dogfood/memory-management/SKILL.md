@@ -18,6 +18,8 @@ metadata:
     category: dogfood
     skill_type: operational
     design_pattern: inversion
+depends_on: []
+
 ---
 # Memory 智能管理 🔧🧠
 

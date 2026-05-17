@@ -25,6 +25,8 @@ metadata:
     category: software-development
     skill_type: library-reference
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 # Python 环境与脚本最佳实践 🐍
 

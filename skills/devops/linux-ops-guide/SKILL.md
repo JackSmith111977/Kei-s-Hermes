@@ -26,6 +26,8 @@ metadata:
     category: devops
     skill_type: library-reference
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 # Linux 运维基础指南 🖥️
 

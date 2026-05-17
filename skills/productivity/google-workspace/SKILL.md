@@ -22,6 +22,8 @@ metadata:
     homepage: https://github.com/NousResearch/hermes-agent
     related_skills:
     - himalaya
+depends_on: []
+
 ---
 # Google Workspace
 

@@ -474,6 +474,98 @@ python3 scripts/qa-status.py [--gates L0,L1,L2,L3,L4]
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+---
+
+## 八、Docker 环境 QA 测试
+
+> SRA 项目可在 Docker 容器内执行完整 QA 流程，用于隔离测试、CI 模拟、多版本兼容性验证。
+
+### 8.1 测试架构
+
+```
+hermes-agent-box (Docker)
+├── SRA 源码挂载: /workspace/sra (ro — 需用 PYTHONPATH 而非 pip install)
+├── pytest 314 tests
+├── SRA Daemon (端口 8536)
+│   ├── GET  /health      → {"status": "running"}
+│   ├── POST /recommend   → {"recommendations": [...]}
+│   └── POST /validate    → {"result": {"compliant": true/false, ...}}
+└── Skills 目录: /workspace/skills (配置后 recommend 才返回结果)
+```
+
+### 8.2 常用测试命令
+
+```bash
+# 进入容器运行测试
+sg docker -c "docker exec -w /workspace/sra hermes-agent-box \\
+  bash -c 'PYTHONPATH=/workspace/sra python3 -m pytest tests/ -q --tb=short -o addopts='"
+
+# 按标记分组
+sg docker -c "docker exec -w /workspace/sra hermes-agent-box \\
+  bash -c 'PYTHONPATH=/workspace/sra python3 -m pytest tests/ -q -m unit -o addopts='"
+
+# 特定模块
+sg docker -c "docker exec -w /workspace/sra hermes-agent-box \\
+  bash -c 'PYTHONPATH=/workspace/sra python3 -m pytest tests/test_matcher.py tests/test_validate.py -q'"
+
+# 生成 JUnit 报告
+sg docker -c "docker exec -w /workspace/sra hermes-agent-box \\
+  bash -c 'PYTHONPATH=/workspace/sra python3 -m pytest tests/ -q --junitxml=/tmp/sra-results.xml'"
+```
+
+### 8.3 SRA Daemon API 验证
+
+启动守护进程后验证各端点：
+
+```python
+# /health — 返回 {"status": "running"} 而非 "ok"
+import urllib.request, json
+r = urllib.request.urlopen("http://localhost:8536/health", timeout=5)
+data = json.loads(r.read())
+assert data["status"] == "running"
+
+# /recommend (POST) — 需配置 skills_dir 才有推荐结果
+body = json.dumps({"message": "Python开发", "top_k": 3}).encode()
+req = urllib.request.Request("http://localhost:8536/recommend", data=body,
+                             headers={"Content-Type": "application/json"})
+r = urllib.request.urlopen(req, timeout=5)
+data = json.loads(r.read())
+# 返回格式: {"recommendations": [...], "contract": {...}, "timing_ms": ...}
+
+# /validate — 合规检测
+body = json.dumps({"tool":"write_file","args":{"path":"report.pdf"},"loaded_skills":[]}).encode()
+req = urllib.request.Request("http://localhost:8536/validate", data=body,
+                             headers={"Content-Type": "application/json"})
+r = urllib.request.urlopen(req, timeout=5)
+data = json.loads(r.read())
+result = data.get("result", {})
+# result.compliant: True/False
+# result.missing: ["pdf-layout", ...] (不合规时列出缺失技能)
+# result.severity: "warning" / "info"
+```
+
+### 8.4 跨容器测试
+
+当 SRA Daemon 运行在 `hermes-agent-box` 时，同一 docker network 的其他容器可通过容器名访问：
+
+```bash
+# 从 opencode 容器测试
+sg docker -c "docker exec opencode-agent-box \\
+  curl -s --connect-timeout 5 http://hermes-agent:8536/health"
+
+# 从 openclaw 容器（无 curl — 用其他容器做客户端）
+```
+
+### 8.5 Docker 环境 QA 的已知陷阱
+
+| # | 陷阱 | 表现 | 解决 |
+|:-:|:-----|:------|:------|
+| 1 | 源码所在卷 ro | pip install -e 失败 | 用 `PYTHONPATH=/workspace/sra` 替代 |
+| 2 | /recommend 返回空 | skills_scanned=0 | 配置 skills_dir 指向有效目录 |
+| 3 | 端口冲突 | 8536 已被宿主机占用 | 用 `-p 8537:8536` 映射不同主机端口 |
+| 4 | 容器内无 curl | node:slim 镜像不含 curl | 用 `wget -qO-` 或 Python urllib |
+| 5 | Daemon 启动需 PYTHONPATH | sra 命令未安装 | 用 `python3 -m skill_advisor.runtime.commands cmd_start` |
+
 ## 🔗 相关文件
 
 | 文件 | 说明 |
@@ -483,3 +575,5 @@ python3 scripts/qa-status.py [--gates L0,L1,L2,L3,L4]
 | `.github/workflows/release.yml` | Release 工作流（含 L4 门禁） |
 | `docs/TEST-STRATEGY.md` | 测试策略文档 |
 | `tests/TEST-DATA-MANIFESTO.md` | 测试数据宣言 |
+| `~/.hermes/skills/docker-terminal/SKILL.md` | Docker 沙箱技能（多容器 Agent 架构） |
+| `~/.hermes/learning/hermes-opencode-openclaw-sandbox/sra-docker-test-plan.md` | 完整 Docker SRA 测试计划 |

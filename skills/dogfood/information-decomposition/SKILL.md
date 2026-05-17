@@ -28,6 +28,8 @@ metadata:
     category: dogfood
     skill_type: library-reference
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 # 信息分解与高级搜索策略 🧩🔍
 

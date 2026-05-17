@@ -20,6 +20,8 @@ tags:
   - Code-Quality
   - Workflow
   - Best-Practices
+depends_on: []
+
 ---
 
 # 🎯 PR Review 工程化工作流 v1.0

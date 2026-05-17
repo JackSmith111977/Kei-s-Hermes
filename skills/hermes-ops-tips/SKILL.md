@@ -2,6 +2,8 @@
 name: hermes-ops-tips
 description: "Hermes 运维与工具流最佳实践。包含 Hermes 手动升级流程、SRA 迁移与独立工具管理、高清架构图生成 (SVG + cairosvg)、Memory 降级策略。"
 triggers: [高清截图, cairosvg, sra迁移, sra管理, sra安装, 架构图, memory full, hermes运维, 升级hermes, hermes升级, sra升级, sra安装, sra重装, sra从源码安装, sra卸载, sra uninstall, sra upgrade, dep-check, sra dep-check, 依赖链检查, 孤儿配置, hermes doctor, hermes修复, statusline, 状态栏, 自定义功能恢复, gateway hook, 网关钩子, 升级后修复, browser vision, vision provider, 视觉模型, 截图卡住, 国内视觉api, openrouter vision, qwen vl]
+depends_on: []
+
 ---
 
 # Hermes Ops & Workflow Tips

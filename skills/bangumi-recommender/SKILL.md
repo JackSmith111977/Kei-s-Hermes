@@ -9,6 +9,8 @@ metadata:
     category: entertainment
     skill_type: generator
     design_pattern: tool_wrapper
+depends_on: []
+
 ---
 
 # 番剧推荐助手 (Bangumi Recommender)

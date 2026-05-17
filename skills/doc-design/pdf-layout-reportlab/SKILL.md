@@ -17,6 +17,10 @@ metadata:
     - redirect
     category: productivity
     skill_type: engine-quickref
+depends_on:
+  - reportlab
+  - pdf-layout
+
 ---
 
 # ReportLab 快速参考
@@ -60,3 +64,16 @@ story = [
 ]
 doc.build(story)
 ```
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

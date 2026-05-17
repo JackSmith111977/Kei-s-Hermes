@@ -18,6 +18,8 @@ metadata:
     - API
     related_skills:
     - ocr-and-documents
+depends_on: []
+
 ---
 # arXiv Research
 

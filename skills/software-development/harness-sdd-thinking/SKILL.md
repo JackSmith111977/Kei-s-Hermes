@@ -38,6 +38,8 @@ metadata:
       - opencode-dev-workflow
       - writing-plans
       - subagent-driven-development
+depends_on: []
+
 ---
 
 # Harness + SDD 约束思维实践

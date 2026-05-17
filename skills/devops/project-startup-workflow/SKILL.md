@@ -29,6 +29,8 @@ metadata:
     design_pattern: pipeline
     related_skills:
       - project-state-machine
+depends_on: []
+
 ---
 
 # 🏗️ 项目起步工作流 (PSW) v1.0

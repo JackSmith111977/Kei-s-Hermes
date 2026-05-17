@@ -18,6 +18,8 @@ metadata:
     category: dogfood
     skill_type: library
     design_pattern: tool_wrapper
+depends_on: []
+
 ---
 # 浏览器自动化技能 🌐🤖
 

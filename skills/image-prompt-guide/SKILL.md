@@ -19,6 +19,8 @@ metadata:
     category: creative
     skill_type: reference
     design_pattern: tool_wrapper
+depends_on: []
+
 ---
 # AI 生图 Prompt 指南 v2.0
 

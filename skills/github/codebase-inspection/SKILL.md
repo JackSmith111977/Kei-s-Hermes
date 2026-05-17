@@ -21,6 +21,8 @@ metadata:
 prerequisites:
   commands:
   - pygount
+depends_on: []
+
 ---
 # Codebase Inspection with pygount
 

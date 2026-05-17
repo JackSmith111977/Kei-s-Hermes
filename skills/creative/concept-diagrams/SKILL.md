@@ -9,6 +9,8 @@ metadata:
   hermes:
     tags: [diagrams, svg, visualization, education, physics, chemistry, engineering]
     related_skills: [architecture-diagram, excalidraw, generative-widgets, web-ui-ux-design]
+depends_on: []
+
 ---
 
 # Concept Diagrams

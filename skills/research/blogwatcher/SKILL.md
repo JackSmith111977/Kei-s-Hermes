@@ -18,6 +18,8 @@ metadata:
 prerequisites:
   commands:
   - blogwatcher-cli
+depends_on: []
+
 ---
 # Blogwatcher
 

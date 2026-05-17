@@ -71,6 +71,8 @@ metadata:
       - github-issues
       - github-repo-management
       - linux-ops-guide
+depends_on: []
+
 ---
 
 # GitHub 项目运维指南 🚀

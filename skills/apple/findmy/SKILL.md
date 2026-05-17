@@ -18,6 +18,8 @@ metadata:
     - tracking
     - macOS
     - Apple
+depends_on: []
+
 ---
 # Find My (Apple)
 

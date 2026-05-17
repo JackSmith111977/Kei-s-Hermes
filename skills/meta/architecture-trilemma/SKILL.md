@@ -27,6 +27,8 @@ metadata:
     category: meta
     skill_type: methodology
     design_pattern: decision-tree
+depends_on: []
+
 ---
 
 # 🔱 架构三难抉择：运行时 vs 技能 vs 工具

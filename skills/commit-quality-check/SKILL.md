@@ -37,6 +37,8 @@ metadata:
     category: software-development
     skill_type: reviewer
     design_pattern: pipeline
+depends_on: []
+
 ---
 
 # commit-quality-check — 提交前文档一致性与质量检查

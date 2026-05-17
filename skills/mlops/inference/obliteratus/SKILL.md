@@ -30,6 +30,8 @@ metadata:
     - vllm
     - gguf
     - huggingface-tokenizers
+depends_on: []
+
 ---
 # OBLITERATUS Skill
 

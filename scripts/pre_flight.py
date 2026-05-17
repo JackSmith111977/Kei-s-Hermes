@@ -183,13 +183,19 @@ def check_skill_creator_need(task):
                     sqs_data = json.loads(sqs_result.stdout)
                     total = sqs_data.get("sqs_total", 0)
                     level = sqs_data.get("level", "?")
-                    print(f"     SQS: {total}/100 {level}")
-                    if total < 50:
-                        print(f"     ⚠️  质量分过低，建议先改进再编辑")
-                    elif total < 70:
-                        print(f"     💡 可优化的维度: ", end="")
+                    max_score = sqs_data.get("max_score", 140)
+                    print(f"     SQS v2.0: {total}/{max_score} {level}")
+                    if total < 70:
+                        print(f"     🔴 质量分过低，禁止部署！")
+                        print(f"     💡 建议先改进: ", end="")
+                        weak = [d for d, s in sqs_data.get("dimensions", {}).items() if s < 10]
+                        print(", ".join(weak) if weak else "全部维度")
+                    elif total < 98:
+                        print(f"     🟡 可优化维度: ", end="")
                         weak = [d for d, s in sqs_data.get("dimensions", {}).items() if s < 12]
                         print(", ".join(weak) if weak else "无")
+                    else:
+                        print(f"     🟢 质量良好")
             except Exception as e:
                 print(f"     ⚠️ SQS 异常: {e}")
 

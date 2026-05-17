@@ -26,6 +26,8 @@ metadata:
   hermes:
     tags: []
     related_skills: ["web-ui-ux-design"]
+depends_on: []
+
 ---
 # Popular Web Designs
 

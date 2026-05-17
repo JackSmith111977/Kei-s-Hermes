@@ -21,6 +21,8 @@ metadata:
 prerequisites:
   commands:
   - memo
+depends_on: []
+
 ---
 # Apple Notes
 

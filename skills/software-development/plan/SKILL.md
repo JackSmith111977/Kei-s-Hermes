@@ -17,6 +17,10 @@ metadata:
     related_skills:
     - writing-plans
     - subagent-driven-development
+depends_on:
+  - writing-plans
+  - systematic-debugging
+
 ---
 # Plan Mode
 
@@ -63,3 +67,16 @@ If not, create a sensible timestamped filename yourself under `.hermes/plans/`.
 - If no explicit instruction accompanies `/plan`, infer the task from the current conversation context.
 - If it is genuinely underspecified, ask a brief clarifying question instead of guessing.
 - After saving the plan, reply briefly with what you planned and the saved path.
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

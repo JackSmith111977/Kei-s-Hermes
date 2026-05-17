@@ -50,6 +50,8 @@ metadata:
     category: dogfood
     skill_type: methodology
     design_pattern: meta-workflow
+depends_on: []
+
 ---
 
 # 大文件分析与数据处理工作流 🧩📊
@@ -720,7 +722,11 @@ delegate_task(
 
 ---
 
-## 八、Skill/Agent 库存扫描（新增）
+## 八、规格符合性审计（新增）
+
+- `references/spec-compliance-audit.md` — 独立审计方法论（五步法：全景扫描→读取承诺→运行时验证→文档-代码一致性检查→结构化报告）。用于检查项目实际实现是否兑现了 EPIC/Spec 中承诺的目标。**与技术债审计（检查代码坏味道）不同，规格审计检查"承诺 vs 实现"的差距。**
+
+## 九、Skill/Agent 库存扫描
 
 - `references/skill-inventory-scan.md` — Agent skill 库存扫描方法论
 - `references/cross-project-integration-audit.md` — 跨项目集成审计（五步法：检查宣称 vs 实际的集成链路）

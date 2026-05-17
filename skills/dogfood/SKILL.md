@@ -14,6 +14,10 @@ metadata:
     - web
     - dogfood
     related_skills: []
+depends_on:
+  - skill-creator
+  - file-system-manager
+
 ---
 # Dogfood: Systematic Web Application QA Testing
 
@@ -166,3 +170,16 @@ Save the report to `{output_dir}/report.md`.
 - **Check responsive behavior** by noting any layout issues visible in screenshots.
 - **Don't forget edge cases**: empty states, very long text, special characters, rapid clicking.
 - When reporting screenshots to the user, include `MEDIA:<screenshot_path>` so they can see the evidence inline.
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

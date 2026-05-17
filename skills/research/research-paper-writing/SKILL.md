@@ -46,6 +46,8 @@ metadata:
     requires_toolsets:
     - terminal
     - files
+depends_on: []
+
 ---
 # Research Paper Writing Pipeline
 

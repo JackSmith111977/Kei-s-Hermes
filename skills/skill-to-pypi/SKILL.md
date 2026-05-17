@@ -34,6 +34,8 @@ triggers:
   - 自动测试
 design_pattern: Pipeline + Generator
 skill_type: Workflow
+depends_on: []
+
 ---
 
 # 📦 Skill to PyPI · 独立开源项目打包指南 v1.1.0

@@ -22,6 +22,8 @@ metadata:
     category: creative
     credits:
     - Hardware palettes and animation loops ported from Synero/pixel-art-studio (MIT) — https://github.com/Synero/pixel-art-studio
+depends_on: []
+
 ---
 # Pixel Art
 

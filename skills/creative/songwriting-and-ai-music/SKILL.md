@@ -16,6 +16,8 @@ tags:
 - parody
 - lyrics
 - creative
+depends_on: []
+
 ---
 # Songwriting & AI Music Generation
 

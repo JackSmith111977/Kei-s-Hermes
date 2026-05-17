@@ -32,6 +32,8 @@ metadata:
     category: dogfood
     skill_type: research
     design_pattern: pipeline
+depends_on: []
+
 ---
 # 夏洛克的解决方案 🔍
 

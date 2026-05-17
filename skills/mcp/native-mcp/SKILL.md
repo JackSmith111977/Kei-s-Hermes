@@ -16,6 +16,8 @@ metadata:
     - Integrations
     related_skills:
     - mcporter
+depends_on: []
+
 ---
 # Native MCP Client
 

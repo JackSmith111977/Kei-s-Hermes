@@ -10,6 +10,8 @@ metadata:
     homepage: https://mcporter.dev
 prerequisites:
   commands: [npx]
+depends_on: []
+
 ---
 
 # mcporter

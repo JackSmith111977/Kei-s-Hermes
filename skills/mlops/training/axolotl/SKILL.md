@@ -31,6 +31,8 @@ metadata:
     - HuggingFace
     - DeepSpeed
     - Multimodal
+depends_on: []
+
 ---
 # Axolotl Skill
 

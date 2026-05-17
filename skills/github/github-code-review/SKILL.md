@@ -18,6 +18,8 @@ metadata:
     related_skills:
     - github-auth
     - github-pr-workflow
+depends_on: []
+
 ---
 # GitHub Code Review
 

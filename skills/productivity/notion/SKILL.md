@@ -19,6 +19,8 @@ metadata:
 prerequisites:
   env_vars:
   - NOTION_API_KEY
+depends_on: []
+
 ---
 # Notion API
 

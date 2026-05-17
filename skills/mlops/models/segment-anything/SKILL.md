@@ -23,6 +23,8 @@ metadata:
     - Computer Vision
     - SAM
     - Zero-Shot
+depends_on: []
+
 ---
 # Segment Anything Model (SAM)
 

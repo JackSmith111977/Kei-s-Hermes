@@ -6,6 +6,8 @@ metadata:
   hermes:
     tags: [email, communication, agentmail, mcp]
     category: email
+depends_on: []
+
 ---
 
 # AgentMail — Agent-Owned Email Inboxes

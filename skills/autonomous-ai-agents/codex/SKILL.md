@@ -18,6 +18,8 @@ metadata:
     related_skills:
     - claude-code
     - hermes-agent
+depends_on: []
+
 ---
 # Codex CLI
 

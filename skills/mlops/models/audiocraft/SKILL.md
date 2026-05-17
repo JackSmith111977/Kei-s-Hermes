@@ -22,6 +22,8 @@ metadata:
     - Text-to-Music
     - Text-to-Audio
     - MusicGen
+depends_on: []
+
 ---
 # AudioCraft: Audio Generation
 

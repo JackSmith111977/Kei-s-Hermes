@@ -30,6 +30,8 @@ metadata:
     category: software-development
     skill_type: library-reference
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 # patch-file-safety: 安全文件编辑指南 🛠️
 

@@ -6,6 +6,8 @@ metadata:
   hermes:
     tags: [python, testing, pytest, debugging, fixtures]
     category: testing
+depends_on: []
+
 ---
 
 # Python 测试最佳实践与反模式急救指南

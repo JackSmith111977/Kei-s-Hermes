@@ -2,6 +2,10 @@
 name: bmad-context-insights
 description: "BMAD 核心架构与上下文工程深度解析。包含 TOML 上下文注入机制、Party Mode 多智能体并行编排、Step-File 架构流派对比及 project-context.md 契约。"
 triggers: [bmad配置, bmad架构, party mode, 上下文注入, 多智能体编排, project-context, bmad context]
+depends_on:
+  - bmad-context-engineering
+  - web-access
+
 ---
 
 # BMAD Context & Architecture Insights
@@ -31,3 +35,15 @@ BMAD 不仅仅是 Prompt，它是基于文件系统的 AI 操作系统。
 - **TDD 强制**: 开发 Story 必须先写失败测试 (RED)，再写代码 (GREEN)。
 
 > 💡 本 skill 已合并到 bmad-context-engineering。请使用 bmad-context-engineering。
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

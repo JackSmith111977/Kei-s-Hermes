@@ -16,6 +16,8 @@ metadata:
     - id: pip
       kind: pip
       package: lark-oapi
+depends_on: []
+
 ---
 # 飞书操作技能 (Feishu Skill)
 

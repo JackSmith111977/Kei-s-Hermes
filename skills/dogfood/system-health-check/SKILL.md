@@ -21,6 +21,8 @@ metadata:
     related_skills: ["file-system-manager"]
     skill_type: diagnosis
     design_pattern: inversion
+depends_on: []
+
 ---
 # 系统健康检查与修复 🔍🔧
 

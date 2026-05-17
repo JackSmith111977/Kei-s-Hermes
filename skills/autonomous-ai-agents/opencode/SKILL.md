@@ -33,6 +33,8 @@ metadata:
       - codex
       - hermes-agent
       - native-mcp
+depends_on: []
+
 ---
 
 # OpenCode CLI 平台指南

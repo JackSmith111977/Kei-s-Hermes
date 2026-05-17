@@ -20,6 +20,8 @@ metadata:
 prerequisites:
   commands:
   - imsg
+depends_on: []
+
 ---
 # iMessage
 

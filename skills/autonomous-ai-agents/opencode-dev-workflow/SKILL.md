@@ -36,6 +36,8 @@ metadata:
       - github-code-review
       - commit-quality-check
       - subagent-driven-development
+depends_on: []
+
 ---
 
 # OpenCode 开发工作流 v2.1

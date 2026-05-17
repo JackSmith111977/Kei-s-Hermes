@@ -21,6 +21,8 @@ metadata:
     - GraphQL
     - API
     - Productivity
+depends_on: []
+
 ---
 # Linear — Issue & Project Management
 

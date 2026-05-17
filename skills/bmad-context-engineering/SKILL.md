@@ -26,6 +26,8 @@ metadata:
     - toml
     category: devops
     skill_type: Tool Wrapper
+depends_on: []
+
 ---
 
 # 🧬 BMAD 上下文工程指南 (Context Engineering)

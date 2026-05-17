@@ -28,6 +28,8 @@ metadata:
     - Mistral
     - Gemma
     - Qwen
+depends_on: []
+
 ---
 # Unsloth Skill
 

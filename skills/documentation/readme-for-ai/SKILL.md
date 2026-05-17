@@ -31,6 +31,8 @@ metadata:
     category: documentation
     skill_type: methodology
     design_pattern: template
+depends_on: []
+
 ---
 
 # README for AI — 模型友好型 README 编写指南

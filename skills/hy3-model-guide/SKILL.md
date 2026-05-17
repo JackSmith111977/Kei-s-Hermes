@@ -43,6 +43,8 @@ metadata:
   depends_on:
     - web-access
     - skill-creator
+depends_on: []
+
 ---
 
 # 🧠 Hy3 模型完整指南 v1.0

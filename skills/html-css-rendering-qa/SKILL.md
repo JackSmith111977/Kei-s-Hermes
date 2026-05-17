@@ -20,6 +20,8 @@ metadata:
     category: documentation
     skill_type: qa
     design_pattern: checklist
+depends_on: []
+
 ---
 
 # HTML/CSS 渲染质量保障 (Rendering QA)

@@ -26,6 +26,8 @@ metadata:
     - github-repo-management
     - github-auth
     - hermes-ops-tips
+depends_on: []
+
 ---
 
 # GitHub 安全部署上传 (Deploy Upload)

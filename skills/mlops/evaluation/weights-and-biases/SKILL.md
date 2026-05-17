@@ -23,6 +23,8 @@ metadata:
     - PyTorch
     - TensorFlow
     - HuggingFace
+depends_on: []
+
 ---
 # Weights & Biases: ML Experiment Tracking & MLOps
 

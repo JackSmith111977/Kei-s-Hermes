@@ -43,6 +43,8 @@ metadata:
     category: developer-workflow
     skill_type: tool-wrapper
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 
 # SRA 完整指南 v2.1

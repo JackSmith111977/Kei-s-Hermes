@@ -23,6 +23,8 @@ metadata:
     - boxes
     related_skills:
     - excalidraw
+depends_on: []
+
 ---
 # ASCII Art Skill
 

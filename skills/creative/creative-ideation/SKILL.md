@@ -22,6 +22,8 @@ metadata:
     - Inspiration
     category: creative
     requires_toolsets: []
+depends_on: []
+
 ---
 # Creative Ideation
 

@@ -19,6 +19,8 @@ metadata:
     - writing-plans
     - requesting-code-review
     - test-driven-development
+depends_on: []
+
 ---
 # Subagent-Driven Development
 

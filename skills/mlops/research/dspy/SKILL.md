@@ -24,6 +24,8 @@ metadata:
     - Stanford NLP
     - Automatic Optimization
     - Modular AI
+depends_on: []
+
 ---
 # DSPy: Declarative Language Model Programming
 

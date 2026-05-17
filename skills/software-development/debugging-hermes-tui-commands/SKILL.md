@@ -8,6 +8,8 @@ metadata:
   hermes:
     tags: [debugging, hermes-agent, tui, slash-commands, typescript, python]
     related_skills: [python-debugpy, node-inspect-debugger, systematic-debugging]
+depends_on: []
+
 ---
 
 # Debugging Hermes TUI Slash Commands

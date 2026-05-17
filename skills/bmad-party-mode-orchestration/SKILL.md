@@ -24,6 +24,8 @@ metadata:
     - party-mode
     category: devops
     skill_type: Tool Wrapper
+depends_on: []
+
 ---
 
 # 🎭 BMAD 多智能体编排指南 (Party Mode Orchestration)

@@ -14,6 +14,8 @@ metadata:
     category: productivity
     skill_type: doc-generation
     format: pptx
+depends_on: []
+
 ---
 # PowerPoint (.pptx) 原子操作技能
 

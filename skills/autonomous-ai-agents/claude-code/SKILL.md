@@ -23,6 +23,8 @@ metadata:
     - codex
     - hermes-agent
     - opencode
+depends_on: []
+
 ---
 > 🔍 **Claude Code — Hermes Orchestration Guide**: Moved to [references/advanced-usage.md](references/advanced-usage.md)
 > 🔍 **Prerequisites**: Moved to [references/advanced-usage.md](references/advanced-usage.md)

@@ -1,0 +1,108 @@
+# ~/.hermes/scripts/fs-enforce/rules.yaml
+# 文件系统规范执行规则
+# 版本: 1.0.0
+# 更新: 2026-05-17
+
+# 目录归属规则
+# allowed: 允许写入的目录（相对于 ~/.hermes/）
+# forbidden: 禁止写入的目录
+path_rules:
+  skills:
+    allowed: ["skills/{category}/{name}/"]
+    forbidden: ["skills/", "docs/"]
+  config:
+    allowed: ["config/"]
+    forbidden: ["skills/", "cache/", "state/", "data/"]
+  state:
+    allowed: ["state/"]
+    forbidden: ["config/", "skills/"]
+  cache:
+    allowed: ["cache/"]
+    forbidden: ["config/", "skills/", "state/"]
+  scripts:
+    allowed: ["scripts/"]
+    forbidden: ["state/", "cache/"]
+  learning:
+    allowed: ["learning/"]
+    forbidden: ["skills/", "config/"]
+  data:
+    allowed: ["data/"]
+    forbidden: ["config/", "state/"]
+  brain:
+    allowed: ["brain/"]
+    forbidden: ["skills/", "config/"]
+  docs:
+    allowed: ["docs/"]
+    forbidden: ["skills/", "config/"]
+  experiences:
+    allowed: ["experiences/"]
+    forbidden: ["skills/"]
+  cron:
+    allowed: ["cron/"]
+    forbidden: ["skills/", "config/"]
+  providers:
+    allowed: ["providers/"]
+    forbidden: ["skills/", "cache/"]
+
+# 命名规范
+naming_rules:
+  forbidden_names:
+    - "test.txt"
+    - "output.json"
+    - "file.py"
+    - "new_1.md"
+    - "untitled.md"
+    - "tmp.txt"
+    - "index.html"
+  forbidden_chars:
+    - " "
+    - "\\"
+    - ":"
+    - "*"
+    - "?"
+    - "\""
+    - "<"
+    - ">"
+    - "|"
+  max_filename_length: 120
+  allowed_extensions_lowercase: true
+  forbidden_prefixes:
+    - "test_"
+    - "tmp_"
+  # 推荐命名格式的正则
+  recommended_pattern: "^(report_|learn_|exp_|skill_|bk_|config_|plan_|spec_|story_|audit_|deploy_|build_|migrate_).+|^.+\\.(md|py|sh|json|yaml|yml|toml|html|css)$"
+
+# 保护路径（不可通过 write_file/patch 写入或删除）
+# 路径相对于 ~/.hermes/
+protected_paths:
+  - "AGENTS.md"
+  - "SOUL.md"
+  - "config/config.yaml"
+  - "providers/"
+  - "skills/"
+  - "scripts/"
+  - "state.db"
+  - "brain/"
+  - "standards/"
+
+# Skill 结构规范
+skill_standards:
+  required:
+    - "SKILL.md"
+  optional_subdirs:
+    - "references/"
+    - "scripts/"
+    - "templates/"
+    - "checklists/"
+    - "tests/"
+    - "examples/"
+    - "assets/"
+  forbidden_unknown_subdirs: true
+  forbidden_external_leakage: true
+
+# 审计配置
+audit:
+  log_dir: "~/.hermes/data/fs-audit/"
+  log_file: "audit.log"
+  max_log_size_mb: 10
+  retention_days: 90

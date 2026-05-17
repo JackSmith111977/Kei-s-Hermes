@@ -21,6 +21,8 @@ metadata:
     - writing-plans
     - test-driven-development
     - github-code-review
+depends_on: []
+
 ---
 # Pre-Commit Code Verification
 

@@ -24,6 +24,8 @@ metadata:
     category: documentation
     skill_type: library-reference
     design_pattern: generator
+depends_on: []
+
 ---
 # Mermaid 图表生成指南
 

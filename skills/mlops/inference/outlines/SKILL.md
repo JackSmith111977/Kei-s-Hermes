@@ -25,6 +25,8 @@ metadata:
     - vLLM
     - Transformers
     - Type Safety
+depends_on: []
+
 ---
 # Outlines: Structured Text Generation
 

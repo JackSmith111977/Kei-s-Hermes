@@ -23,6 +23,8 @@ metadata:
     - Intel GPUs
     - Embedded
     - Model Compression
+depends_on: []
+
 ---
 # llama.cpp + GGUF
 

@@ -18,6 +18,8 @@ metadata:
     category: dogfood
     skill_type: inversion
     design_pattern: diagnosis
+depends_on: []
+
 ---
 # 防重复循环技能 🔁🚫
 

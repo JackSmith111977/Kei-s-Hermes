@@ -11,6 +11,8 @@ metadata:
     related_skills: [native-mcp, mcporter]
 prerequisites:
   commands: [python3]
+depends_on: []
+
 ---
 
 # FastMCP

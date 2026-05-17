@@ -22,6 +22,16 @@ triggers:
   - 继续实现
   - 开始实施
   - start implementing
+  - 多阶段
+  - 多阶段执行
+  - 自动化实施
+  - phase
+  - 阶段执行
+  - 自主执行
+  - 进度监控
+  - 进度记录
+  - phase-gate
+  - 计划实施
 author: Emma (小玛)
 license: MIT
 metadata:
@@ -392,6 +402,90 @@ git commit -m "type(scope): description"
 | **`setup.py` 正则解析 `__init__.py` 提取版本号** | `setup.py` 用 `re.search(r'__version__\\s*=\\s*["\\']([^"\\']+)', ...).group(1)` 从 `__init__.py` 读版本号。当版本解析改为函数调用时（如 `__version__ = _resolve_version()`），正则返回 `None` → CI 所有 Python 版本在 `pip install` 阶段全部崩溃 | ❌ 不要在 `setup.py` 中解析 `__init__.py` 提取版本。版本应完全由 `pyproject.toml` + `setuptools-scm` 管理。`setup.py` 仅做最小调用：<br><br>```python<br>from setuptools import setup, find_packages<br>setup(packages=find_packages())<br>```<br><br>📌 实战案例：SRA v2.1.1 CI 全炸，根因为 `__init__.py` 改为函数赋值后正则无匹配 |
 | **`__init__.py` 顶层导入与 `__version__` 循环引用** | `__init__.py` 在顶层 `from .runtime.daemon import X`，但 `daemon.py` 又 `from .. import __version__`。导入时 `__init__.py` 尚未执行到 `__version__` 定义 → `ImportError` | 将模块级导入移到 `__version__` 定义**之后**，加 `# noqa: E402` 抑制 lint：<br><br>```python<br>__version__ = _resolve_version()<br>from .runtime.daemon import X  # noqa: E402<br>```<br><br>📌 实战教训：SRA 重构版本解析后出现循环导入 |
 | **setuptools-scm 配置陷阱（v10+）** | 1) `version_file` 改名为 `write_to`；2) `tag_regex` 在 TOML 中推荐用单引号 literal string 避转义；3) `write_to_template` 缺失则 `_version.py` 不生成；4) `vcs-versioning` 是 setuptools-scm ≥10 的必需依赖 | 推荐配置：<br><br>```toml<br>[tool.setuptools_scm]<br>tag_regex = '^(?:[\\w-]+-)?v?(?P<version>[\\d\\.a-b]{3,}(?:rc\\d+)?)$'<br>version_scheme = "post-release"<br>local_scheme = "no-local-version"<br>write_to = "pkg/_version.py"<br>write_to_template = "__version__ = '{version}'\\nversion = '{version}'\\n"<br>```<br><br>📌 `_version.py` 加入 `.gitignore`。开发环境用 `git describe` 实时解析 |
+
+---
+
+---
+
+## 🏗️ 附加模式：多阶段自主执行 (Multi-Phase Autonomous Execution)
+
+> **适用场景**: 主人分配了一个包含多个 Phase 的大型实施计划，要求自动化执行、逐阶段 Review、用 `todo` 追踪进度。
+
+### 何时使用
+
+主人说出以下模式时自动加载此模式：
+- 「自动化实施所有阶段的任务」
+- 「每个阶段需要 review」
+- 「进度需要记录」
+- 「每完成一项原子任务都需要标记完成」
+- 「完成后将实施文案发我审阅」
+
+### 模式流程
+
+```text
+[0] 审阅方案（等待主人批准）
+    │ 主人批准后开始
+    ▼
+[1] 初始化 todo 清单
+    │ todo() 设置所有任务，标记为 pending
+    ▼
+[2] 执行 Phase N
+    │ ├── 逐原子任务执行
+    │ ├── 每完成一个 → todo(merge: true) 标记 completed
+    │ └── 每遇到失败 → 修复后重新验证
+    ▼
+[3] Phase Review
+    │ 检查所有任务是否符合验收标准
+    │ ├── 全部通过 → 标记 Phase 完成
+    │ └── 有失败 → 重新执行 → 直到全部通过
+    ▼
+[4] 汇报 Phase 结果给主人
+    │ 等待主人说"继续"或"批准"
+    ▼
+[5] 重复 [2]→[4] 直到所有 Phase 完成
+    │
+    ▼
+[6] 最终交付报告
+```
+
+### 关键规则
+
+| 规则 | 说明 |
+|:-----|:------|
+| **先审阅后实施** | Phase 计划必须先给主人审阅，主人批准后才能开始实施（"在你批准前禁止修改和实施"）|
+| **进度追踪** | 每个原子任务创建时立即在 `todo` 中注册（`"status":"in_progress"`），完成后标记 `"completed"` |
+| **逐阶段 Review** | 每完成一个 Phase 必须自我验证：检查所有任务是否符合预期。不符合的重新执行直到通过（「否则重新开发」）|
+| **等待主人信号** | Phase Review 通过后汇报给主人，等主人说"继续"才能进下一个 Phase |
+| **不可擅自推进** | ❌ 永远不跳过 Phase Review 直接进入下一 Phase |
+| **失败重做** | 任何任务失败或不符合预期，必须重做到通过为止，不可遗留降级 |
+
+### 奖励机制
+
+当你成功完成多阶段自主执行后（所有 Phase 通过审查），`SELF.md` 中记录一次成功经验，积累信任分数。
+
+### 实战教训（2026-05-17）
+
+```text
+❌ 错误：未等主人批准计划就开始实施
+    → 被主人纠正：先写计划 → 等批准 → 再实施
+    → 浪费：写了实施计划文档后又等了一轮
+
+✅ 正确流程：
+    1. 写实施计划 → 2. 发给主人审阅 → 3. 主人批准 → 
+    4. 创建 todo 清单 → 5. 逐任务执行 → 
+    6. 每完成一个标记 completed → 7. Phase 完成自检 → 
+    8. 汇报给主人 → 9. 等主人说"继续" → 10. 下一 Phase
+```
+
+### 与 7 步开发流程的关系
+
+```
+多阶段自主执行模式           → 适用于「大规模实施计划」
+    ↓ 每个原子任务内部
+7 步开发流程 (本 skill)      → 适用于「具体的编码/实现任务」
+```
+
+两者是嵌套关系：多阶段模式的每个原子任务内部，可以调用 7 步流程来实施具体的开发工作。
 
 ---
 

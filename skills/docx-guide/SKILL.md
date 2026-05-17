@@ -17,6 +17,8 @@ metadata:
     - redirect
     category: productivity
     skill_type: experience-quickref
+depends_on: []
+
 ---
 
 # Word 文档快速入口

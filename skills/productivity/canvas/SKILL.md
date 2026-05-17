@@ -9,6 +9,8 @@ prerequisites:
 metadata:
   hermes:
     tags: [Canvas, LMS, Education, Courses, Assignments]
+depends_on: []
+
 ---
 
 # Canvas LMS — Course & Assignment Access

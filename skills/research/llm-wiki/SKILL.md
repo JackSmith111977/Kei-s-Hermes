@@ -21,6 +21,8 @@ metadata:
     - obsidian
     - arxiv
     - agentic-research-ideas
+depends_on: []
+
 ---
 # Karpathy's LLM Wiki
 

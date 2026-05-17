@@ -18,6 +18,8 @@ metadata:
     - OCR
     related_skills:
     - powerpoint
+depends_on: []
+
 ---
 # PDF & Document Extraction
 

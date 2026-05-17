@@ -17,6 +17,8 @@ metadata:
     related_skills: ["web-ui-ux-design"]
     skill_type: library
     design_pattern: generator
+depends_on: []
+
 ---
 # Image Generation Skill - AI 图片生成技能
 

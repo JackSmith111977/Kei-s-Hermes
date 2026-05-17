@@ -16,6 +16,8 @@ metadata:
     - NLP
     - Productivity
     homepage: https://pypi.org/project/nano-pdf/
+depends_on: []
+
 ---
 # nano-pdf
 

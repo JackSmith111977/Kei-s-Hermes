@@ -26,6 +26,8 @@ metadata:
     category: devops
     skill_type: data-analysis
     design_pattern: pipeline
+depends_on: []
+
 ---
 # proxy-finder · 机场搜集与节点测试
 

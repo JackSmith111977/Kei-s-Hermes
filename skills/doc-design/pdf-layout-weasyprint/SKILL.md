@@ -18,6 +18,10 @@ metadata:
     - redirect
     category: productivity
     skill_type: engine-quickref
+depends_on:
+  - weasyprint
+  - pdf-layout
+
 ---
 
 # WeasyPrint 快速参考
@@ -58,3 +62,16 @@ pre { white-space: pre-wrap; word-break: break-all; }
 | 中文白页 | 安装中文字体: `apt install fonts-wqy-zenhei` |
 | 大文件 OOM | 分块生成后用 `pdfunite` 合并 |
 | 自定义字体不生效 | 在 CSS 中用 `@font-face` 指定绝对路径 |
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

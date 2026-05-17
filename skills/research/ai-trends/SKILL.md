@@ -17,6 +17,8 @@ metadata:
     - LLM
     - AI Agent
     - 论文追踪
+depends_on: []
+
 ---
 
 # AI 前沿技术趋势

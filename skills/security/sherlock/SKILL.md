@@ -10,6 +10,8 @@ metadata:
     category: security
 prerequisites:
   commands: [sherlock]
+depends_on: []
+
 ---
 
 # Sherlock OSINT Username Search

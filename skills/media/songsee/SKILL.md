@@ -19,6 +19,8 @@ metadata:
 prerequisites:
   commands:
   - songsee
+depends_on: []
+
 ---
 # songsee
 

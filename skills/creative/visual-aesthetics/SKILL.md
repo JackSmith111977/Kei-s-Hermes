@@ -26,6 +26,8 @@ metadata:
     category: creative
     skill_type: library-reference
     design_pattern: tool-wrapper
+depends_on: []
+
 ---
 # boku 的视觉审美指南 🔍✨
 

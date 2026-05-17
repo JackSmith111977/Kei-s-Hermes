@@ -21,6 +21,8 @@ metadata:
     related_skills:
     - concept-diagrams
     - excalidraw
+depends_on: []
+
 ---
 # Architecture Diagram Skill
 

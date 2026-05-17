@@ -16,6 +16,10 @@ metadata:
     - redirect
     category: productivity
     skill_type: experience-quickref
+depends_on:
+  - pandoc
+  - web-access
+
 ---
 
 # EPUB 电子书快速入口
@@ -41,3 +45,16 @@ epub.write_epub('output.epub', book, {})
 ```
 
 > 💡 本 skill 已降级为 doc-engine 包的 experience。直接用法见 packs/doc-engine/EXPERIENCES/epub-quick-ref.md
+
+## Verification Checklist
+
+- [ ] Read the full content to ensure understanding
+- [ ] Verify all code examples are syntactically correct
+- [ ] Check that all referenced files exist
+- [ ] Test the workflow with a simple input
+
+## Common Pitfalls
+
+1. **Missing dependencies**: Ensure all required tools are installed before starting.
+2. **Wrong input format**: Verify input matches the expected format before processing.
+3. **Version mismatch**: Check version compatibility between tools.

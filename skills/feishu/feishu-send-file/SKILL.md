@@ -28,6 +28,8 @@ metadata:
     design_pattern: tool-wrapper
     related_skills:
     - feishu
+depends_on: []
+
 ---
 # 飞书发送文件指南 📁
 

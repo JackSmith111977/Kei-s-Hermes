@@ -76,6 +76,8 @@ metadata:
     category: dogfood
     skill_type: workflow
     design_pattern: lifecycle
+depends_on: []
+
 ---
 
 # 📋 文档对齐协议 v4.0 — BMAD 式声明式依赖 + 自动门禁

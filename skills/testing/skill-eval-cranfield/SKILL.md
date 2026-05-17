@@ -35,6 +35,8 @@ metadata:
     related_skills:
       - skill-creator
       - systematic-debugging
+depends_on: []
+
 ---
 
 # 🎯 Skill Eval Cranfield — Cranfield 范式的推荐质量评估

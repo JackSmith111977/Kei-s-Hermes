@@ -27,6 +27,8 @@ metadata:
     - terminal
     supersedes:
     - find-nearby
+depends_on: []
+
 ---
 # Maps Skill
 

@@ -23,6 +23,8 @@ metadata:
     category: dogfood
     skill_type: research
     design_pattern: inversion
+depends_on: []
+
 ---
 # boku 的自我分析 🐾
 

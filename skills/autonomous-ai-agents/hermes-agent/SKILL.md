@@ -9,6 +9,8 @@ metadata:
     tags: [hermes, setup, configuration, multi-agent, spawning, cli, gateway, development]
     homepage: https://github.com/NousResearch/hermes-agent
     related_skills: [claude-code, codex, opencode]
+depends_on: []
+
 ---
 
 # Hermes Agent
@@ -552,6 +554,25 @@ terminal(command="tmux new-session -d -s resumed 'hermes --resume 20260225_14305
    - Check `echo "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:+SET}"` — if empty, the fallback entry is ignored
    - Fix: use `api_key` directly in `fallback_providers` (same as main `providers`), or set the env var
    - The 429→fallback logic checks `_fallback_index < len(_fallback_chain)`. If chain is empty (len=0), condition fails and fallback is silently skipped
+
+### Network-restricted environments
+
+If GitHub is unreachable (e.g., behind a restrictive proxy in China), `install.sh` will fail during `git clone`:
+
+```bash
+# ❌ install.sh fails when GitHub blocked
+#   error: RPC failed; curl 56 GnuTLS recv error
+#   fatal: early EOF / fetch-pack: invalid index-pack output
+
+# ✅ Alternative: pip install from PyPI (usually reachable)
+pip install hermes-agent
+pip install python-dotenv pyyaml rich   # install.sh handles these automatically
+
+# ✅ Alternative: copy existing installation from another machine
+# Copy the ~/.hermes/hermes-agent/ directory into the container/server
+```
+
+**Docker environments** additionally face Docker Hub pull failures. Configure registry mirrors per `skill_view(name='docker-terminal')` section 六.
 
 ### Changes not taking effect
 - **Tools/skills:** `/reset` starts a new session with updated toolset
